@@ -47,6 +47,11 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Root cause:** OneDrive hasn't materialized the tool-written file down to the local disk the sandbox mounts; the sandbox serves a partial copy.
 - **Rule:** don't trust sandbox reads of just-edited files. Verify by writing a known-good copy **directly into the sandbox** and building that, or hand the check to Claude Code. Never claim "verified" off a stale read. (R5, R6)
 
+**`node --check` of a `.js` file fails when `package.json` reads stale.**
+- **Symptom:** `ERR_INVALID_PACKAGE_CONFIG: Invalid package config .../package.json` when checking `.js` files in the mounted repo, even though the `.js` files themselves are fine (a `.mjs` checks OK).
+- **Root cause:** Node reads `package.json` to decide a `.js` file's module type; OneDrive had only partially materialized `package.json` into the sandbox, so Node saw a corrupt config.
+- **Rule:** verify just-authored modules in a clean `/tmp` tree with its own `{"type":"module"}` package.json (copy the files in, then `node --check`/run tests there). Don't read a sandbox `package.json` failure as a code error. (R5, R6)
+
 **Cowork sandbox can't commit on Windows.**
 - **Symptom:** git operations from the sandbox fail / leave `.git/*.lock` zombies.
 - **Root cause:** Windows doesn't release the git lock files for the sandbox process.

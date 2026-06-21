@@ -1,13 +1,16 @@
-// The Undercroft — a walkable 3D town scene (no combat). You spawn here, walk
-// the hero around with WASD, and step up to stations or the Ward-Crystal to
-// interact. Separate PlayCanvas scene from the mission; only one renders at a
-// time (see main.js). Drives its own update loop via app.on('update').
+// The Undercroft — a walkable 3D spawn map (no combat). You spawn here, walk the
+// hero with WASD, and step up to a station or the Ward-Crystal to interact.
+// Geometry/scenery live in src/view/hubWorld.js (+ hubScenery.js); layout data in
+// src/config/hubLayout.js; wall collision in src/sim/hubCollide.js.
 
 import * as pc from "playcanvas";
 import { PALETTE } from "../config/palette.js";
 import { loadGlb } from "../view/pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { HERO } from "../config/hero.js";
+import { buildHubWorld } from "../view/hubWorld.js";
+import { resolveCircle } from "../sim/hubCollide.js";
+import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -28,17 +31,6 @@ function prim(type, material) {
   return e;
 }
 
-// station id -> label + world position + accent
-const STATIONS = [
-  { id: "quartermaster", name: "Quartermaster — sell loot for Gold", x: -9, z: -4, color: "gold" },
-  { id: "salvager", name: "Salvager — break gear into mats", x: -9, z: 4, color: "ash" },
-  { id: "bench", name: "Re-roll / Upgrade Bench", x: 9, z: -4, color: "plague" },
-  { id: "stash", name: "Stash — your storage", x: 9, z: 4, color: "bone" },
-  { id: "blackmarket", name: "The Black Market — trade in $OSSA", x: 0, z: 9, color: "blood" },
-];
-const CRYSTAL = { x: 0, z: -9 };
-const INTERACT_R = 2.6;
-
 export class Hub {
   constructor(container, { onOpenStation, onOpenMapSelect }) {
     this.onOpenStation = onOpenStation;
@@ -56,21 +48,23 @@ export class Hub {
     this.app = new pc.Application(canvas, { graphicsDeviceOptions: { antialias: true } });
     this.app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
-    this.app.scene.ambientLight = col(0x252e22);
-    try {
-      this.app.scene.fog = pc.FOG_LINEAR;
-      this.app.scene.fogColor = col(0x09120a);
-      this.app.scene.fogStart = 10;
-      this.app.scene.fogEnd = 48;
-    } catch (_) {}
 
-    // camera
-    this.camYaw = 0.5;
-    this.camPitch = 0.5;
-    this.camDist = 12;
-    this.camTarget = new pc.Vec3(0, 1.1, 0);
+    // Build the world (rooms, courtyard, torches, stations, crystal, scenery, fog).
+    const world = buildHubWorld(this.app);
+    this.colliders = world.colliders;
+    this.stations = world.stations;
+    this.crystalPos = world.crystal;
+    this.crystal = world.crystalEntity;
+    this.spawn = world.spawn;
+    const C = world.camera;
+
+    // Fixed close camera — distance is LOCKED (no zoom). Arrows still orbit yaw.
+    this.camYaw = C.yaw;
+    this.camPitch = C.pitch;
+    this.camDist = C.dist;
+    this.camTarget = new pc.Vec3(this.spawn.x, C.targetY, this.spawn.z);
     this.cam = new pc.Entity("camera");
-    this.cam.addComponent("camera", { fov: 55, farClip: 200, clearColor: col(PALETTE.void) });
+    this.cam.addComponent("camera", { fov: C.fov, nearClip: C.near, farClip: C.far, clearColor: col(0x0a140c) });
     this.app.root.addChild(this.cam);
 
     const sun = new pc.Entity();
@@ -78,13 +72,10 @@ export class Hub {
     sun.setEulerAngles(55, 30, 0);
     this.app.root.addChild(sun);
 
-    this._buildRoom();
-    this._buildStations();
-    this._buildCrystal();
     this._loadHero();
 
     // hero state (simple walker — no sim)
-    this.hero = { x: 0, z: 3, facing: 0, speed: HERO.speed * 0.8 };
+    this.hero = { x: this.spawn.x, z: this.spawn.z, facing: 0, speed: HERO.speed * 0.8 };
 
     // input
     this.keys = new Set();
@@ -105,71 +96,6 @@ export class Hub {
     this.app.on("update", (dt) => this._tick(dt));
     this.app.start();
     this.app.autoRender = false; // off until shown
-  }
-
-  _buildRoom() {
-    const floor = prim("box", mat("void"));
-    floor.setLocalScale(28, 0.2, 28);
-    floor.setPosition(0, -0.1, 0);
-    this.app.root.addChild(floor);
-    // worn flagstone tint patch
-    const dais = prim("cylinder", mat("rot", 0.08));
-    dais.setLocalScale(10, 0.06, 10);
-    dais.setPosition(0, 0.02, 0);
-    this.app.root.addChild(dais);
-
-    const wallMat = mat("ash");
-    const wall = (x, z, sx, sz) => {
-      const e = prim("box", wallMat);
-      e.setLocalScale(sx, 3.2, sz);
-      e.setPosition(x, 1.6, z);
-      this.app.root.addChild(e);
-    };
-    wall(0, -14, 30, 0.8);
-    wall(0, 14, 30, 0.8);
-    wall(-14, 0, 0.8, 30);
-    wall(14, 0, 0.8, 30);
-    // pillars
-    for (const [x, z] of [[-10, -10], [10, -10], [-10, 10], [10, 10]]) {
-      const p = prim("cylinder", wallMat);
-      p.setLocalScale(0.8, 4, 0.8);
-      p.setPosition(x, 2, z);
-      this.app.root.addChild(p);
-    }
-  }
-
-  _buildStations() {
-    this.stationEnts = [];
-    for (const s of STATIONS) {
-      const base = prim("cylinder", mat("ash"));
-      base.setLocalScale(1.2, 0.5, 1.2);
-      base.setPosition(s.x, 0.25, s.z);
-      this.app.root.addChild(base);
-      const orb = prim("sphere", mat(s.color, 0.9));
-      orb.setLocalScale(0.6, 0.6, 0.6);
-      orb.setPosition(s.x, 0.9, s.z);
-      this.app.root.addChild(orb);
-      const lamp = new pc.Entity();
-      lamp.addComponent("light", { type: "point", color: col(PALETTE[s.color] ?? PALETTE.plague), intensity: 0.8, range: 5 });
-      lamp.setPosition(s.x, 1.2, s.z);
-      this.app.root.addChild(lamp);
-      this.stationEnts.push(s);
-    }
-  }
-
-  _buildCrystal() {
-    this.crystal = prim("sphere", mat("plague", 1.6));
-    this.crystal.setLocalScale(1.6, 2.6, 1.6);
-    this.crystal.setPosition(CRYSTAL.x, 1.6, CRYSTAL.z);
-    this.app.root.addChild(this.crystal);
-    const base = prim("cylinder", mat("ash"));
-    base.setLocalScale(2.4, 0.4, 2.4);
-    base.setPosition(CRYSTAL.x, 0.2, CRYSTAL.z);
-    this.app.root.addChild(base);
-    const light = new pc.Entity();
-    light.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 2.4, range: 12 });
-    light.setPosition(CRYSTAL.x, 2, CRYSTAL.z);
-    this.app.root.addChild(light);
   }
 
   async _loadHero() {
@@ -222,20 +148,14 @@ export class Hub {
       this.keys.add(k);
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.key.toLowerCase()));
-    this.canvas.addEventListener("wheel", (e) => {
-      if (!this.active) return;
-      e.preventDefault();
-      this.camDist = Math.max(5, Math.min(28, this.camDist + (e.deltaY > 0 ? 1.4 : -1.4)));
-    }, { passive: false });
+    // NOTE: no wheel/zoom listener — camera distance is locked (R: no zoom-out).
   }
 
   _tick(dt) {
     if (!this.active) return;
-    // camera orbit via arrows
+    // camera orbit via left/right arrows only (distance stays locked)
     if (this.keys.has("arrowleft")) this.camYaw += 1.8 * dt;
     if (this.keys.has("arrowright")) this.camYaw -= 1.8 * dt;
-    if (this.keys.has("arrowup")) this.camDist = Math.max(5, this.camDist - 10 * dt);
-    if (this.keys.has("arrowdown")) this.camDist = Math.min(28, this.camDist + 10 * dt);
 
     // camera-relative movement
     const fwd = { x: -Math.sin(this.camYaw), z: -Math.cos(this.camYaw) };
@@ -248,10 +168,11 @@ export class Hub {
     if (m > 0) {
       mx /= m;
       mz /= m;
-      this.hero.x += mx * this.hero.speed * dt;
-      this.hero.z += mz * this.hero.speed * dt;
-      this.hero.x = Math.max(-13, Math.min(13, this.hero.x));
-      this.hero.z = Math.max(-13, Math.min(13, this.hero.z));
+      const nx = this.hero.x + mx * this.hero.speed * dt;
+      const nz = this.hero.z + mz * this.hero.speed * dt;
+      const res = resolveCircle(nx, nz, HERO_RADIUS, this.colliders);
+      this.hero.x = res.x;
+      this.hero.z = res.z;
       this.hero.facing = Math.atan2(mx, mz);
     }
     if (this.heroEnt) {
@@ -259,7 +180,7 @@ export class Hub {
       this.heroEnt.setLocalEulerAngles(0, (this.hero.facing * 180) / Math.PI, 0);
     }
 
-    // camera follow
+    // camera follow (fixed distance)
     const k = 1 - Math.pow(0.001, Math.min(dt, 0.05));
     this.camTarget.x += (this.hero.x - this.camTarget.x) * k;
     this.camTarget.z += (this.hero.z - this.camTarget.z) * k;
@@ -286,8 +207,8 @@ export class Hub {
         near = payload;
       }
     };
-    test(CRYSTAL.x, CRYSTAL.z, { kind: "crystal" });
-    for (const s of STATIONS) test(s.x, s.z, { kind: "station", id: s.id, name: s.name });
+    test(this.crystalPos.x, this.crystalPos.z, { kind: "crystal" });
+    for (const s of this.stations) test(s.x, s.z, { kind: "station", id: s.id, name: s.name });
 
     if (near) {
       this.prompt.style.display = "block";
@@ -306,9 +227,10 @@ export class Hub {
     this.active = true;
     this.canvas.style.display = "block";
     this.app.autoRender = true;
-    // reset hero to spawn near the crystal
-    this.hero.x = 0;
-    this.hero.z = 3;
+    this.hero.x = this.spawn.x;
+    this.hero.z = this.spawn.z;
+    this.camTarget.x = this.spawn.x;
+    this.camTarget.z = this.spawn.z;
     this.app.resizeCanvas();
   }
 

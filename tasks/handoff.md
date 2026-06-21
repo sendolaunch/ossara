@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S5 — 2026-06-21 — Roster-first flow + ornate-stone Select Heroes |
+| **Last session** | S6 — 2026-06-21 — Spawn-map rebuild: modular keep + fixed cam + dead-kingdom horizon (new files; wiring pending CC) |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,19 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S6 — 2026-06-21 — Spawn-map rebuild (Undercroft): modular keep + locked camera + dead-kingdom horizon
+- Locked art direction with the user first (R9): **procedural-now + GLB-ready**, **fixed close camera (no zoom)**, **full multi-room rebuild**.
+- Authored four NEW files (Cowork-side, R12/R15) + one test:
+  - `src/config/hubLayout.js` — layout DATA: three stone chambers (west/central/east) + round Ward-Crystal courtyard, wall colliders, station/crystal/spawn positions, fixed-camera config, hero radius, torch + timber-hall placement.
+  - `src/sim/hubCollide.js` — pure circle-vs-AABB wall resolver (the hero can no longer walk through stone). Node-testable.
+  - `src/view/hubScenery.js` — **purely decorative, non-walkable** dead-kingdom horizon: ruined-tower skyline ring, a fallen cathedral, dead trees, plague-green horizon glow, far ground + fog. Low-detail, fog-faded; guarded so it can never break the playable room.
+  - `src/view/hubWorld.js` — builds the modular rooms (walls + trim + base course), pillars, round courtyard parapet, warm torches, the 5 stations, the Ward-Crystal, and a NE timber-hall backdrop for scale; sets fog; calls scenery; returns `{colliders, stations, crystal, crystalEntity, spawn, camera}`. GLB slots documented.
+  - `test/hubCollide.test.mjs` — headless collision proof.
+- Probed (R5/R6): `node --check` clean on all 5 files; `node test/hubCollide.test.mjs` → **6/6** (incl. ejected-clear-of-all-27-colliders + doorway-passable). Verified in a /tmp tree because the mounted `package.json` read stale (OneDrive sync lag — see lessons).
+- **NOT done by Cowork (handed to CC in the close-prompt):** the existing-file edit to `src/ui/hub3d.js` (R14) — swap the inline primitive scene for `buildHubWorld`, lock the camera (remove wheel + arrow-zoom), and route hero movement through `resolveCircle`. Full gate (vite build, sim test) + **eyeball smoke run** (R20/R23) are CC's: walk hub → stations → courtyard → Ward-Crystal → mission → return, console clean (F12).
+
+**In Friendly Words:** I rebuilt your home/spawn map. Instead of one boxy room floating in black, it's now a stone keep with three connected chambers and a round courtyard around the green Ward-Crystal, lit by warm torches, with a timber hall next door for scale. Past the walls there's a far-off silhouette of the ruined kingdom — broken towers, a collapsed cathedral, dead trees, and a sickly green glow on the horizon, all fog-faded and purely for looks (you can't walk there). The camera is now locked in close — no more zooming way out to see the void. I built this as new files and proved the wall-collision math with a test; the last step (snapping it into the live hub screen and the click-through check) is the paste-into-Claude-Code block below.
 
 ### S5 — 2026-06-21 — Roster-first flow + ornate-stone Select Heroes
 - Boot flow shortened: Connect (or Dev Enter) now jumps straight to **Select Heroes**; the standalone Name screen is unrouted (file still present, harmless). Account name carries over from cloud profile / prior session — `onChooseHero("")` won't clobber an existing `profile.name`.
