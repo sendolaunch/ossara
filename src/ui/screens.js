@@ -5,6 +5,7 @@ import { CSS } from "../config/palette.js";
 import { TOKEN_GATE } from "../config/economy.js";
 import { CLASSES, CLASS_ORDER } from "../config/classes.js";
 import { connectPhantom, checkHolding } from "../web3/wallet.js";
+import { signInWithWallet, accountsEnabled } from "../web3/supa.js";
 import { Preview } from "./preview.js";
 import { injectTheme, maskSVG } from "./theme.js";
 
@@ -31,11 +32,12 @@ const frame = (inner) => {
 };
 
 export class ScreenFlow {
-  constructor(root, { onLaunchMission, onEnterUndercroft }) {
+  constructor(root, { onLaunchMission, onEnterUndercroft, onAccount }) {
     injectTheme();
     this.root = root;
     this.onLaunchMission = onLaunchMission;
     this.onEnterUndercroft = onEnterUndercroft;
+    this.onAccount = onAccount;
     this.address = null;
     this.username = "";
     this.classIndex = 0;
@@ -160,6 +162,13 @@ export class ScreenFlow {
     } else {
       this.loginStatus.innerHTML = `Connected <b>${short}</b> — ${hold.balance} $OSSA. <span class="oss-plague">Access granted.</span>`;
       this.enterBtn.style.display = "";
+    }
+    if (accountsEnabled()) {
+      const acc = await signInWithWallet();
+      if (acc.ok && this.onAccount) {
+        this.onAccount({ userId: acc.userId, address: acc.address || this.address });
+        this.loginStatus.innerHTML += ` · <span class="oss-plague">progress synced</span>`;
+      }
     }
   }
 

@@ -13,11 +13,15 @@ import { loadProfile, saveProfile, addItem, getBonuses } from "./sim/profile.js"
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
 import { Inventory } from "./ui/inventory.js";
+import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
+import { adoptRemote } from "./sim/account.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
 const profile = loadProfile();
 let inventoryUI = null;
+let account = null;
+function persist() { saveProfile(profile); if (account) saveRemoteProfile(profile, account); }
 app.style.display = "none"; // hidden until we enter the hub
 
 const screensRoot = document.createElement("div");
@@ -78,7 +82,7 @@ function startMission() {
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), { ilvl: 1, difficulty: 0 });
       drops.forEach((d) => addItem(profile, d));
-      saveProfile(profile);
+      persist();
     },
   });
 }
@@ -87,7 +91,7 @@ function startMission() {
 let stationModal = null;
 function showStation(id) {
   if (id === "stash") {
-    if (!inventoryUI) inventoryUI = new Inventory(ui, { getProfile: () => profile, onChange: () => saveProfile(profile) });
+    if (!inventoryUI) inventoryUI = new Inventory(ui, { getProfile: () => profile, onChange: () => persist() });
     inventoryUI.open();
     return;
   }
@@ -123,12 +127,20 @@ const flow = new ScreenFlow(screensRoot, {
   onEnterUndercroft: (cid, name) => {
     classId = cid;
     username = name;
-    profile.name = name; profile.classId = cid; saveProfile(profile);
+    profile.name = name; profile.classId = cid; persist();
     enterHub();
   },
   onLaunchMission: (cid) => {
     classId = cid || classId;
     startMission();
+  },
+  onAccount: async ({ userId, address }) => {
+    account = { userId, wallet: address };
+    profile.wallet = address;
+    const remote = await loadRemoteProfile(address);
+    adoptRemote(profile, remote);
+    saveProfile(profile);
+    await saveRemoteProfile(profile, account);
   },
 });
 
