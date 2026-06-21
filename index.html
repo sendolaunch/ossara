@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>OSSARA — Hold the Breach</title>
+    <style>
+      :root {
+        /* Locked palette — design doc §12 */
+        --void: #070806;
+        --bone: #e9e4d2;
+        --plague: #6ee65a;
+        --rot: #2c6b27;
+        --ash: #8f886f;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: var(--void); }
+      body {
+        font-family: ui-monospace, "SFMono-Regular", "Consolas", monospace;
+        color: var(--bone);
+        -webkit-font-smoothing: antialiased;
+      }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; }
+      #ui { position: fixed; inset: 0; pointer-events: none; }
+      #ui > * { pointer-events: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="ui"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
