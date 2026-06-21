@@ -16,8 +16,9 @@ const el = (t, s = {}, h) => {
 };
 
 export class Inventory {
-  constructor(root, { getProfile, onChange }) {
+  constructor(root, { getProfile, getActiveClass, onChange }) {
     this.getProfile = getProfile;
+    this.getActiveClass = getActiveClass || (() => null);
     this.onChange = onChange;
     const s = el("div");
     s.className = "oss-screen";
@@ -66,12 +67,14 @@ export class Inventory {
   }
 
   render() {
-    const p = this.getProfile();
-    const b = getBonuses(p);
+    const a = this.getProfile();
+    const cid = this.getActiveClass();
+    const hero = cid ? a.heroes[cid] : null;
+    const b = getBonuses(a, cid);
     this.inner.innerHTML = "";
 
     const head = el("div", { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" });
-    head.innerHTML = `<div class="oss-h2" style="font-size:22px">The Stash</div><div class="oss-gold">${p.gold} Gold</div>`;
+    head.innerHTML = `<div class="oss-h2" style="font-size:22px">The Stash</div><div class="oss-gold">${hero ? hero.gold : 0} Gold</div>`;
     this.inner.appendChild(head);
 
     const summary = el("div", { color: CSS.ash, fontSize: "12px", marginBottom: "10px" },
@@ -80,30 +83,34 @@ export class Inventory {
 
     const cols = el("div", { display: "flex", gap: "18px", alignItems: "flex-start", flexWrap: "wrap" });
 
-    // equipped
+    // equipped (active hero only)
     const left = el("div", { flex: "1", minWidth: "260px" });
     left.appendChild(el("div", { font: "700 13px 'Cinzel',serif", letterSpacing: "1px", margin: "0 0 4px" }, "EQUIPPED"));
-    for (const slot of SLOTS) {
-      const item = p.equipped[slot];
-      if (item) {
-        const actions = el("div");
-        actions.appendChild(this._btn("Unequip", "ghost", () => { unequip(p, slot); this._changed(); }));
-        left.appendChild(this._itemCard(item, actions));
-      } else {
-        left.appendChild(el("div", { color: CSS.ash, fontSize: "12px", padding: "6px 10px", border: `1px dashed ${CSS.rot}`, borderRadius: "8px", margin: "6px 0" }, `${slot} — empty`));
+    if (!hero) {
+      left.appendChild(el("div", { color: CSS.ash, fontSize: "12px" }, "No hero selected."));
+    } else {
+      for (const slot of SLOTS) {
+        const item = hero.equipped[slot];
+        if (item) {
+          const actions = el("div");
+          actions.appendChild(this._btn("Unequip", "ghost", () => { unequip(a, cid, slot); this._changed(); }));
+          left.appendChild(this._itemCard(item, actions));
+        } else {
+          left.appendChild(el("div", { color: CSS.ash, fontSize: "12px", padding: "6px 10px", border: `1px dashed ${CSS.rot}`, borderRadius: "8px", margin: "6px 0" }, `${slot} — empty`));
+        }
       }
     }
 
-    // inventory
+    // shared stash
     const right = el("div", { flex: "1", minWidth: "260px" });
-    right.appendChild(el("div", { font: "700 13px 'Cinzel',serif", letterSpacing: "1px", margin: "0 0 4px" }, `RELICS (${p.inventory.length})`));
-    if (!p.inventory.length) {
+    right.appendChild(el("div", { font: "700 13px 'Cinzel',serif", letterSpacing: "1px", margin: "0 0 4px" }, `RELICS (${a.stash.length})`));
+    if (!a.stash.length) {
       right.appendChild(el("div", { color: CSS.ash, fontSize: "12px" }, "Empty. Hold breaches to recover relics of the fallen."));
     }
-    for (const item of p.inventory.slice().reverse()) {
+    for (const item of a.stash.slice().reverse()) {
       const actions = el("div");
-      actions.appendChild(this._btn("Equip", "primary", () => { equip(p, item.id); this._changed(); }));
-      actions.appendChild(this._btn("Salvage", "ghost", () => { salvage(p, item.id); this._changed(); }));
+      if (hero) actions.appendChild(this._btn("Equip", "primary", () => { equip(a, cid, item.id); this._changed(); }));
+      actions.appendChild(this._btn("Salvage", "ghost", () => { salvage(a, item.id); this._changed(); }));
       right.appendChild(this._itemCard(item, actions));
     }
 

@@ -9,10 +9,11 @@ import { Hub } from "./ui/hub3d.js";
 import { MapSelect } from "./ui/mapselect.js";
 import { CSS } from "./config/palette.js";
 import { mountVersionBadge } from "./ui/versionBadge.js";
-import { loadProfile, saveProfile, addItem, getBonuses } from "./sim/profile.js";
+import { loadProfile, saveProfile, addItem, getBonuses, setActive } from "./sim/profile.js";
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
 import { Inventory } from "./ui/inventory.js";
+import { HeroSelect } from "./ui/heroSelect.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
 
@@ -32,7 +33,7 @@ ui.appendChild(screensRoot);
 let hub = null;
 let mission = null;
 let mapSelect = null;
-let classId = "warden";
+let heroSelect = null;
 let username = "The Warded";
 
 function ensureHub() {
@@ -67,7 +68,16 @@ function enterHub() {
   app.style.display = "";
   ensureHub();
   if (mapSelect) mapSelect.hide();
+  if (heroSelect) heroSelect.hide();
   hub.show();
+}
+
+function showHeroSelect() {
+  screensRoot.style.display = "";
+  app.style.display = "none";
+  if (hub) hub.hide();
+  if (mission) mission._show?.(false);
+  heroSelect.show();
 }
 
 function startMission() {
@@ -77,8 +87,8 @@ function startMission() {
   if (!mission) {
     mission = new Mission(app, ui, { onExit: () => enterHub() });
   }
-  mission.start(classId, {
-    bonuses: getBonuses(profile),
+  mission.start(profile.activeClass || "warden", {
+    bonuses: getBonuses(profile, profile.activeClass),
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), { ilvl: 1, difficulty: 0 });
       drops.forEach((d) => addItem(profile, d));
@@ -91,7 +101,7 @@ function startMission() {
 let stationModal = null;
 function showStation(id) {
   if (id === "stash") {
-    if (!inventoryUI) inventoryUI = new Inventory(ui, { getProfile: () => profile, onChange: () => persist() });
+    if (!inventoryUI) inventoryUI = new Inventory(ui, { getProfile: () => profile, getActiveClass: () => profile.activeClass, onChange: () => persist() });
     inventoryUI.open();
     return;
   }
@@ -124,14 +134,13 @@ function showStation(id) {
 
 // ---- boot ----------------------------------------------------------------
 const flow = new ScreenFlow(screensRoot, {
-  onEnterUndercroft: (cid, name) => {
-    classId = cid;
+  onChooseHero: (name) => {
     username = name;
-    profile.name = name; profile.classId = cid; persist();
-    enterHub();
+    profile.name = name;
+    persist();
+    showHeroSelect();
   },
-  onLaunchMission: (cid) => {
-    classId = cid || classId;
+  onLaunchMission: () => {
     startMission();
   },
   onAccount: async ({ userId, address }) => {
@@ -143,6 +152,15 @@ const flow = new ScreenFlow(screensRoot, {
     await saveRemoteProfile(profile, account);
   },
 });
+
+heroSelect = new HeroSelect(screensRoot, {
+  getAccount: () => profile,
+  onPlay: (cid) => { setActive(profile, cid); persist(); enterHub(); },
+  onOpenStash: () => showStation("stash"),
+  onBack: () => { heroSelect.hide(); flow.showLogin(); },
+});
+screensRoot.appendChild(heroSelect.el);
+heroSelect.hide();
 
 flow.showLogin();
 mountVersionBadge();

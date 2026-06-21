@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S3 — 2026-06-21 — Supabase Web3 login verified end-to-end |
+| **Last session** | S4 — 2026-06-21 — Multi-hero Select Heroes + shared stash (save v2) |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,16 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S4 — 2026-06-21 — Multi-hero Select Heroes + shared stash
+- Save v2: one hero per class (own gold/level/xp/cleared/equipped), one SHARED stash on the account. Pure model in `src/sim/heroes.js` with headless tests in `test/heroes.test.mjs`.
+- Boot flow is now Connect → Name → **Select Heroes** (`src/ui/heroSelect.js`, four ring-portals — picked from the DD hero-select frame) → Undercroft. Old "Confirm Order" class-select screen is unreached (the file is still in `screens.js`, harmless).
+- `profile.js` is now a thin localStorage adapter over `heroes.js`; v1 saves auto-migrate (inventory → `stash`, `classId` → `heroes[classId]`).
+- Inventory UI rebuilt around (active hero × shared stash): equipped cards belong to the chosen hero; relic list comes from the account stash; equip moves a relic into the active hero's slot, unequip drops back to the shared stash, salvage credits Gold to the active hero.
+- Supabase: `profiles` row now upserts `heroes` / `stash` / `active_class`; `adoptRemote` maps those columns onto the local account. New migration `supabase/migrations/0003_heroes.sql` adds the v2 columns — **not yet applied** (DB write, R25; needs the user to run it).
+- Gate: build clean, sim 43/43, loot 2065/2065, heroes 19/19. Smoke + eyeball deferred to the user.
+
+**In Friendly Words:** Instead of locking you into one class, you now keep up to four heroes — one per Order — and pick which one walks into the Undercroft each time. Each hero has their own level, Gold and equipped relics, but the Stash is shared, so you can take a relic off your Warden and put it on your Stormcaller. Old single-class saves auto-upgrade. There's one Supabase database change waiting for you to apply, and the live click-through is yours to confirm.
 
 ### S3 — 2026-06-21 — Supabase Web3 login verified end-to-end
 - Fixed the non-ASCII em-dash in the SIWS `statement` (`src/web3/supa.js`) that was causing Phantom to abort with "signature request cannot be shown due to invalid formatting" before any network call.

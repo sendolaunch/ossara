@@ -2,7 +2,7 @@
 import { makeRng } from "../src/sim/rng.js";
 import { rollDrop, rollMissionDrops, aggregateBonuses } from "../src/sim/loot.js";
 import { RARITIES, SLOTS } from "../src/config/items.js";
-import { createProfile, addItem, equip, unequip, salvage, getBonuses } from "../src/sim/profile.js";
+import { createAccount, setActive, addItem, equip, unequip, salvage, getBonuses } from "../src/sim/profile.js";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  ✗ FAIL:", m)));
@@ -59,23 +59,23 @@ section("aggregateBonuses sums equipped perks");
   ok(b.gearPower === 20, "gear power summed");
 }
 
-section("profile equip / unequip / salvage / bonuses");
+section("rollDrop output drives the v2 account equip/salvage pipeline");
 {
-  const p = createProfile();
+  const a = createAccount();
+  setActive(a, "warden");
   const it = rollDrop(makeRng(5), { ilvl: 4 });
-  addItem(p, it);
-  ok(p.inventory.length === 1, "item added to inventory");
-  ok(equip(p, it.id), "equip succeeds");
-  ok(p.equipped[it.slot] && p.equipped[it.slot].id === it.id, "item now in its slot");
-  ok(p.inventory.length === 0, "equipped item left inventory");
-  // bonuses reflect equipped
-  const b = getBonuses(p);
-  ok(typeof b.towerDamagePct === "number", "bonuses computed from equipped");
-  ok(unequip(p, it.slot), "unequip succeeds");
-  ok(p.inventory.length === 1 && !p.equipped[it.slot], "item back in inventory");
-  const goldBefore = p.gold;
-  const dust = salvage(p, it.id);
-  ok(dust > 0 && p.gold === goldBefore + dust && p.inventory.length === 0, "salvage gives gold + removes item");
+  addItem(a, it);
+  ok(a.stash.length === 1, "item added to shared stash");
+  ok(equip(a, "warden", it.id), "equip onto warden succeeds");
+  ok(a.heroes.warden.equipped[it.slot] && a.heroes.warden.equipped[it.slot].id === it.id, "item now in warden's slot");
+  ok(a.stash.length === 0, "equipped item left stash");
+  const b = getBonuses(a, "warden");
+  ok(typeof b.towerDamagePct === "number", "bonuses computed from warden's equipped");
+  ok(unequip(a, "warden", it.slot), "unequip succeeds");
+  ok(a.stash.length === 1 && !a.heroes.warden.equipped[it.slot], "item back in shared stash");
+  const goldBefore = a.heroes.warden.gold;
+  const dust = salvage(a, it.id);
+  ok(dust > 0 && a.heroes.warden.gold === goldBefore + dust && a.stash.length === 0, "salvage credits active hero gold + removes item");
 }
 
 section("mission drops 1..3");

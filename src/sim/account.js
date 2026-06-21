@@ -7,13 +7,9 @@
 export function adoptRemote(local, remote) {
   if (!remote) return local; // first login on this wallet — keep local, it'll be pushed up
   local.name = remote.name ?? local.name;
-  local.classId = remote.class_id ?? local.classId;
-  local.gold = remote.gold ?? local.gold ?? 0;
-  local.level = remote.level ?? local.level ?? 1;
-  local.xp = remote.xp ?? local.xp ?? 0;
-  local.cleared = remote.cleared ?? local.cleared ?? [];
-  local.inventory = remote.inventory ?? local.inventory ?? [];
-  local.equipped = remote.equipped ?? local.equipped ?? {};
-  local.version = remote.save_version ?? local.version ?? 1;
+  if (remote.heroes) local.heroes = remote.heroes;
+  if (remote.stash) local.stash = remote.stash;
+  if (remote.active_class) local.activeClass = remote.active_class;
+  local.version = remote.save_version ?? local.version ?? 2;
   return local;
 }

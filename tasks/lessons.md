@@ -29,7 +29,9 @@ Newest entries first within each section. Sections stay even when empty — they
 
 ## Save format
 
-*(None yet — no persistence shipped. When progression/gear/wallet state is saved, add entries here and remember R19: version the data, migrate or refuse, never break old saves silently.)*
+**Save-shape change needs both a client `migrate()` AND a SQL backfill.**
+- Symptom: bumping the save version without aligning either side resets v1 rows/saves on first contact (old columns get nulled, or old localStorage shape is rejected).
+- Rule: ship the pure model (`heroes.js`-style) with node tests first so the gate proves the migration before any UI is wired; pair every client-side bump with a SQL migration that backfills the new columns from the old ones. (R19)
 
 ## Build / deploy
 

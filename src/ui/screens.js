@@ -32,11 +32,12 @@ const frame = (inner) => {
 };
 
 export class ScreenFlow {
-  constructor(root, { onLaunchMission, onEnterUndercroft, onAccount }) {
+  constructor(root, { onLaunchMission, onEnterUndercroft, onChooseHero, onAccount }) {
     injectTheme();
     this.root = root;
     this.onLaunchMission = onLaunchMission;
     this.onEnterUndercroft = onEnterUndercroft;
+    this.onChooseHero = onChooseHero;
     this.onAccount = onAccount;
     this.address = null;
     this.username = "";
@@ -122,13 +123,13 @@ export class ScreenFlow {
     connect.onclick = () => this._connect();
     this.enterBtn = button("Enter ▸", "primary");
     this.enterBtn.style.display = "none";
-    this.enterBtn.onclick = () => this.showClassSelect();
+    this.enterBtn.onclick = () => this.showNameEntry();
     const dev = button("Dev Enter — skip wallet (token not live yet)", "ghost");
     dev.style.marginTop = "12px";
     dev.style.fontSize = "12px";
     dev.onclick = () => {
       this.address = this.address || "DEV-MODE";
-      this.showClassSelect();
+      this.showNameEntry();
     };
     const row = el("div", { display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" });
     row.append(connect, this.enterBtn);
@@ -250,7 +251,7 @@ export class ScreenFlow {
 
     const btnRow = el("div", { display: "flex", gap: "12px", justifyContent: "center", marginTop: "16px" });
     const back = button("‹ Back", "ghost");
-    back.onclick = () => this.showClassSelect();
+    back.onclick = () => this.showLogin();
     const begin = button("Enter the Undercroft ▸", "primary");
     begin.onclick = () => this._beginTutorial();
     btnRow.append(back, begin);
@@ -262,10 +263,11 @@ export class ScreenFlow {
   }
 
   _beginTutorial() {
-    // Name your survivor -> spawn into the Undercroft home base (no forced
-    // tutorial). Missions launch from the hub's "Hold a Breach".
+    // Name your survivor -> SELECT HEROES portal screen (one per Order). The
+    // chosen hero owns its own gold/level/gear; the stash is shared.
     this.username = (this.nameInput.value || "").trim() || "The Warded";
-    if (this.onEnterUndercroft) this.onEnterUndercroft(this.selectedClass, this.username);
+    if (this.onChooseHero) this.onChooseHero(this.username);
+    else if (this.onEnterUndercroft) this.onEnterUndercroft(this.selectedClass, this.username);
     else this.showHub();
   }
 

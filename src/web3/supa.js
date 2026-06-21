@@ -56,14 +56,10 @@ export async function saveRemoteProfile(profile, { userId, wallet }) {
     user_id: userId,
     wallet,
     name: profile.name || null,
-    class_id: profile.classId || null,
-    level: profile.level || 1,
-    xp: profile.xp || 0,
-    gold: profile.gold || 0,
-    cleared: profile.cleared || [],
-    inventory: profile.inventory || [],
-    equipped: profile.equipped || {},
-    save_version: profile.version || 1,
+    heroes: profile.heroes || {},
+    stash: profile.stash || [],
+    active_class: profile.activeClass || null,
+    save_version: 2,
   };
   const { error } = await supa.from("profiles").upsert(row, { onConflict: "user_id" });
   if (error) {
