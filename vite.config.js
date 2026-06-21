@@ -5,6 +5,9 @@ import { defineConfig } from "vite";
 // separate always-on host later, per the design doc.
 export default defineConfig({
   base: "./",
+  define: {
+    __COMMIT_SHA__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || "dev").slice(0, 7)),
+  },
   build: {
     target: "es2020",
     outDir: "dist",

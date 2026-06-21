@@ -8,6 +8,7 @@ import { Mission } from "./ui/mission.js";
 import { Hub } from "./ui/hub3d.js";
 import { MapSelect } from "./ui/mapselect.js";
 import { CSS } from "./config/palette.js";
+import { mountVersionBadge } from "./ui/versionBadge.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -113,6 +114,7 @@ const flow = new ScreenFlow(screensRoot, {
 });
 
 flow.showLogin();
+mountVersionBadge();
 
 window.OSSARA = {
   flow,

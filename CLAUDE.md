@@ -92,6 +92,15 @@ adds them to git.
 3. Write a **close-prompt** for Claude Code covering all existing-file edits + new files +
    the git add/commit (+ push once a remote exists). Include the commit message.
 
+**R24. Reach for the fastest tool that can answer (probe ordering).**
+- In-repo (git log, grep, file ops, npm scripts) -> bash. Fastest.
+- API-shaped Vercel (deployments, build/runtime logs, project config, env list) -> Vercel MCP direct (one round trip).
+- SQL-shaped Supabase (schema, row counts, RLS advisors, SELECT) -> Supabase MCP direct.
+- Live-page-shaped (footer SHA verify, DOM/JS-exec on a logged-in page, visual paint) -> Chrome MCP; slower, but the only tool that sees what the user sees.
+- 403 fallback: when a Vercel-MCP deployment-scoped call 403s, drive an authenticated vercel.com tab via Chrome MCP javascript_tool: fetch('/api/v1/deployments/<dpl_id>/events?builds=1',{credentials:'include'}).then(r=>r.json()) — full build log via the session cookie.
+
+**R25. Read-side MCP is Cowork's to call; write-side is forbidden.** Probe freely with read tools (list/get/search, SELECT, advisors). Anything that changes persistent state — apply_migration, deploy_to_vercel, mutating execute_sql, env-var writes, any apply_/deploy_/create_/delete_ — is a Tier-1 destructive op: route through the user via close-prompt. Test: would this change state a future request would see? Yes -> close-prompt. No -> call it.
+
 ---
 
 ## Tier 5 — Project-specific (game-dev)
@@ -137,3 +146,5 @@ npm run dev            # then EYEBALL: console clean (F12), and the loop works:
 **R23. "Done" requires the gate.** Don't call a change finished, merged, or deployable until
 the build passes, the sim test passes, and (for any visible change, R20) the eyeball smoke run
 is clean. If a step couldn't be run, the recap says which one and why (R5/R6).
+
+**R26. A deploy isn't done until the live URL renders the new commit.** Not "Ready", not an HTML-shell fetch — confirm the live page boots (PlayCanvas up, loop reachable) AND the version badge SHA (bottom-right "OSSARA · <sha>") matches the shipped commit. Can't see the page? Say "deploy unverified" and hand the eyeball to the user (R5/R6).

@@ -52,6 +52,11 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Root cause:** web-content fetch restrictions + binary formats.
 - **Rule:** the user supplies assets (free packs, ChatGPT for 2D); Cowork wires them in with a fail-safe fallback so a missing file never breaks the build.
 
+**Vercel MCP: empty teams / 403 on deployment-scoped calls.**
+- Symptom: list_teams -> {teams: []} though the MCP is connected; list_projects needs a teamId you can't get; deployment-scoped calls 403.
+- Root cause: the MCP team scope often doesn't enumerate (recurring auth-scope quirk).
+- Rule: don't read empty teams as "no projects." Pair Chrome MCP, open an authenticated vercel.com tab, fetch('/api/v1/deployments/<dpl_id>/events?builds=1',{credentials:'include'}) for build logs / deployment data via the session cookie. (R24)
+
 ## Workflow
 
 **Tempted to edit an existing file from Cowork.**

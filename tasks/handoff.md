@@ -7,7 +7,9 @@ Close every session by updating this file per the R16 ritual.
 |---|---|
 | **Last session** | S1 — 2026-06-21 — bootstrap workflow scaffolding |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
-| **Deployed version** | Not deployed — local dev only (`npm run dev`) |
+| **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
+| **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
+| **Vercel scope note** | MCP list_teams is empty (scope quirk — see lessons); project lives under the deploying account |
 | **Engine** | PlayCanvas ~1.77 (live: `pcRenderer.js`, `hub3d.js`). `three` ^0.160 = legacy/dead (R21) |
 | **Build tool** | Vite 5 (ESM, vanilla JS). Deploy target: Vercel (static) |
 | **Open destructive ops** | None |
@@ -31,6 +33,16 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S2 — 2026-06-21 — Vercel deploy + tooling rules
+- First production build succeeded on Vercel; live at https://ossara-nine.vercel.app (HTML shell verified; full render pending eyeball/Chrome pair).
+- Banked Vercel project ID prj_mG5nB3TZHHnL4jTVYqynT2deapv5.
+- Added commit-SHA version badge (bottom-right) as the deploy-verify surface (R26).
+- Added tool-speed ordering (R24) + read/write MCP boundary (R25).
+- Logged the Vercel-MCP empty-teams / 403 scope quirk + the authenticated-tab fetch workaround in lessons.
+- Chrome MCP still unpaired; Supabase not started.
+
+**In Friendly Words:** OSSARA is live on the internet for the first time and the build worked. We wrote down which tool to use for what so future sessions are fast, added a tiny version stamp in the corner to always tell whether the live site is current, and recorded a known Vercel quirk so it won't trip us again.
 
 ### S1 — 2026-06-21 — Bootstrap workflow scaffolding
 - Surveyed the repo before drafting: OSSARA is a Vite + vanilla-ESM browser game; **PlayCanvas ~1.77** is the live 3D engine, `three` is legacy/dead; pure logic in `src/sim/` is node-testable; deploys static to Vercel.
