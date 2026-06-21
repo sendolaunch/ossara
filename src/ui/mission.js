@@ -58,6 +58,7 @@ export class Mission {
     this.onWin = opts.onWin || null;
     this._wonFired = false;
     this.world = new World(LEVEL, opts.tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
+    this.renderer.setHeroClass(this.classId);
     this.renderer.reset();
     this.hud.reset();
     this.hud.setTowers(this.world.availableTowers);
@@ -76,6 +77,7 @@ export class Mission {
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
     this.world = new World(LEVEL, tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
+    this.renderer.setHeroClass(this.classId);
     this.renderer.reset();
     this.hud.reset();
     this.hud.setTowers(this.world.availableTowers);

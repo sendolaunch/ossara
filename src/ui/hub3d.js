@@ -11,6 +11,7 @@ import { HERO } from "../config/hero.js";
 import { buildHubWorld } from "../view/hubWorld.js";
 import { resolveCircle } from "../sim/hubCollide.js";
 import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
+import { loadCharacter } from "../view/character.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -32,9 +33,11 @@ function prim(type, material) {
 }
 
 export class Hub {
-  constructor(container, { onOpenStation, onOpenMapSelect }) {
+  constructor(container, { onOpenStation, onOpenMapSelect, getActiveClass }) {
     this.onOpenStation = onOpenStation;
     this.onOpenMapSelect = onOpenMapSelect;
+    this.getActiveClass = getActiveClass || (() => "warden");
+    this._loadedClass = null;
 
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
@@ -99,44 +102,16 @@ export class Hub {
   }
 
   async _loadHero() {
-    const cfg = MODELS.hero || {};
-    let e = null;
-    try {
-      e = await loadGlb(this.app, cfg.file || "models/hero.glb");
-    } catch (_) {
-      e = null;
-    }
-    if (!e) {
-      e = new pc.Entity("hero");
-      const body = prim("capsule", mat("bone"));
-      body.setLocalScale(0.6, 0.9, 0.6);
-      body.setLocalPosition(0, 0.7, 0);
-      e.addChild(body);
-      this._heroFoot = 0;
-      this.app.root.addChild(e);
-      this.heroEnt = e;
-      return;
-    }
-    const wrap = new pc.Entity("hero");
-    wrap.addChild(e);
-    this.app.root.addChild(wrap);
-    try {
-      let aabb = null;
-      for (const r of e.findComponents("render")) {
-        for (const mi of r.meshInstances) {
-          if (!aabb) aabb = mi.aabb.clone();
-          else aabb.add(mi.aabb);
-        }
-      }
-      if (aabb) {
-        const h = aabb.halfExtents.y * 2;
-        const s = h > 0.001 ? ((cfg.targetHeight || 1.8) * (cfg.scale || 1)) / h : 1;
-        e.setLocalScale(s, s, s);
-        this._heroFoot = -(aabb.center.y - aabb.halfExtents.y) * s;
-        e.setLocalPosition(-aabb.center.x * s, this._heroFoot, -aabb.center.z * s);
-      }
-    } catch (_) {}
-    this.heroEnt = wrap;
+    const cls = this.getActiveClass();
+    this._loadedClass = cls;
+    let ctl = null;
+    try { ctl = await loadCharacter(this.app, cls); } catch (_) { ctl = null; }
+    if (ctl) { this.heroCtl = ctl; this._heroFoot = ctl.foot || 0; this.heroEnt = ctl.wrap; this.app.root.addChild(ctl.wrap); return; }
+    // fallback: simple capsule (unchanged)
+    const e = new pc.Entity("hero");
+    const body = prim("capsule", mat("bone"));
+    body.setLocalScale(0.6, 0.9, 0.6); body.setLocalPosition(0, 0.7, 0);
+    e.addChild(body); this._heroFoot = 0; this.app.root.addChild(e); this.heroEnt = e;
   }
 
   _bindInput() {
@@ -165,7 +140,8 @@ export class Hub {
     let mx = sF * fwd.x + sR * right.x;
     let mz = sF * fwd.z + sR * right.z;
     const m = Math.hypot(mx, mz);
-    if (m > 0) {
+    const moving = m > 0;
+    if (moving) {
       mx /= m;
       mz /= m;
       const nx = this.hero.x + mx * this.hero.speed * dt;
@@ -175,6 +151,7 @@ export class Hub {
       this.hero.z = res.z;
       this.hero.facing = Math.atan2(mx, mz);
     }
+    if (this.heroCtl) this.heroCtl.setMoving(moving);
     if (this.heroEnt) {
       this.heroEnt.setPosition(this.hero.x, this._heroFoot || 0, this.hero.z);
       this.heroEnt.setLocalEulerAngles(0, (this.hero.facing * 180) / Math.PI, 0);
@@ -231,6 +208,11 @@ export class Hub {
     this.hero.z = this.spawn.z;
     this.camTarget.x = this.spawn.x;
     this.camTarget.z = this.spawn.z;
+    if (this.heroCtl && this._loadedClass !== this.getActiveClass()) {
+      if (this.heroEnt) this.heroEnt.destroy();
+      this.heroCtl = null;
+      this._loadHero();
+    }
     this.app.resizeCanvas();
   }
 

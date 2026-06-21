@@ -45,6 +45,7 @@ function ensureHub() {
         hub.hide();
         mapSelect.show();
       },
+      getActiveClass: () => profile.activeClass || "warden",
     });
   }
   return hub;

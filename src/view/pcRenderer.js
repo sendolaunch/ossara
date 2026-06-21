@@ -8,6 +8,7 @@ import { PALETTE } from "../config/palette.js";
 import { gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
+import { loadCharacter } from "./character.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -270,6 +271,14 @@ export class PCRenderer {
     this.heroEntity = wrap;
   }
 
+  async setHeroClass(classId) {
+    if (this.heroEntity) { this.heroEntity.destroy(); this.heroEntity = null; }
+    let ctl = null;
+    try { ctl = await loadCharacter(this.app, classId); } catch (_) { ctl = null; }
+    if (ctl) { this.heroCtl = ctl; this._heroFoot = ctl.foot || 0; this.heroEntity = ctl.wrap; this.app.root.addChild(ctl.wrap); this._prevHero = null; return; }
+    this.heroCtl = null; this._loadHero(); // primitive/MODELS fallback (unchanged)
+  }
+
   // ---- camera --------------------------------------------------------------
   orbit(d) {
     this.camYaw += d;
@@ -424,6 +433,12 @@ export class PCRenderer {
     this.heroEntity.enabled = h.alive;
     this.heroEntity.setPosition(h.x, this._heroFoot || 0, h.z);
     this.heroEntity.setLocalEulerAngles(0, (h.facing * 180) / Math.PI, 0);
+    if (this.heroCtl) {
+      const moving = this._prevHero ? Math.hypot(h.x - this._prevHero.x, h.z - this._prevHero.z) > 0.002 : false;
+      this.heroCtl.setMoving(moving && h.alive);
+      this.heroCtl.setDead(!h.alive);
+      this._prevHero = { x: h.x, z: h.z };
+    }
   }
 
   reset() {

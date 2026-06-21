@@ -45,6 +45,25 @@ Close every session by updating this file per the R16 ritual.
 
 ## Session log (newest first)
 
+### S6.2 — 2026-06-21 — KayKit Adventurers: animated per-class heroes + weapons (hub + mission)
+- User supplied **KayKit Adventurers 2.0 (CC0)**; imported to `public/models/characters/` (6 chars + `anim/` 2 shared libs + `weapons/` gltf+bin+atlas pngs). Characters are self-contained GLB; weapons reference per-theme atlas PNGs (all copied).
+- Class→model (user-chosen): Warden=Knight, Hunter=Ranger, Stormcaller=Mage, **Plague Doctor=Rogue_Hooded as a stand-in for the Druid** (Druid is KayKit EXTRA/paid — one-line swap in `characters.js` once purchased).
+- New files (Cowork): `src/config/characters.js` (art manifest — model/weapon/offhand per class, shared anim libs, clip names `Idle_A/Walking_A/Running_A/Death_A`, bones `handslot.r/.l`); `src/view/character.js` (`loadCharacter()` — the SINGLE place touching the PlayCanvas anim API; model + shared anims + weapon on `handslot.r`, autofit, fully guarded: model-fail→null fallback, anim-fail→static, weapon-fail→still renders); `test/characters.test.mjs`.
+- Probed (R5/R6): `node --check` clean; `node test/characters.test.mjs` → **30/30** (parses the GLBs: each model has both handslots, weapons+bins exist, anim libs contain every named clip). The anim *runtime* (assignAnimation/baseLayer transitions) is the one thing the sandbox can't run — flagged for CC's eyeball (lessons: PlayCanvas API mismatch is a known class).
+- Existing-file wiring handed to CC (R14): hub3d `_loadHero`→`loadCharacter(activeClass)` + drive idle/walk from movement; pcRenderer add `setHeroClass()` + animate from hero velocity + death; mission `start()/restart()` call `setHeroClass`; main passes `getActiveClass`; LFS-track `*.bin`.
+
+**In Friendly Words:** Your heroes are now real animated characters instead of placeholder blocks. Each Order wears its matching KayKit fighter — Warden the Knight, Hunter the Ranger, Stormcaller the Mage, and the Plague Doctor borrows the Hooded Rogue until you grab the paid Druid (then it's a one-word change). They idle and walk with the pack's animations, and each carries the right weapon in-hand. I verified all the art and animation files line up (30/30 checks), but I can't watch them move from here — so the close-prompt has Claude Code run the game and confirm they actually animate, and tune the one animation call if the engine wants it slightly different.
+
+### S6.1 — 2026-06-21 — Modular GLB dungeon-pack hookup (plug-and-play, fallback-safe)
+- S6 shipped first (CC commit `935e713`, gate green). This follow-up adds the optional pack swap.
+- New files (Cowork): `src/config/hubAssets.js` (slot manifest — floor/wall/corner/pillar/doorway/torch/timberHall, `HUB_TILE`, all optional) + `src/view/hubGlb.js` (load each container once, instantiate-tile many; null-safe).
+- `hubWorld.js` v2 (existing-file edit → close-prompt): primitives now build into swappable group roots; after build, `preloadHubKit` loads any present GLBs and `applyKit` replaces only those slots. No pack = identical procedural look. No `hub3d.js`/`main.js` changes.
+- Recommended pack: **KayKit · Dungeon Remastered (CC0)** → /public/models/dungeon/ ; timber hall optional from KayKit Medieval. Cowork can't download binaries (R: sandbox limit) — user drops the files; tune with `HUB_TILE` + per-slot `scale`/`yaw`.
+- Also wiring `node test/hubCollide.test.mjs` into `npm test` (per CC's note).
+- Probed: `node --check` clean on hubAssets/hubGlb/hubWorld-v2; collision 6/6 (verified in /tmp w/ a playcanvas stub to dodge the sync-lag package.json issue).
+
+**In Friendly Words:** I set up your game so a real textured dungeon art-pack just "drops in." Grab the free KayKit Dungeon Remastered pack, put its pieces in a `models/dungeon` folder, and the stone walls/floors/pillars automatically upgrade from my placeholder blocks to the real art — and if a file's missing, it quietly keeps the placeholder so nothing ever breaks. I can't download the pack for you (sandbox limit), so the close-prompt below has the exact link and where to put the files.
+
 ### S6 — 2026-06-21 — Spawn-map rebuild (Undercroft): modular keep + locked camera + dead-kingdom horizon
 - Locked art direction with the user first (R9): **procedural-now + GLB-ready**, **fixed close camera (no zoom)**, **full multi-room rebuild**.
 - Authored four NEW files (Cowork-side, R12/R15) + one test:
