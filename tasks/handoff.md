@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S1 — 2026-06-21 — bootstrap workflow scaffolding |
+| **Last session** | S3 — 2026-06-21 — Supabase Web3 login verified end-to-end |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S3 — 2026-06-21 — Supabase Web3 login verified end-to-end
+- Fixed the non-ASCII em-dash in the SIWS `statement` (`src/web3/supa.js`) that was causing Phantom to abort with "signature request cannot be shown due to invalid formatting" before any network call.
+- Set Supabase Auth → URL Configuration: Site URL = https://ossara-nine.vercel.app; redirect URLs = `ossara-nine.vercel.app/**` + `localhost:5173/**`. Server had been rejecting the signed message with "URI which is not allowed on this server."
+- Live test produced auth user `06167e4a…` and a corresponding `profiles` row for wallet `5P7cX…abLz`.
+- Confirmed RLS owner-write on `profiles`: the wallet-owner can upsert their own row; anon reads of others are blocked.
+- Logged the dual root cause (ASCII statement + URL config) in `tasks/lessons.md` under Build / deploy.
+
+**In Friendly Words:** The "Connect" button finally goes all the way — Phantom now shows you a readable sign-in message, you approve it, and the game writes your account to the cloud database under your wallet. Two tiny config things were silently blocking it: a fancy dash in the prompt text Phantom doesn't like, and a Supabase setting that hadn't been pointed at the live site yet. Both are recorded so we don't trip on them again.
 
 ### S2 — 2026-06-21 — Vercel deploy + tooling rules
 - First production build succeeded on Vercel; live at https://ossara-nine.vercel.app (HTML shell verified; full render pending eyeball/Chrome pair).

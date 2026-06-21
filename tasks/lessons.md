@@ -33,7 +33,10 @@ Newest entries first within each section. Sections stay even when empty — they
 
 ## Build / deploy
 
-*(None yet. The deploy artifact is Vite's `dist/`; Vercel auto-detects the Vite preset. Populate as deploy issues arise.)*
+**Supabase Web3 (Solana) sign-in silently does nothing.**
+- Symptom: clicking Connect created no session, profiles table stayed empty, no auth request hit the server.
+- Root causes (two, both required): (a) the SIWS `statement` contained a non-ASCII em-dash → Phantom throws "signature request cannot be shown due to invalid formatting" before any network call; (b) Supabase Auth URL Configuration still had Site URL=http://localhost:3000 and no redirect URLs → server rejected the signed message with "URI which is not allowed on this server."
+- Rule: keep SIWS statements plain ASCII; set Supabase Auth → URL Configuration (Site URL + redirect URLs incl. localhost) to the real deploy domain before testing Web3 login. Verify live, not from code.
 
 ## Cowork sandbox limits
 

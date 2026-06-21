@@ -22,7 +22,7 @@ export async function signInWithWallet() {
   try {
     const { data, error } = await supa.auth.signInWithWeb3({
       chain: "solana",
-      statement: "Sign in to OSSARA — hold the breach, loot the dead.",
+      statement: "Sign in to OSSARA - hold the breach, loot the dead.",
     });
     if (error) return { ok: false, error: error.message };
     const address = data?.user?.user_metadata?.address || data?.user?.user_metadata?.custom_claims?.address || null;
