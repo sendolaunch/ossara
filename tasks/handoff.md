@@ -14,6 +14,17 @@ Close every session by updating this file per the R16 ritual.
 | **Build tool** | Vite 5 (ESM, vanilla JS). Deploy target: Vercel (static) |
 | **Open destructive ops** | None |
 
+## Supabase
+| Field | Value |
+|---|---|
+| Project | Ossara (org: sendolaunch) |
+| Project ref | kwcnmxouzjmsieutwrae |
+| Region | us-west-2 |
+| API URL | https://kwcnmxouzjmsieutwrae.supabase.co |
+| Publishable (anon) key | sb_publishable_xVPCGcQEzZ-zrFCClMtSfQ_HjiDrsd6  (public) |
+| Service-role key | SECRET — Vercel env SUPABASE_SERVICE_ROLE_KEY only, never in repo |
+| First migration | supabase/migrations/0001_profiles.sql (profiles table, RLS read-only, writes via serverless) |
+
 ---
 
 ## Active backlog
