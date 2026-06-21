@@ -12,6 +12,7 @@
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
     "playcanvas": "~1.77.0",
     "three": "^0.160.1"
   },
