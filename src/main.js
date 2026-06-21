@@ -159,6 +159,8 @@ heroSelect = new HeroSelect(screensRoot, {
   onPlay: (cid) => { setActive(profile, cid); persist(); enterHub(); },
   onOpenStash: () => showStation("stash"),
   onBack: () => { heroSelect.hide(); flow.showLogin(); },
+  onPersist: () => persist(),
+  uiRoot: ui,
 });
 screensRoot.appendChild(heroSelect.el);
 heroSelect.hide();

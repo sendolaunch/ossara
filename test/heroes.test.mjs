@@ -7,6 +7,7 @@ import assert from "node:assert";
 import {
   SAVE_VERSION, createAccount, createHero, ensureHero, hasHero, getActiveHero,
   setActive, addItem, equip, unequip, salvage, getBonuses, migrate, emptyEquipped,
+  setHeroName,
 } from "../src/sim/heroes.js";
 
 let passed = 0;
@@ -107,6 +108,19 @@ const item = (id, slot, power = 8, perks = []) => ({ id, slot, rarity: "common",
   ok(h.level === 7 && h.xp === 320 && h.gold === 99, "hero stats carried");
   ok(h.cleared.length === 1, "cleared carried");
   ok(h.equipped.weapon && h.equipped.weapon.id === "eq", "equipped weapon carried");
+}
+
+// --- per-hero username (locked, set-once) ------------------------------------
+{
+  const a = createAccount();
+  setActive(a, "warden");
+  ok(a.heroes.warden.username === null, "username defaults to null on a fresh hero");
+  ok(setHeroName(a, "warden", "Zelin") === a.heroes.warden, "setHeroName returns the hero");
+  ok(a.heroes.warden.username === "Zelin", "first claim sticks");
+  setHeroName(a, "warden", "Imposter");
+  ok(a.heroes.warden.username === "Zelin", "setHeroName won't overwrite a claimed name");
+  ok(setHeroName(a, "stormcaller", "Storm") === null, "setHeroName on an uncreated hero is a no-op");
+  ok(createHero("hunter").username === null, "createHero starts with username=null");
 }
 
 // --- migration guards --------------------------------------------------------

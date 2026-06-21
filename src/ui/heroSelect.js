@@ -17,6 +17,9 @@
 
 import { CSS } from "../config/palette.js";
 import { CLASSES, CLASS_ORDER } from "../config/classes.js";
+import { openHeroNameModal } from "./nameModal.js";
+import { loadMyHeroNames } from "../web3/heronames.js";
+import { setHeroName, ensureHero } from "../sim/heroes.js";
 
 // ornate-stone palette (warm, torchlit — independent of the green UI theme)
 const GOLD = "#e8d29a";
@@ -36,11 +39,13 @@ const el = (tag, style = {}, html) => {
 };
 
 export class HeroSelect {
-  constructor(root, { getAccount, onPlay, onOpenStash, onBack } = {}) {
+  constructor(root, { getAccount, onPlay, onOpenStash, onBack, onPersist, uiRoot } = {}) {
     this.getAccount = getAccount || (() => ({ heroes: {}, activeClass: null, name: "" }));
     this.onPlay = onPlay || (() => {});
     this.onOpenStash = onOpenStash || (() => {});
     this.onBack = onBack || (() => {});
+    this.onPersist = onPersist || (() => {});
+    this._uiRoot = uiRoot || document.body;
     this.selected = null;
     this._build();
   }
@@ -122,13 +127,29 @@ export class HeroSelect {
     const stash = this._btn("◈ Shared Stash", "stone"); stash.onclick = () => this.onOpenStash();
     this.enterBtn = this._btn("Enter the Undercroft ▸", "gold");
     this._setEnter(false);
-    this.enterBtn.onclick = () => { if (this.selected) this.onPlay(this.selected); };
+    this.enterBtn.onclick = () => { if (this.selected) this._enterFlow(this.selected); };
     foot.append(back, stash, this.enterBtn);
 
     panel.append(title, tag, this.grid, this.hint, foot);
     s.appendChild(panel);
 
     this.el = s;
+  }
+
+  _enterFlow(cid) {
+    const acct = this.getAccount();
+    const hero = ensureHero(acct, cid);
+    if (hero && hero.username) { this.onPlay(cid); return; }
+    openHeroNameModal(this._uiRoot, {
+      classId: cid,
+      heroLabel: CLASSES[cid].name,
+      onClaimed: (u) => {
+        setHeroName(acct, cid, u);
+        this.onPersist();
+        this._paint();
+        this.onPlay(cid);
+      },
+    });
   }
 
   _btn(label, kind) {
@@ -201,8 +222,16 @@ export class HeroSelect {
       p.portrait.src = `art/class-${cid}.png`;
 
       if (hero) {
-        p.name.textContent = acct.name ? acct.name : c.name;
-        p.sub.innerHTML = `<span style="color:${GOLD}">Lv ${hero.level}</span> · ${c.name}${c.ready ? "" : " (preview)"}`;
+        p.name.textContent = hero.username || c.name;
+        if (hero.username) {
+          p.sub.innerHTML =
+            `<span style="color:${GOLD}">🔒 ${hero.username}</span>` +
+            ` · ${c.name} <span style="color:${GOLD}">Lv ${hero.level}</span>${c.ready ? "" : " (preview)"}`;
+        } else {
+          p.sub.innerHTML =
+            `<span style="color:${GOLD}">Lv ${hero.level}</span> · ${c.name}${c.ready ? "" : " (preview)"}` +
+            ` · <span style="opacity:.8">choose a name</span>`;
+        }
         p.ring.style.borderColor = isSel ? GOLD : GOLD_DIM;
         p.ring.style.boxShadow = isSel
           ? "0 0 30px rgba(255,170,70,0.6), inset 0 0 24px rgba(255,170,70,0.3)"
@@ -221,13 +250,27 @@ export class HeroSelect {
     }
   }
 
-  show() {
+  async show() {
     const acct = this.getAccount();
     this.selected = acct.activeClass && acct.heroes[acct.activeClass] ? acct.activeClass : null;
     if (this.selected) this._select(this.selected);
     else { this._setEnter(false, "Enter the Undercroft ▸"); this.hint.textContent = "Choose a portal to begin."; }
     this._paint();
     this.el.style.display = "flex";
+    // pull server-side names — server wins so a cross-device claim shows up
+    try {
+      const names = await loadMyHeroNames();
+      let changed = false;
+      for (const cid of Object.keys(names)) {
+        if (!names[cid]) continue;
+        if (!acct.heroes[cid]) ensureHero(acct, cid);
+        if (acct.heroes[cid] && !acct.heroes[cid].username) {
+          setHeroName(acct, cid, names[cid]);
+          changed = true;
+        }
+      }
+      if (changed) { this.onPersist(); this._paint(); }
+    } catch (_) { /* offline / no-auth — local view stays */ }
   }
 
   hide() { this.el.style.display = "none"; }

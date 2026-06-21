@@ -35,6 +35,11 @@ Newest entries first within each section. Sections stay even when empty — they
 
 ## Build / deploy
 
+**Live deploy serves Git LFS *pointer files*, not the real assets → all 3D models fall back to placeholders.**
+- **Symptom:** local `npm run dev` shows the real GLB hero/characters; the Vercel deploy shows the primitive-capsule fallback for every model. `fetch('/models/.../X.glb')` returns 200 but the body is ~130 bytes starting `version https://git-lfs.github.com/spec/v1`.
+- **Root cause:** binaries are Git-LFS-tracked (R18). Vercel does NOT pull LFS objects unless **Git LFS is enabled in Project Settings → Git**, so it serves the pointer stub. PlayCanvas can't parse it → `loadGlb` fails → primitive fallback. The local gate can't catch this (it reads real local LFS files).
+- **Rule:** any LFS-tracked asset that must be *served to the browser* requires **Git LFS enabled on the host (Vercel) + a redeploy**. After any deploy touching models, verify live with `fetch(url).then(r=>r.text())` and check it's binary, not an LFS pointer — this is part of R26's "live renders the new commit." (R5, R6, R26)
+
 **Supabase Web3 (Solana) sign-in silently does nothing.**
 - Symptom: clicking Connect created no session, profiles table stayed empty, no auth request hit the server.
 - Root causes (two, both required): (a) the SIWS `statement` contained a non-ASCII em-dash → Phantom throws "signature request cannot be shown due to invalid formatting" before any network call; (b) Supabase Auth URL Configuration still had Site URL=http://localhost:3000 and no redirect URLs → server rejected the signed message with "URI which is not allowed on this server."

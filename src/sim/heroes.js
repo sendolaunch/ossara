@@ -27,7 +27,15 @@ export function emptyEquipped() {
 }
 
 export function createHero(classId) {
-  return { classId, level: 1, xp: 0, gold: 0, cleared: [], equipped: emptyEquipped() };
+  return { classId, username: null, level: 1, xp: 0, gold: 0, cleared: [], equipped: emptyEquipped() };
+}
+
+// Permanent per-hero username. Immutable: only sets when the slot is still empty.
+// Once a name is claimed server-side and synced, it cannot be overwritten.
+export function setHeroName(acct, classId, username) {
+  const h = acct && acct.heroes && acct.heroes[classId];
+  if (h && !h.username) h.username = username;
+  return h || null;
 }
 
 export function createAccount() {
@@ -42,6 +50,7 @@ export function ensureHero(acct, classId) {
   if (!h.equipped || typeof h.equipped !== "object") h.equipped = emptyEquipped();
   for (const s of SLOTS) if (!(s in h.equipped)) h.equipped[s] = null;
   if (!Array.isArray(h.cleared)) h.cleared = [];
+  if (!("username" in h)) h.username = null;
   return h;
 }
 

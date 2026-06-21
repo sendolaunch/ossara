@@ -45,6 +45,13 @@ Close every session by updating this file per the R16 ritual.
 
 ## Session log (newest first)
 
+### S6.3 — 2026-06-21 — Live-verify: deploy serves LFS pointers (blocker found)
+- Drove the live site (Chrome MCP): badge confirms `5a714b7`, hub renders, but the hero is the **placeholder capsule** — KayKit model didn't load.
+- Root cause proven: `fetch('/models/characters/Knight.glb')` → 200 but a **131-byte LFS pointer** (`version https://git-lfs.github.com/spec/v1...`). Vercel isn't pulling LFS → every `.glb` is a stub → primitive fallback. Local dev works (real LFS files on disk); the gate can't see it.
+- **Fix (user action — settings, R25):** Vercel → Project Settings → Git → enable **Git LFS**, then **redeploy**. Then re-verify the fetch returns binary, not a pointer.
+- Logged the bug-class in lessons (Build/deploy). Everything character-side is correct in code + on disk; this is purely a host setting. The 3D Select-Heroes portraits are queued behind this (no point shipping them until models actually load on the deploy).
+- **Locked-username feature — backend foundations authored (verified), wiring pending CC.** User chose: a separate name PER HERO, globally unique + permanent. New files: `supabase/migrations/0004_hero_names.sql` (table + RLS: public read, auth-only claim, NO update/delete = immutable; PK on lower(username) = global unique; one name per owner+class); `src/sim/username.js` (pure rules, 17/17 test); `test/username.test.mjs`; `src/web3/heronames.js` (claim/isAvailable/loadMyHeroNames via `supa`); `src/ui/nameModal.js` (themed set-name modal). Pending (close-prompt): apply migration 0004 (Supabase write, R25 → user); add `username` to the Hero shape in `src/sim/heroes.js`; wire `heroSelect.js` to show each hero's locked name + open the modal on create; add username.test to `npm test`. Claiming requires wallet sign-in (no global name without a session).
+
 ### S6.2 — 2026-06-21 — KayKit Adventurers: animated per-class heroes + weapons (hub + mission)
 - User supplied **KayKit Adventurers 2.0 (CC0)**; imported to `public/models/characters/` (6 chars + `anim/` 2 shared libs + `weapons/` gltf+bin+atlas pngs). Characters are self-contained GLB; weapons reference per-theme atlas PNGs (all copied).
 - Class→model (user-chosen): Warden=Knight, Hunter=Ranger, Stormcaller=Mage, **Plague Doctor=Rogue_Hooded as a stand-in for the Druid** (Druid is KayKit EXTRA/paid — one-line swap in `characters.js` once purchased).

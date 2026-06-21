@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/sim.test.mjs && node test/loot.test.mjs && node test/heroes.test.mjs && node test/hubCollide.test.mjs && node test/characters.test.mjs",
+    "test": "node test/sim.test.mjs && node test/loot.test.mjs && node test/heroes.test.mjs && node test/hubCollide.test.mjs && node test/characters.test.mjs && node test/username.test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
