@@ -54,7 +54,10 @@ export class Mission {
     this.classId = classId || "warden";
     this.mode = opts;
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
-    this.world = new World(LEVEL, opts.tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers });
+    this._bonuses = opts.bonuses || {};
+    this.onWin = opts.onWin || null;
+    this._wonFired = false;
+    this.world = new World(LEVEL, opts.tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
     this.renderer.reset();
     this.hud.reset();
     this.hud.setTowers(this.world.availableTowers);
@@ -71,7 +74,8 @@ export class Mission {
   restart() {
     const tutorial = !!(this.mode && this.mode.tutorial);
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
-    this.world = new World(LEVEL, tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers });
+    this._wonFired = false;
+    this.world = new World(LEVEL, tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
     this.renderer.reset();
     this.hud.reset();
     this.hud.setTowers(this.world.availableTowers);
@@ -116,6 +120,7 @@ export class Mission {
       first = false;
       guard++;
     }
+    if (this.world.status === "won" && !this._wonFired) { this._wonFired = true; if (this.onWin) this.onWin(); }
 
     this.renderer.update(this.world, Math.min(dt, 0.05));
     this.hud.update(this.world);

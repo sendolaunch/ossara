@@ -9,9 +9,15 @@ import { Hub } from "./ui/hub3d.js";
 import { MapSelect } from "./ui/mapselect.js";
 import { CSS } from "./config/palette.js";
 import { mountVersionBadge } from "./ui/versionBadge.js";
+import { loadProfile, saveProfile, addItem, getBonuses } from "./sim/profile.js";
+import { makeRng } from "./sim/rng.js";
+import { rollMissionDrops } from "./sim/loot.js";
+import { Inventory } from "./ui/inventory.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
+const profile = loadProfile();
+let inventoryUI = null;
 app.style.display = "none"; // hidden until we enter the hub
 
 const screensRoot = document.createElement("div");
@@ -67,12 +73,24 @@ function startMission() {
   if (!mission) {
     mission = new Mission(app, ui, { onExit: () => enterHub() });
   }
-  mission.start(classId, {});
+  mission.start(classId, {
+    bonuses: getBonuses(profile),
+    onWin: () => {
+      const drops = rollMissionDrops(makeRng(), { ilvl: 1, difficulty: 0 });
+      drops.forEach((d) => addItem(profile, d));
+      saveProfile(profile);
+    },
+  });
 }
 
 // ---- station placeholder modal -------------------------------------------
 let stationModal = null;
 function showStation(id) {
+  if (id === "stash") {
+    if (!inventoryUI) inventoryUI = new Inventory(ui, { getProfile: () => profile, onChange: () => saveProfile(profile) });
+    inventoryUI.open();
+    return;
+  }
   const names = {
     quartermaster: "Quartermaster",
     salvager: "Salvager",
@@ -105,6 +123,7 @@ const flow = new ScreenFlow(screensRoot, {
   onEnterUndercroft: (cid, name) => {
     classId = cid;
     username = name;
+    profile.name = name; profile.classId = cid; saveProfile(profile);
     enterHub();
   },
   onLaunchMission: (cid) => {

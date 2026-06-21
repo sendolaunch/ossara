@@ -27,6 +27,7 @@ export class World {
     this.waves = waves;
     this.heroDef = opts.hero || CLASS_KITS.warden.hero;
     this.availableTowers = opts.towers || Object.keys(TOWERS);
+    this.bonuses = opts.bonuses || {};
     this.lane = buildLanePath(level);
     this.pathSet = pathCellSet(level);
     this.occupied = new Set(); // cell keys with a tower on them
@@ -42,8 +43,18 @@ export class World {
     this.projPool = new Pool(createProjectile, resetProjectile);
     this.towers = [];
     this.hero = createHero(this.heroDef, level);
+    const _B = this.bonuses;
+    this.hero.ability = { ...this.hero.ability };
+    this.hero.attackDamage *= 1 + (_B.heroDamagePct || 0) / 100;
+    this.hero.ability.damage *= 1 + (_B.heroDamagePct || 0) / 100;
+    this.hero.maxHp = Math.round(this.hero.maxHp * (1 + (_B.heroHpPct || 0) / 100));
+    this.hero.hp = this.hero.maxHp;
+    this.hero.speed *= 1 + (_B.movePct || 0) / 100;
+    this.hero.attackRate *= 1 + (_B.fireRatePct || 0) / 100;
 
-    this.core = { hp: level.coreHp, maxHp: level.coreHp, ...gridToWorld(level.core.col, level.core.row, level) };
+    const _wardMul = 1 + (this.bonuses.wardPct || 0) / 100;
+    const _coreHp = Math.round(level.coreHp * _wardMul);
+    this.core = { hp: _coreHp, maxHp: _coreHp, ...gridToWorld(level.core.col, level.core.row, level) };
     this.marrow = level.startingMarrow;
 
     // Wave state machine.
@@ -105,6 +116,9 @@ export class World {
     this.marrow -= def.cost;
     const w = gridToWorld(col, row, this.level);
     const tower = createTower(def, col, row, w);
+    tower.damage *= 1 + (this.bonuses.towerDamagePct || 0) / 100;
+    tower.range *= 1 + (this.bonuses.rangePct || 0) / 100;
+    tower.fireRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
     this.towers.push(tower);
     this.occupied.add(cellKey(col, row));
     this.events.push({ kind: "place", x: w.x, z: w.z });
@@ -189,7 +203,7 @@ export class World {
     if (!e.alive || e.counted) return;
     e.counted = true;
     e.alive = false;
-    this.marrow += e.bounty;
+    this.marrow += Math.round(e.bounty * (1 + (this.bonuses.marrowPct || 0) / 100));
     this.stats.kills++;
     this.events.push({ kind: "kill", x: e.x, z: e.z, bounty: e.bounty, boss: e.boss });
   }

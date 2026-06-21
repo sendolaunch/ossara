@@ -64,7 +64,7 @@ section("building rules");
   ok(!r3.ok && r3.reason === "blocked", "cannot place on the lane");
 
   w.marrow = 0;
-  const r4 = w.tryPlaceTower("ballista", 1, 1);
+  const r4 = w.tryPlaceTower("ballista", 0, 1);
   ok(!r4.ok && r4.reason === "marrow", "cannot afford without marrow");
 }
 
