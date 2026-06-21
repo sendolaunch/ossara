@@ -1,20 +1,32 @@
 // SELECT HEROES — the roster screen, modelled on Dungeon Defenders' hero-select
-// (radial portal slots in a ring, ornate stone frame). One portal per order; a
-// portal is either an existing hero (class + level) or an empty "Create Hero"
-// slot. Picking a portal selects that hero; "Enter the Undercroft" takes them in.
-// Single-player only — no local/co-op start. The shared Stash opens from here too.
+// (radial portal slots in a ring). Art direction: ORNATE STONE, TORCHLIT —
+// carved stone panel, gilded double frame, warm torch glow, candle-lit rune
+// rings. One portal per order; a portal is either an existing hero (class +
+// level) or an empty "Create Hero" slot. Picking a portal selects that hero;
+// "Enter the Undercroft" takes them in. Single-player only (no co-op start).
+// The shared Stash opens from here too.
+//
+// Background: drops in /public/art/hall-bg.png (an ornate torchlit stone hall)
+// if present; otherwise a layered-CSS stone+torch fallback keeps it readable.
+// Hero faces: /public/art/class-<id>.png if present, else a gilded initial.
+// (Live 3D customised heroes with modular gear land in a later pass.)
 //
 // Construction:
-//   new HeroSelect(root, {
-//     getAccount,        // () => account (sim/heroes.js shape)
-//     onPlay,            // (classId) => void  — create-if-needed, set active, enter hub
-//     onOpenStash,       // () => void         — open the shared stash
-//     onBack,            // () => void         — back to the title/login
-//   })
-//   heroSelect.show();  heroSelect.hide();
+//   new HeroSelect(root, { getAccount, onPlay, onOpenStash, onBack })
+//   heroSelect.mount(root); heroSelect.show(); heroSelect.hide();
 
 import { CSS } from "../config/palette.js";
 import { CLASSES, CLASS_ORDER } from "../config/classes.js";
+
+// ornate-stone palette (warm, torchlit — independent of the green UI theme)
+const GOLD = "#e8d29a";
+const GOLD_DIM = "#b8954e";
+const GOLD_DEEP = "#7c5e25";
+const STONE_HI = "#332c22";
+const STONE_LO = "#171310";
+const TORCH = "rgba(255,168,74,0.85)";
+const PARCH = "#d8c8a4";
+const ASH = CSS.ash || "#9a917c";
 
 const el = (tag, style = {}, html) => {
   const e = document.createElement(tag);
@@ -22,16 +34,10 @@ const el = (tag, style = {}, html) => {
   if (html != null) e.innerHTML = html;
   return e;
 };
-const button = (label, cls = "") => {
-  const b = el("button");
-  b.className = "oss-btn" + (cls ? " " + cls : "");
-  b.textContent = label;
-  return b;
-};
 
 export class HeroSelect {
   constructor(root, { getAccount, onPlay, onOpenStash, onBack } = {}) {
-    this.getAccount = getAccount || (() => ({ heroes: {}, activeClass: null }));
+    this.getAccount = getAccount || (() => ({ heroes: {}, activeClass: null, name: "" }));
     this.onPlay = onPlay || (() => {});
     this.onOpenStash = onOpenStash || (() => {});
     this.onBack = onBack || (() => {});
@@ -40,101 +46,136 @@ export class HeroSelect {
   }
 
   _build() {
-    const s = el("div");
-    s.className = "oss-screen";
-    s.appendChild(Object.assign(el("div"), { className: "oss-fog" }));
-
-    const title = el("h1", { fontSize: "44px", margin: "6px 0 2px" }, "Select Heroes");
-    title.className = "oss-title";
-    const tag = el("div", { marginBottom: "10px" }, "Four orders. One survivor each. The stash is shared.");
-    tag.className = "oss-tag";
-
-    // 2x2 ring of portals (diamond feel via alternating offsets)
-    this.grid = el("div", {
-      display: "grid",
-      gridTemplateColumns: "repeat(2, 220px)",
-      gap: "18px 48px",
-      justifyContent: "center",
-      margin: "8px auto 4px",
+    const s = el("div", {
+      position: "absolute", inset: "0", display: "none",
+      alignItems: "center", justifyContent: "center", zIndex: "10",
+      fontFamily: "'EB Garamond', Georgia, serif",
     });
 
+    // --- background: stone hall image with a torchlit CSS fallback ----------
+    const bg = el("div", {
+      position: "absolute", inset: "0",
+      background:
+        "radial-gradient(120% 90% at 50% -10%, rgba(255,150,60,0.10), rgba(0,0,0,0) 55%)," +
+        "radial-gradient(60% 50% at 12% 30%, rgba(255,150,60,0.12), rgba(0,0,0,0) 60%)," +
+        "radial-gradient(60% 50% at 88% 30%, rgba(255,150,60,0.12), rgba(0,0,0,0) 60%)," +
+        "linear-gradient(180deg, #16120e 0%, #0c0a08 60%, #060504 100%)",
+    });
+    const bgImg = document.createElement("img");
+    bgImg.src = "art/hall-bg.png";
+    bgImg.alt = "";
+    Object.assign(bgImg.style, {
+      position: "absolute", inset: "0", width: "100%", height: "100%",
+      objectFit: "cover", opacity: "0", transition: "opacity .4s",
+    });
+    bgImg.onload = () => { bgImg.style.opacity = "0.9"; };
+    bgImg.onerror = () => { bgImg.style.display = "none"; };
+    const vignette = el("div", {
+      position: "absolute", inset: "0", pointerEvents: "none",
+      background: "radial-gradient(110% 80% at 50% 40%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.72) 100%)",
+    });
+    s.append(bg, bgImg, vignette);
+
+    // --- carved stone panel with gilded double frame ------------------------
+    const panel = el("div", {
+      position: "relative", width: "min(880px, 94vw)", padding: "30px 34px 24px",
+      borderRadius: "16px",
+      background: `linear-gradient(180deg, ${STONE_HI}, ${STONE_LO})`,
+      border: `2px solid ${GOLD_DIM}`,
+      boxShadow:
+        `0 0 0 6px rgba(0,0,0,0.55), inset 0 0 0 2px ${GOLD_DEEP},` +
+        `inset 0 2px 40px rgba(255,170,80,0.08), 0 26px 80px rgba(0,0,0,0.7)`,
+      textAlign: "center",
+    });
+    // gilded corner studs
+    for (const [cx, cy] of [["8px", "8px"], ["8px", "8px"]]) {} // (kept simple — frame above reads as ornate)
+
+    const title = el("div", {
+      font: "800 46px 'Cinzel', serif", letterSpacing: "8px", color: GOLD,
+      textShadow: "0 2px 0 #000, 0 0 26px rgba(255,170,70,0.45)", margin: "2px 0 2px",
+    }, "SELECT HEROES");
+    const tag = el("div", {
+      color: PARCH, opacity: ".85", letterSpacing: "3px", fontSize: "13px",
+      textTransform: "uppercase", marginBottom: "16px",
+    }, "Four orders · One survivor each · The stash is shared");
+
+    this.grid = el("div", {
+      display: "grid", gridTemplateColumns: "repeat(2, 220px)",
+      gap: "14px 64px", justifyContent: "center", margin: "6px auto 2px",
+    });
     this.portals = {};
     CLASS_ORDER.forEach((cid, i) => {
       const p = this._portal(cid);
-      // nudge columns up/down to echo the DD diamond
-      p.wrap.style.transform = i % 2 === 0 ? "translateY(0)" : "translateY(22px)";
+      p.wrap.dataset.base = i % 2 === 0 ? "translateY(0px)" : "translateY(20px)";
+      p.wrap.style.transform = p.wrap.dataset.base;
       this.grid.appendChild(p.wrap);
       this.portals[cid] = p;
     });
 
-    // footer: Back (left) · Shared Stash (mid) · Enter (right)
-    const foot = el("div", { display: "flex", gap: "12px", justifyContent: "center", alignItems: "center", marginTop: "18px", flexWrap: "wrap" });
-    const back = button("‹ Leave", "ghost");
-    back.onclick = () => this.onBack();
-    const stash = button("📦 Shared Stash", "");
-    stash.onclick = () => this.onOpenStash();
-    this.enterBtn = button("Enter the Undercroft ▸", "primary");
-    this.enterBtn.disabled = true;
-    this.enterBtn.style.opacity = "0.5";
+    this.hint = el("div", {
+      color: PARCH, fontSize: "13px", minHeight: "20px", margin: "12px 0 6px",
+      fontStyle: "italic", opacity: ".9",
+    }, "Choose a portal to begin.");
+
+    const foot = el("div", { display: "flex", gap: "14px", justifyContent: "center", alignItems: "center", marginTop: "6px", flexWrap: "wrap" });
+    const back = this._btn("‹ Leave", "ghost"); back.onclick = () => this.onBack();
+    const stash = this._btn("◈ Shared Stash", "stone"); stash.onclick = () => this.onOpenStash();
+    this.enterBtn = this._btn("Enter the Undercroft ▸", "gold");
+    this._setEnter(false);
     this.enterBtn.onclick = () => { if (this.selected) this.onPlay(this.selected); };
     foot.append(back, stash, this.enterBtn);
 
-    this.hint = el("div", { color: CSS.ash, fontSize: "12px", minHeight: "18px", marginTop: "8px" }, "Choose a portal to begin.");
-
-    const { frame: f, inner } = this._frame();
-    inner.style.width = "min(760px, 94vw)";
-    inner.style.textAlign = "center";
-    inner.append(title, tag, this.grid, this.hint, foot);
-    s.appendChild(f);
+    panel.append(title, tag, this.grid, this.hint, foot);
+    s.appendChild(panel);
 
     this.el = s;
-    this.root = null; // set on first show
-    this._rootEl = s;
   }
 
-  _frame() {
-    const f = el("div");
-    f.className = "oss-frame";
-    const inner = el("div");
-    inner.className = "oss-inner";
-    f.appendChild(inner);
-    return { frame: f, inner };
+  _btn(label, kind) {
+    const base = {
+      font: "700 14px 'Cinzel', serif", letterSpacing: "2px", padding: "11px 20px",
+      borderRadius: "9px", cursor: "pointer", color: PARCH, transition: "all .15s",
+      border: `1.5px solid ${GOLD_DEEP}`, background: `linear-gradient(180deg, #2a241b, #15110d)`,
+    };
+    const b = el("button", base, label);
+    if (kind === "gold") Object.assign(b.style, {
+      color: "#241a08", border: `1.5px solid ${GOLD}`,
+      background: `linear-gradient(180deg, ${GOLD}, ${GOLD_DIM})`,
+      boxShadow: "0 0 18px rgba(255,170,70,0.35)",
+    });
+    b.onmouseenter = () => { if (!b.disabled) b.style.filter = "brightness(1.15)"; };
+    b.onmouseleave = () => { b.style.filter = "none"; };
+    return b;
+  }
+
+  _setEnter(on, label) {
+    this.enterBtn.disabled = !on;
+    this.enterBtn.style.opacity = on ? "1" : "0.45";
+    this.enterBtn.style.cursor = on ? "pointer" : "default";
+    if (label) this.enterBtn.textContent = label;
   }
 
   _portal(cid) {
     const c = CLASSES[cid];
-    const wrap = el("div", { display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", userSelect: "none" });
+    const wrap = el("div", { display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", userSelect: "none", transition: "transform .15s" });
 
-    // glowing ring + portrait/initial
     const ring = el("div", {
       width: "150px", height: "150px", borderRadius: "50%", position: "relative",
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: "radial-gradient(circle at 50% 38%, rgba(110,230,90,0.10), rgba(7,8,6,0.85))",
-      border: "2px solid #5c451c", transition: "box-shadow .15s, border-color .15s, transform .15s",
+      background: `radial-gradient(circle at 50% 36%, rgba(255,170,80,0.10), ${STONE_LO} 70%)`,
+      border: `3px solid ${GOLD_DEEP}`, transition: "box-shadow .15s, border-color .15s",
     });
-
     const portrait = document.createElement("img");
-    Object.assign(portrait.style, {
-      position: "absolute", inset: "10px", width: "calc(100% - 20px)", height: "calc(100% - 20px)",
-      objectFit: "cover", borderRadius: "50%", display: "none",
-    });
+    Object.assign(portrait.style, { position: "absolute", inset: "9px", width: "calc(100% - 18px)", height: "calc(100% - 18px)", objectFit: "cover", borderRadius: "50%", display: "none" });
+    const initial = el("div", { width: "100%", height: "100%", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", font: "800 48px 'Cinzel', serif", color: GOLD, opacity: ".85", textShadow: "0 2px 0 #000" }, c.name.charAt(0));
     portrait.onload = () => { portrait.style.display = ""; initial.style.display = "none"; };
     portrait.onerror = () => { portrait.style.display = "none"; initial.style.display = "flex"; };
-
-    const initial = el("div", {
-      width: "100%", height: "100%", borderRadius: "50%", display: "flex",
-      alignItems: "center", justifyContent: "center", font: "800 46px 'Cinzel', serif",
-      color: CSS.bone, opacity: ".85",
-    }, c.name.charAt(0));
-
     ring.append(initial, portrait);
 
-    const name = el("div", { font: "800 17px 'Cinzel', serif", letterSpacing: "1px", marginTop: "8px", color: CSS.bone }, "");
-    const sub = el("div", { fontSize: "12px", color: CSS.ash, lineHeight: "1.4" }, "");
-
+    const name = el("div", { font: "800 17px 'Cinzel', serif", letterSpacing: "1px", marginTop: "9px", color: GOLD }, "");
+    const sub = el("div", { fontSize: "12px", color: ASH, lineHeight: "1.4" }, "");
     wrap.append(ring, name, sub);
     wrap.onclick = () => this._select(cid);
-
     return { wrap, ring, portrait, initial, name, sub, classId: cid };
   }
 
@@ -143,12 +184,10 @@ export class HeroSelect {
     const acct = this.getAccount();
     const exists = !!(acct.heroes && acct.heroes[cid]);
     const c = CLASSES[cid];
-    this.enterBtn.disabled = false;
-    this.enterBtn.style.opacity = "1";
-    this.enterBtn.textContent = exists ? "Enter the Undercroft ▸" : `Create ${c.name} ▸`;
+    this._setEnter(true, exists ? "Enter the Undercroft ▸" : `Create ${c.name} ▸`);
     this.hint.innerHTML = exists
-      ? `<span class="oss-plague">${c.name}</span> of ${c.order} — ${c.role}`
-      : `New hero: <span class="oss-plague">${c.name}</span> — ${c.special.split(" — ")[0]}`;
+      ? `<span style="color:${GOLD}">${c.name}</span> of ${c.order} — ${c.role}`
+      : `New hero: <span style="color:${GOLD}">${c.name}</span> — ${c.special.split(" — ")[0]}`;
     this._paint();
   }
 
@@ -159,49 +198,39 @@ export class HeroSelect {
       const c = CLASSES[cid];
       const hero = acct.heroes && acct.heroes[cid];
       const isSel = this.selected === cid;
-
-      // portrait attempt (created heroes try class art; empties stay as initial)
       p.portrait.src = `art/class-${cid}.png`;
 
       if (hero) {
-        p.name.textContent = acct.name ? `${acct.name}` : c.name;
-        p.sub.innerHTML = `<span class="oss-gold">Lv ${hero.level}</span> · ${c.name}${c.ready ? "" : " (preview)"}`;
-        p.ring.style.borderColor = isSel ? "#e9d8a6" : "#7a5a1f";
+        p.name.textContent = acct.name ? acct.name : c.name;
+        p.sub.innerHTML = `<span style="color:${GOLD}">Lv ${hero.level}</span> · ${c.name}${c.ready ? "" : " (preview)"}`;
+        p.ring.style.borderColor = isSel ? GOLD : GOLD_DIM;
         p.ring.style.boxShadow = isSel
-          ? "0 0 26px rgba(110,230,90,0.55), inset 0 0 22px rgba(110,230,90,0.25)"
-          : "0 0 14px rgba(110,230,90,0.22)";
+          ? "0 0 30px rgba(255,170,70,0.6), inset 0 0 24px rgba(255,170,70,0.3)"
+          : "0 0 16px rgba(255,150,60,0.3)";
         p.initial.style.opacity = "0.9";
       } else {
         p.name.textContent = c.name;
         p.sub.innerHTML = `<span style="opacity:.8">Create Hero</span>`;
-        p.ring.style.borderColor = isSel ? "#e9d8a6" : "#5c451c";
-        p.ring.style.boxShadow = isSel ? "0 0 22px rgba(233,216,166,0.5)" : "none";
-        p.initial.style.opacity = "0.45";
+        p.ring.style.borderColor = isSel ? GOLD : GOLD_DEEP;
+        p.ring.style.boxShadow = isSel ? "0 0 24px rgba(255,170,70,0.5)" : "none";
+        p.initial.style.opacity = "0.4";
         p.portrait.style.display = "none";
         p.initial.style.display = "flex";
       }
-      p.wrap.style.transform = (p.wrap.dataset.base || "") + (isSel ? " scale(1.04)" : "");
+      p.wrap.style.transform = (p.wrap.dataset.base || "") + (isSel ? " scale(1.05)" : "");
     }
   }
 
   show() {
-    // re-pick the active hero by default if there is one
     const acct = this.getAccount();
     this.selected = acct.activeClass && acct.heroes[acct.activeClass] ? acct.activeClass : null;
     if (this.selected) this._select(this.selected);
-    else { this.enterBtn.disabled = true; this.enterBtn.style.opacity = "0.5"; this.enterBtn.textContent = "Enter the Undercroft ▸"; }
+    else { this._setEnter(false, "Enter the Undercroft ▸"); this.hint.textContent = "Choose a portal to begin."; }
     this._paint();
     this.el.style.display = "flex";
   }
 
-  hide() {
-    this.el.style.display = "none";
-  }
+  hide() { this.el.style.display = "none"; }
 
-  // mount helper (main.js appends this.el to the screens root)
-  mount(root) {
-    root.appendChild(this.el);
-    this.el.style.display = "none";
-    return this;
-  }
+  mount(root) { root.appendChild(this.el); this.el.style.display = "none"; return this; }
 }

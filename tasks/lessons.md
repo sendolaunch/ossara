@@ -64,6 +64,10 @@ Newest entries first within each section. Sections stay even when empty — they
 
 ## Workflow
 
+**Lock subjective art direction with the user BEFORE building a reskin.**
+- Symptom: past look-misses came from guessing the user's taste, then having to re-skin.
+- Rule: present options + a recommendation (R9) before any visual rework; once direction is locked, drive richness through swappable art-asset slots with CSS fallbacks (so missing files degrade, not break) — not through hardcoded visuals.
+
 **Tempted to edit an existing file from Cowork.**
 - **Symptom:** wanting to "just fix" a file the user already had on disk.
 - **Root cause:** faster in the moment, but it breaks the role split and the git story.

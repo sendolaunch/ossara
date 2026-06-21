@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S4 — 2026-06-21 — Multi-hero Select Heroes + shared stash (save v2) |
+| **Last session** | S5 — 2026-06-21 — Roster-first flow + ornate-stone Select Heroes |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S5 — 2026-06-21 — Roster-first flow + ornate-stone Select Heroes
+- Boot flow shortened: Connect (or Dev Enter) now jumps straight to **Select Heroes**; the standalone Name screen is unrouted (file still present, harmless). Account name carries over from cloud profile / prior session — `onChooseHero("")` won't clobber an existing `profile.name`.
+- `src/ui/heroSelect.js` restyled to ornate stone / torchlit: panel reads as warm stone + gold, slots take their art from `/public/art/hall-bg.png` (panel backdrop) + `art/class-<id>.png` (per-portrait), all with graceful CSS fallbacks so a missing file never breaks the build.
+- Migration **0003 applied live** — `profiles` table now carries `heroes` / `stash` / `active_class` columns; `saveRemoteProfile` upserts the v2 row shape end-to-end.
+- Full per-class **3D customised hero models deferred** to a later pass (planned alongside the modular-gear/visible-equipment work). Today's restyle is 2D portrait + UI chrome only.
+- Gate: build clean, sim 43/43, loot 2065/2065, heroes 37/37. Live eyeball confirmed by user (warm-stone read, Select Heroes lands directly, Shared Stash opens, console clean).
+
+**In Friendly Words:** The game now drops you straight into picking your hero after you connect — the extra name screen is gone, since the name follows your wallet. The Select Heroes panel got its DD-style warm-stone look, and the four portals can now show real class portraits the moment we drop the art into `/public/art/`. The cloud database upgrade went through too, so your heroes and shared stash save across devices.
 
 ### S4 — 2026-06-21 — Multi-hero Select Heroes + shared stash
 - Save v2: one hero per class (own gold/level/xp/cleared/equipped), one SHARED stash on the account. Pure model in `src/sim/heroes.js` with headless tests in `test/heroes.test.mjs`.

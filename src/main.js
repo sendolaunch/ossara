@@ -135,8 +135,8 @@ function showStation(id) {
 // ---- boot ----------------------------------------------------------------
 const flow = new ScreenFlow(screensRoot, {
   onChooseHero: (name) => {
-    username = name;
-    profile.name = name;
+    username = name || username;
+    if (name) profile.name = name;
     persist();
     showHeroSelect();
   },

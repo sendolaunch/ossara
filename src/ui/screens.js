@@ -123,13 +123,13 @@ export class ScreenFlow {
     connect.onclick = () => this._connect();
     this.enterBtn = button("Enter ▸", "primary");
     this.enterBtn.style.display = "none";
-    this.enterBtn.onclick = () => this.showNameEntry();
+    this.enterBtn.onclick = () => this._toRoster();
     const dev = button("Dev Enter — skip wallet (token not live yet)", "ghost");
     dev.style.marginTop = "12px";
     dev.style.fontSize = "12px";
     dev.onclick = () => {
       this.address = this.address || "DEV-MODE";
-      this.showNameEntry();
+      this._toRoster();
     };
     const row = el("div", { display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" });
     row.append(connect, this.enterBtn);
@@ -260,6 +260,10 @@ export class ScreenFlow {
     s.appendChild(f);
     this.nameEl = s;
     this.root.appendChild(s);
+  }
+
+  _toRoster() {
+    if (this.onChooseHero) this.onChooseHero("");
   }
 
   _beginTutorial() {
