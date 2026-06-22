@@ -150,7 +150,8 @@ export function buildTavernWorld(app) {
   preloadKit(app, [...new Set([
     ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name),
     ...PROPS.map((p) => p.name), ...BANNERS.map((p) => p.name), ...CRYSTAL_DECOR.map((p) => p.name),
-    "torch_mounted", MEZZANINE.stairs.name,
+    "torch_mounted",
+    ...(MEZZANINE.stairs ? [MEZZANINE.stairs.name] : []),
     ...MEZZANINE.deck.map((p) => p.name), ...MEZZANINE.rail.map((p) => p.name), ...MEZZANINE.banners.map((p) => p.name),
   ])])
     .then(() => placeAll(app, root))
