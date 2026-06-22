@@ -45,7 +45,16 @@ Close every session by updating this file per the R16 ritual.
 
 ## Session log (newest first)
 
-### S6.7 — 2026-06-21 — Portrait framing + hover kit panel (towers + special)
+### S6.8 — 2026-06-21 — Hub redesign: KayKit Dungeon tavern (Dungeon-Defenders style)
+- User connected **KayKit Dungeon Remastered 1.1 (CC0)** as a folder; imported 211 gltf+bin + `dungeon_texture.png` (6.3 MB) to `public/models/dungeon/`. 4-unit grid; pieces pre-centred.
+- Locked art+layout with the user (floor-plan widget approved): wood-floored tavern hall, **Bar/Quartermaster** north, **Forge/Bench** NE, **Stash/chests** NW, **Salvager** W, **Black Market** E, **Ward-Crystal** centre, decorative stair-up **mezzanine**, spawn at south entrance. Mezzanine decorative-only (stations all ground-floor).
+- New files (Cowork): `src/config/tavern.js` (layout data — floors/walls/columns/props/banners/torches/mezzanine/stations/crystal/spawn/camera, colliders, `TAVERN_PIECES`); `src/view/dungeonKit.js` (preload-once + place-by-name, null-safe); `src/view/tavernWorld.js` (`buildTavernWorld` — procedural glowing crystal + torch lights + station runes, async kit place over a primitive base floor, **same return shape as buildHubWorld**); `test/tavern.test.mjs`.
+- Probed: node --check clean on all 4; `node test/tavern.test.mjs` → **71/71** (every piece+`.bin`+texture exists, spawn collision-free, all 5 stations have a clear approach). Placement/rotation/scale need the live eyeball (can't render PlayCanvas here).
+- Pending CC (R14): swap hub3d import `buildHubWorld`→`buildTavernWorld` (return shape identical — floating name, collider movement, camera all unchanged); add tavern.test to `npm test`; LFS already covers gltf/bin/png; git add `public/models/dungeon`. Old `hubWorld/hubLayout/hubScenery` become unused (optional later cleanup).
+
+### S6.7 — 2026-06-21 — Portrait framing + hover kit panel (towers + special) [LIVE-VERIFIED a88f68a]
+- Verified live (Chrome MCP): all 4 rings show full-body characters + weapons sized inside the circle; hovering a portal swaps the kit panel to that order's tower-icon chips + signature special. Final framing landed as full-body (cam 1.15/6.0, lookAt 1.0/0, side 0.92) per S6.7b.
+- Minor polish left (optional): the role line above the chips reflects the *selected* order while the chips/special follow the *hovered* order — could sync both to hover.
 - Live-verified 3a38885: portraits face forward + render (single-app fix good), but characters sit high in the ring with a gap below ("floating").
 - Fix 1 (heroPortrait framing, close-prompt): tighter bust framing + larger viewport so the figure fills the ring (cam closer/lower, side factor 0.82→0.96). Couldn't live-tune (bundled ESM, no `pc` global) — values reasoned, to verify by screenshot.
 - Fix 2 (red-circle rework): new `src/config/kitIcons.js` (tower + special emoji icons, swappable for real art). heroSelect gets a hover-driven kit panel — hovering a portal shows that order's defensive towers (icon chips) + signature special; reverts to the selected order on mouse-out.

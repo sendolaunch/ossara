@@ -8,7 +8,7 @@ import { PALETTE } from "../config/palette.js";
 import { loadGlb } from "../view/pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { HERO } from "../config/hero.js";
-import { buildHubWorld } from "../view/hubWorld.js";
+import { buildTavernWorld } from "../view/tavernWorld.js";
 import { resolveCircle } from "../sim/hubCollide.js";
 import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
 import { loadCharacter } from "../view/character.js";
@@ -54,7 +54,7 @@ export class Hub {
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
 
     // Build the world (rooms, courtyard, torches, stations, crystal, scenery, fog).
-    const world = buildHubWorld(this.app);
+    const world = buildTavernWorld(this.app);
     this.colliders = world.colliders;
     this.stations = world.stations;
     this.crystalPos = world.crystal;
