@@ -45,6 +45,11 @@ Close every session by updating this file per the R16 ritual.
 
 ## Session log (newest first)
 
+### S6.7 — 2026-06-21 — Portrait framing + hover kit panel (towers + special)
+- Live-verified 3a38885: portraits face forward + render (single-app fix good), but characters sit high in the ring with a gap below ("floating").
+- Fix 1 (heroPortrait framing, close-prompt): tighter bust framing + larger viewport so the figure fills the ring (cam closer/lower, side factor 0.82→0.96). Couldn't live-tune (bundled ESM, no `pc` global) — values reasoned, to verify by screenshot.
+- Fix 2 (red-circle rework): new `src/config/kitIcons.js` (tower + special emoji icons, swappable for real art). heroSelect gets a hover-driven kit panel — hovering a portal shows that order's defensive towers (icon chips) + signature special; reverts to the selected order on mouse-out.
+
 ### S6.6 — 2026-06-21 — Fix: Select-Heroes portraits (multi-app shader conflict → single-app multi-viewport)
 - Live-verified 6d0f2c6: only 1 of 4 portrait rings rendered (the rest blank), console spammed "Failed to compile vertex shader … while rendering undefined".
 - Root cause (logged in lessons): **multiple `pc.Application` instances on one page collide over shared GPU/shader state** — only the last-created app renders. 4 portrait apps was wrong. (Hub+mission already worked because only one autoRenders at a time.)

@@ -21,6 +21,7 @@ import { openHeroNameModal } from "./nameModal.js";
 import { loadMyHeroNames } from "../web3/heronames.js";
 import { setHeroName, ensureHero } from "../sim/heroes.js";
 import { HeroPortraitStage } from "./heroPortrait.js";
+import { towerIcon, specialIcon } from "../config/kitIcons.js";
 
 // ornate-stone palette (warm, torchlit — independent of the green UI theme)
 const GOLD = "#e8d29a";
@@ -129,6 +130,9 @@ export class HeroSelect {
       fontStyle: "italic", opacity: ".9",
     }, "Choose a portal to begin.");
 
+    this.kit = el("div", { display:"flex", flexDirection:"column", alignItems:"center",
+      gap:"8px", minHeight:"58px", margin:"4px 0 6px" });
+
     const foot = el("div", { display: "flex", gap: "14px", justifyContent: "center", alignItems: "center", marginTop: "6px", flexWrap: "wrap" });
     const back = this._btn("‹ Leave", "ghost"); back.onclick = () => this.onBack();
     const stash = this._btn("◈ Shared Stash", "stone"); stash.onclick = () => this.onOpenStash();
@@ -137,7 +141,7 @@ export class HeroSelect {
     this.enterBtn.onclick = () => { if (this.selected) this._enterFlow(this.selected); };
     foot.append(back, stash, this.enterBtn);
 
-    panel.append(title, tag, this.grid, this.hint, foot);
+    panel.append(title, tag, this.grid, this.hint, this.kit, foot);
     s.appendChild(panel);
 
     this.el = s;
@@ -157,6 +161,18 @@ export class HeroSelect {
         this.onPlay(cid);
       },
     });
+  }
+
+  _renderKit(cid) {
+    if (!cid) { this.kit.innerHTML = `<div style="color:${ASH};font-style:italic;font-size:13px">Hover an order to see its defences.</div>`; return; }
+    const c = CLASSES[cid];
+    const towers = (c.towers || []).map(t =>
+      `<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border:1px solid ${GOLD_DEEP};border-radius:8px;background:linear-gradient(180deg,#241d12,#15110b);color:${PARCH};font-size:13px;letter-spacing:.5px"><span style="font-size:16px">${towerIcon(t)}</span>${t}</span>`).join("");
+    const [sName, ...rest] = (c.special || "").split(" — ");
+    const sDesc = rest.join(" — ");
+    this.kit.innerHTML =
+      `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${towers}</div>` +
+      `<div style="color:${PARCH};font-size:13px"><span style="font-size:15px">${specialIcon(cid)}</span> <b style="color:${GOLD}">${sName}</b>${sDesc ? ` — <span style="color:${ASH}">${sDesc}</span>` : ""}</div>`;
   }
 
   _btn(label, kind) {
@@ -204,6 +220,8 @@ export class HeroSelect {
     const sub = el("div", { fontSize: "12px", color: ASH, lineHeight: "1.4" }, "");
     wrap.append(ring, name, sub);
     wrap.onclick = () => this._select(cid);
+    wrap.onmouseenter = () => this._renderKit(cid);
+    wrap.onmouseleave = () => this._renderKit(this.selected);
     return { wrap, ring, portrait, initial, name, sub, classId: cid };
   }
 
@@ -213,9 +231,8 @@ export class HeroSelect {
     const exists = !!(acct.heroes && acct.heroes[cid]);
     const c = CLASSES[cid];
     this._setEnter(true, exists ? "Enter the Undercroft ▸" : `Create ${c.name} ▸`);
-    this.hint.innerHTML = exists
-      ? `<span style="color:${GOLD}">${c.name}</span> of ${c.order} — ${c.role}`
-      : `New hero: <span style="color:${GOLD}">${c.name}</span> — ${c.special.split(" — ")[0]}`;
+    this.hint.innerHTML = `<span style="color:${GOLD}">${c.name}</span> — ${c.order}`;
+    this._renderKit(cid);
     this._paint();
   }
 
@@ -263,6 +280,7 @@ export class HeroSelect {
     if (this.selected) this._select(this.selected);
     else { this._setEnter(false, "Enter the Undercroft ▸"); this.hint.textContent = "Choose a portal to begin."; }
     this._paint();
+    this._renderKit(this.selected);
     this.el.style.display = "flex";
     this.stage.show();
     // pull server-side names — server wins so a cross-device claim shows up
