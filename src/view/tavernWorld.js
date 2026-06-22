@@ -100,18 +100,19 @@ export function buildTavernWorld(app) {
     const barWood = mat(0x5a3d24, { gloss: 0.25 });
     const barTop = mat(0x6b4a2c, { gloss: 0.3 });
     const { cx, cz, radius: r } = BAR;
-    const N = 16;
+    const N = 46;                              // many segments → reads as a smooth curve
+    const stepW = (Math.PI * r) / N * 1.7;     // wider than the spacing → overlap, no facets
     prim(root, "cylinder", mat(0x3a2c1c), cx, 0.06, cz, (r + 1.2) * 2, 0.12, (r + 1.2) * 2, false); // raised plinth
     for (let i = 0; i <= N; i++) {
-      const t = (i / N) * Math.PI;                 // 0..PI, bulges +z into the room
+      const t = (i / N) * Math.PI;             // 0..PI, bulges +z into the room
       const x = cx + r * Math.cos(t), z = cz + r * Math.sin(t);
-      const yawDeg = (t * 180) / Math.PI + 90;     // align with the arc tangent
-      const seg = prim(root, "box", barWood, x, 0.5, z, 1.15, 1.0, 0.7); seg.setLocalEulerAngles(0, yawDeg, 0);
-      const top = prim(root, "box", barTop, x, 1.02, z, 1.25, 0.12, 0.85, false); top.setLocalEulerAngles(0, yawDeg, 0);
-      if (i % 3 === 1) { const xb = cx + (r - 0.9) * Math.cos(t), zb = cz + (r - 0.9) * Math.sin(t);
-        prim(root, "sphere", mat(0x3a6b2c, { emissive: 0.06 }), xb, 1.18, zb, 0.18, 0.42, 0.18, false); } // bottle
-      if (i % 4 === 2) { const xs = cx + (r + 1.2) * Math.cos(t), zs = cz + (r + 1.2) * Math.sin(t);
-        prim(root, "cylinder", barWood, xs, 0.35, zs, 0.55, 0.7, 0.55); } // stool
+      const yawDeg = (t * 180) / Math.PI + 90; // tangent to the arc
+      const seg = prim(root, "box", barWood, x, 0.5, z, stepW, 1.0, 0.7); seg.setLocalEulerAngles(0, yawDeg, 0);
+      const top = prim(root, "box", barTop, x, 1.02, z, stepW + 0.08, 0.14, 0.95, false); top.setLocalEulerAngles(0, yawDeg, 0);
+      if (i % 7 === 3) { const xb = cx + (r - 0.95) * Math.cos(t), zb = cz + (r - 0.95) * Math.sin(t);
+        prim(root, "sphere", mat(0x3a6b2c, { emissive: 0.06 }), xb, 1.2, zb, 0.18, 0.42, 0.18, false); } // bottle
+      if (i % 10 === 5) { const xs = cx + (r + 1.3) * Math.cos(t), zs = cz + (r + 1.3) * Math.sin(t);
+        prim(root, "cylinder", barWood, xs, 0.35, zs, 0.6, 0.7, 0.6); } // stool
     }
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
