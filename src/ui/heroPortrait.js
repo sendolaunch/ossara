@@ -89,8 +89,8 @@ export class HeroPortraitStage {
         fov: 26, nearClip: 0.1, farClip: 50,
         priority: i, // deterministic draw order
       });
-      cam.setPosition(cx, 1.5, 2.2);
-      cam.lookAt(cx, 1.4, 0); // bust framing — head + torso sit inside the round ring
+      cam.setPosition(cx, 1.15, 6.0);     // far enough to see feet→head + a raised weapon
+      cam.lookAt(cx, 1.0, 0);             // aim at mid-body so the whole figure centers // bust framing — head + torso sit inside the round ring
       this.app.root.addChild(cam);
       slot.cam = cam;
       this._loadSlot(slot, cx);
@@ -133,7 +133,7 @@ export class HeroPortraitStage {
       const r = s.ringEl.getBoundingClientRect();
       if (!r.width) { s.cam.camera.enabled = false; continue; }
       s.cam.camera.enabled = true;
-      const side = Math.min(r.width, r.height) * 0.96; // inscribe inside the circle
+      const side = Math.min(r.width, r.height) * 0.92; // inscribe inside the circle
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
       const x = (cx - side / 2) / W;
