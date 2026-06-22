@@ -48,7 +48,7 @@ export function buildTavernWorld(app) {
   app.root.addChild(root);
 
   // ---- warm tavern atmosphere ----------------------------------------------
-  app.scene.ambientLight = col(0x322a20);
+  app.scene.ambientLight = col(0x3a3026);
   try {
     app.scene.fog = pc.FOG_LINEAR;
     app.scene.fogColor = col(0x130d08);
@@ -69,17 +69,17 @@ export function buildTavernWorld(app) {
   prim(root, "cylinder", mat(0x4a4035), cx, 0.12, cz, 3.2, 0.24, 3.2);
   prim(root, "cylinder", mat(PALETTE.plague, { emissive: 0.5 }), cx, 0.26, cz, 2.4, 0.06, 2.4, false);
   const crystalEntity = prim(root, "sphere", mat(PALETTE.plague, { emissive: 1.8, gloss: 0.7 }), cx, 1.9, cz, 1.5, 2.6, 1.5, false);
-  pointLight(root, PALETTE.plague, 2.6, 16, cx, 2.4, cz);
+  pointLight(root, PALETTE.plague, 1.5, 9, cx, 2.2, cz);
 
   // ---- warm torch point lights (the mounted-torch meshes load async) -------
-  for (const t of TORCHES) pointLight(root, 0xffb867, 1.1, 8, t.x, 2.4, t.z);
+  for (const t of TORCHES) pointLight(root, 0xffb867, 1.6, 9, t.x, 2.4, t.z);
+  pointLight(root, 0xffd9a0, 0.7, 26, 0, 6, 0);
 
-  // ---- station markers (floor rune + accent light so stops read clearly) ---
+  // ---- station markers (floor rune only — no per-station tinting lights) ---
   const stations = [];
   for (const s of TAVERN_STATIONS) {
     const accent = PALETTE[s.color] ?? PALETTE.plague;
-    prim(root, "cylinder", mat(accent, { emissive: 0.55 }), s.x, 0.07, s.z, 1.6, 0.05, 1.6, false);
-    pointLight(root, accent, 0.5, 4.5, s.x, 1.4, s.z);
+    prim(root, "cylinder", mat(accent, { emissive: 0.35 }), s.x, 0.07, s.z, 1.4, 0.05, 1.4, false);
     stations.push({ id: s.id, name: s.name, x: s.x, z: s.z });
   }
 
