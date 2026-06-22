@@ -15,6 +15,7 @@ import {
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
   RUNNER, ENTRANCE_STEPS, MIRROR, BAR,
 } from "../config/tavern.js";
+import { floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -67,10 +68,10 @@ export function buildTavernWorld(app) {
 
   // ---- Ward-Crystal (procedural centrepiece + portal) ----------------------
   const cx = TAVERN_CRYSTAL.x, cz = TAVERN_CRYSTAL.z;
-  prim(root, "cylinder", mat(0x4a4035), cx, 0.12, cz, 3.2, 0.24, 3.2);
-  prim(root, "cylinder", mat(PALETTE.plague, { emissive: 0.5 }), cx, 0.26, cz, 2.4, 0.06, 2.4, false);
-  const crystalEntity = prim(root, "sphere", mat(PALETTE.plague, { emissive: 1.8, gloss: 0.7 }), cx, 1.9, cz, 1.5, 2.6, 1.5, false);
-  pointLight(root, PALETTE.plague, 1.5, 9, cx, 2.2, cz);
+  prim(root, "cylinder", mat(0x4a4035), cx, 0.12 + TIER.hall, cz, 3.2, 0.24, 3.2);
+  prim(root, "cylinder", mat(PALETTE.plague, { emissive: 0.5 }), cx, 0.26 + TIER.hall, cz, 2.4, 0.06, 2.4, false);
+  const crystalEntity = prim(root, "sphere", mat(PALETTE.plague, { emissive: 1.8, gloss: 0.7 }), cx, 1.9 + TIER.hall, cz, 1.5, 2.6, 1.5, false);
+  pointLight(root, PALETTE.plague, 1.5, 9, cx, 2.2 + TIER.hall, cz);
 
   // ---- warm torch point lights (the mounted-torch meshes load async) -------
   for (const t of TORCHES) pointLight(root, 0xffb867, 1.6, 9, t.x, 2.4, t.z);
@@ -83,52 +84,58 @@ export function buildTavernWorld(app) {
 
   // entrance runner (purple carpet) S → crystal
   for (let z = RUNNER.from; z >= RUNNER.to; z -= 0.5)
-    prim(root, "box", mat(0x3a2a55, { emissive: 0.12 }), RUNNER.x, 0.05, z, RUNNER.width, 0.04, 0.5, false);
+    prim(root, "box", mat(0x3a2a55, { emissive: 0.12 }), RUNNER.x, 0.05 + floorHeightAt(RUNNER.x, z), z, RUNNER.width, 0.04, 0.5, false);
   // ornate rune diamond around the crystal
   for (const [dx, dz] of [[2,0],[-2,0],[0,2],[0,-2],[1.4,1.4],[1.4,-1.4],[-1.4,1.4],[-1.4,-1.4]])
-    prim(root, "box", mat(PALETTE.plague, { emissive: 0.7 }), dx, 0.07, dz, 0.7, 0.05, 0.7, false).setLocalEulerAngles(0, 45, 0);
+    prim(root, "box", mat(PALETTE.plague, { emissive: 0.7 }), dx, 0.07 + TIER.hall, dz, 0.7, 0.05, 0.7, false).setLocalEulerAngles(0, 45, 0);
   // entrance steps
   for (let i = 0; i < 3; i++)
     prim(root, "box", mat(0x6b6552), ENTRANCE_STEPS.x, 0.05 - i * 0.12, ENTRANCE_STEPS.z + i * 0.7, 5, 0.14, 0.7, false);
   // wardrobe mirror
   if (MIRROR) {
-    prim(root, "box", mat(0x2a2018), MIRROR.x + 0.2, 1.4, MIRROR.z, 0.25, 2.6, 1.5);
-    prim(root, "box", mat(0xbcd6ff, { emissive: 0.22, gloss: 0.9 }), MIRROR.x + 0.04, 1.4, MIRROR.z, 0.08, 2.2, 1.1, false);
+    prim(root, "box", mat(0x2a2018), MIRROR.x + 0.2, 1.4 + TIER.hall, MIRROR.z, 0.25, 2.6, 1.5);
+    prim(root, "box", mat(0xbcd6ff, { emissive: 0.22, gloss: 0.9 }), MIRROR.x + 0.04, 1.4 + TIER.hall, MIRROR.z, 0.08, 2.2, 1.1, false);
   }
 
   if (BAR) {
+    const barRoot = new pc.Entity("barTier");
+    barRoot.setLocalPosition(0, TIER.bar, 0);
+    root.addChild(barRoot);
     const barWood = mat(0x5a3d24, { gloss: 0.25 });
     const barTop = mat(0x6b4a2c, { gloss: 0.3 });
     const { cx, cz, radius: r } = BAR;
     const N = 46;                              // many segments → reads as a smooth curve
     const stepW = (Math.PI * r) / N * 1.7;     // wider than the spacing → overlap, no facets
-    prim(root, "cylinder", mat(0x3a2c1c), cx, 0.06, cz, (r + 1.2) * 2, 0.12, (r + 1.2) * 2, false); // raised plinth
+    prim(barRoot, "cylinder", mat(0x3a2c1c), cx, 0.06, cz, (r + 1.2) * 2, 0.12, (r + 1.2) * 2, false); // raised plinth
     for (let i = 0; i <= N; i++) {
       const t = (i / N) * Math.PI;             // 0..PI, bulges +z into the room
       const x = cx + r * Math.cos(t), z = cz + r * Math.sin(t);
       const yawDeg = (t * 180) / Math.PI + 90; // tangent to the arc
-      const seg = prim(root, "box", barWood, x, 0.5, z, stepW, 1.0, 0.7); seg.setLocalEulerAngles(0, yawDeg, 0);
-      const top = prim(root, "box", barTop, x, 1.02, z, stepW + 0.08, 0.14, 0.95, false); top.setLocalEulerAngles(0, yawDeg, 0);
+      const seg = prim(barRoot, "box", barWood, x, 0.5, z, stepW, 1.0, 0.7); seg.setLocalEulerAngles(0, yawDeg, 0);
+      const top = prim(barRoot, "box", barTop, x, 1.02, z, stepW + 0.08, 0.14, 0.95, false); top.setLocalEulerAngles(0, yawDeg, 0);
       if (i % 7 === 3) { const xb = cx + (r - 0.95) * Math.cos(t), zb = cz + (r - 0.95) * Math.sin(t);
-        prim(root, "sphere", mat(0x3a6b2c, { emissive: 0.06 }), xb, 1.2, zb, 0.18, 0.42, 0.18, false); } // bottle
+        prim(barRoot, "sphere", mat(0x3a6b2c, { emissive: 0.06 }), xb, 1.2, zb, 0.18, 0.42, 0.18, false); } // bottle
       if (i % 10 === 5) { const xs = cx + (r + 1.3) * Math.cos(t), zs = cz + (r + 1.3) * Math.sin(t);
-        prim(root, "cylinder", barWood, xs, 0.35, zs, 0.6, 0.7, 0.6); } // stool
+        prim(barRoot, "cylinder", barWood, xs, 0.35, zs, 0.6, 0.7, 0.6); } // stool
     }
-    pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
+    pointLight(barRoot, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
+
+  buildTiers(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
   for (const s of TAVERN_STATIONS) {
     const accent = PALETTE[s.color] ?? PALETTE.plague;
-    prim(root, "cylinder", mat(accent, { emissive: 0.35 }), s.x, 0.07, s.z, 1.4, 0.05, 1.4, false);
-    pointLight(root, accent, 0.5, 4, s.x, 1.4, s.z);
+    const sy = tierFloorY(s.x, s.z);
+    prim(root, "cylinder", mat(accent, { emissive: 0.35 }), s.x, 0.07 + sy, s.z, 1.4, 0.05, 1.4, false);
+    pointLight(root, accent, 0.5, 4, s.x, 1.4 + sy, s.z);
     stations.push({ id: s.id, name: s.name, x: s.x, z: s.z });
   }
   // signature glows
-  pointLight(root, 0xff7a28, 1.3, 6, 14, 1.6, -11);   // forge fire
-  pointLight(root, 0xff4f1e, 1.2, 6, 14, 1.4, 11);    // incinerator
-  pointLight(root, 0x7a4cff, 0.8, 5, -14, 1.6, -10);  // black market
+  pointLight(root, 0xff7a28, 1.3, 6, 14, 1.6 + TIER.hall, -11);   // forge fire
+  pointLight(root, 0xff4f1e, 1.2, 6, 14, 1.4 + TIER.hall, 11);    // incinerator
+  pointLight(root, 0x7a4cff, 0.8, 5, -14, 1.6 + TIER.hall, -10);  // black market
 
   // ---- async: load + place all kit geometry --------------------------------
   preloadKit(app, [...new Set([
@@ -152,14 +159,34 @@ export function buildTavernWorld(app) {
   };
 }
 
+function buildTiers(root) {
+  const stone = mat(0x6f6a58, { gloss: 0.12 });
+  const tread = mat(0x7a7460, { gloss: 0.1 });
+  // entrance steps: hall(1.5) DOWN to entrance(0) across the foyer front (z 5..6.4)
+  for (let i = 0; i < 3; i++)
+    prim(root, "box", tread, 0, (1.0 - i * 0.5) + 0.25, 5 + i * 0.7, 20, 0.5, 0.8, false);
+  // entrance-pit side risers (x = ±11, z 7..14)
+  for (const sx of [-11, 11])
+    prim(root, "box", stone, sx, 0.75, 10.5, 0.5, 1.5, 7, false);
+  // grand staircase: hall(1.5) UP to bar(3.0), central corridor (z -4..-7)
+  for (let i = 0; i < 4; i++)
+    prim(root, "box", tread, 0, (1.875 + i * 0.375) - 0.19, -4 - i, 8, 0.5, 1.0, false);
+  // bar-platform front risers (split around the stair gap |x|<=4) + side faces
+  prim(root, "box", stone, -7, 2.25, -8, 6, 1.5, 0.5, false);
+  prim(root, "box", stone, 7, 2.25, -8, 6, 1.5, 0.5, false);
+  for (const sx of [-10, 10])
+    prim(root, "box", stone, sx, 2.25, -11, 0.5, 1.5, 6, false);
+}
+
 function placeAll(app, root) {
   const put = (p, extra = {}) => place(app, root, p.name, { x: p.x, z: p.z, y: p.y || 0, ry: p.ry || 0, ...extra });
 
   // floors (primitive wood fallback per missing tile)
   const fallbackFloor = mat(0x5a4026);
   for (const f of FLOORS) {
-    if (kitReady(app, f.name)) put(f);
-    else prim(root, "box", fallbackFloor, f.x, -0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
+    const fy = tierFloorY(f.x, f.z);
+    if (kitReady(app, f.name)) place(app, root, f.name, { x: f.x, z: f.z, y: fy });
+    else prim(root, "box", fallbackFloor, f.x, fy - 0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
   }
   for (const w of WALLS) put(w);
   // rounded corners — quarter arc of tangent, textured kit-wall panels
@@ -178,10 +205,10 @@ function placeAll(app, root) {
     }
   }
   for (const c of COLUMNS) put(c);
-  for (const p of PROPS) put(p);
+  for (const p of PROPS) put(p, { y: (p.y || 0) + tierFloorY(p.x, p.z) });
   for (const b of BANNERS) put(b);
   for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: 2.5, z: t.z, ry: t.ry });
-  for (const d of CRYSTAL_DECOR) put(d);
+  for (const d of CRYSTAL_DECOR) put(d, { y: (d.y || 0) + tierFloorY(d.x, d.z) });
 
   // decorative mezzanine
   if (MEZZANINE.stairs) put(MEZZANINE.stairs);

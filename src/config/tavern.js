@@ -108,7 +108,14 @@ const CORNER_COLLIDERS = [
   { x: -16.4, z: 12.4, hw: 1.6, hd: 1.6 }, { x: 16.4, z: 12.4, hw: 1.6, hd: 1.6 },
 ];
 
-export const TAVERN_COLLIDERS = [...colliders, ...FURNITURE_COLLIDERS, ...PROP_COLLIDERS, ...CORNER_COLLIDERS];
+// tier colliders: keep the player from skipping the stairs onto the bar platform
+// or shortcutting past the entrance steps via the side
+const TIER_COLLIDERS = [
+  { x: -7, z: -8, hw: 3, hd: 0.4 }, { x: 7, z: -8, hw: 3, hd: 0.4 },
+  { x: -10, z: -11, hw: 0.4, hd: 3 }, { x: 10, z: -11, hw: 0.4, hd: 3 },
+  { x: -11, z: 10.5, hw: 0.4, hd: 3.5 }, { x: 11, z: 10.5, hw: 0.4, hd: 3.5 },
+];
+export const TAVERN_COLLIDERS = [...colliders, ...FURNITURE_COLLIDERS, ...PROP_COLLIDERS, ...CORNER_COLLIDERS, ...TIER_COLLIDERS];
 export const TAVERN_PIECES = [...new Set([
   ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name),
   ...PROPS.map((p) => p.name), ...BANNERS.map((p) => p.name), ...CRYSTAL_DECOR.map((p) => p.name),

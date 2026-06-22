@@ -17,6 +17,7 @@ import { MOVE, EMOTES, SPRINT_KEY, DASH_KEY } from "../config/moves.js";
 import { WardCharge } from "./wardCharge.js";
 import { DashPip } from "./dashPip.js";
 import { FreeCam } from "./freeCam.js";
+import { floorHeightAt } from "../sim/hubFloor.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -200,12 +201,13 @@ export class Hub {
         if (this._idleT > MOVE.idleFidgetAfter) { this.heroCtl.playClip(MOVE.fidgetClip); this._idleT = -3; }
       } else this._idleT = 0;
     }
+    const _fy = floorHeightAt(this.hero.x, this.hero.z);
     if (this.heroEnt) {
-      this.heroEnt.setPosition(this.hero.x, this._heroFoot || 0, this.hero.z);
+      this.heroEnt.setPosition(this.hero.x, _fy + (this._heroFoot || 0), this.hero.z);
       this.heroEnt.setLocalEulerAngles(0, (this.hero.facing * 180) / Math.PI, 0);
     }
 
-    this.chase.update(dt, { x: this.hero.x, y: this._heroFoot || 0, z: this.hero.z }, movingNow ? this.hero.facing : null);
+    this.chase.update(dt, { x: this.hero.x, y: _fy, z: this.hero.z }, movingNow ? this.hero.facing : null);
 
     if (this.crystal) this.crystal.rotate(0, 30 * dt, 0);
 
