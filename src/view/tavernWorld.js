@@ -128,7 +128,7 @@ export function buildTavernWorld(app) {
     ];
     for (const c of cdefs) {
       const inX = c.x > 0 ? -1 : 1, inZ = c.z > 0 ? -1 : 1;
-      const w = prim(root, "box", stoneWall, c.x + inX * 2.6, 1.6, c.z + inZ * 2.6, 7.5, 3.2, 0.7);
+      const w = prim(root, "box", stoneWall, c.x + inX * 1.3, 1.5, c.z + inZ * 1.3, 3.0, 3.0, 0.8);
       w.setLocalEulerAngles(0, c.ry, 0);
     }
   }
