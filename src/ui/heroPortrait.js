@@ -98,7 +98,7 @@ export class HeroPortraitStage {
 
     this.app.on("update", (dt) => {
       this._spin = (this._spin || 0) + dt;
-      const yaw = 180 + Math.sin(this._spin * 0.6) * 20;
+      const yaw = Math.sin(this._spin * 0.6) * 20;
       for (const s of this.slots) if (s.model) s.model.setLocalEulerAngles(0, yaw, 0);
     });
 
@@ -115,7 +115,7 @@ export class HeroPortraitStage {
     slot.ctl = ctl;
     slot.model = ctl.wrap;
     ctl.wrap.setLocalPosition(cx, 0, 0);
-    ctl.wrap.setLocalEulerAngles(0, 180, 0);
+    ctl.wrap.setLocalEulerAngles(0, 0, 0);
     this.app.root.addChild(ctl.wrap);
     slot.ready = true;
     slot.onReady();
