@@ -119,8 +119,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
 
   // ---- animation (the single risky API surface; fully guarded) --------------
   let layer = null;
+  const tracks = {};
   try {
-    const tracks = {};
     for (const lib of CHAR_ANIM_LIBS) collectTracks(await loadContainer(app, lib), tracks);
     inner.addComponent("anim", { activate: true });
     const assign = (state, clip, loop = true) => {
@@ -150,14 +150,35 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const wrap = new pc.Entity("hero");
   wrap.addChild(inner);
 
-  const st = { moving: false, dead: false, _atk: null };
+  const st = { moving: false, running: false, dead: false, _atk: null, _one: null, _assigned: new Set() };
   return {
     wrap,
     foot,
     setMoving(b) {
       if (!layer || st.dead || b === st.moving) return;
       st.moving = b;
-      goto(layer, b ? "Walk" : "Idle");
+      goto(layer, b ? (st.running ? "Run" : "Walk") : "Idle");
+    },
+    setGait(running) {
+      running = !!running;
+      if (st.running === running) return;
+      st.running = running;
+      if (st.moving && layer) goto(layer, running ? "Run" : "Walk", 0.15);
+    },
+    playClip(name, loop = false) {
+      if (!layer || st.dead) return;
+      const t = tracks[name];
+      if (!t) return;
+      if (!st._assigned.has(name)) {
+        try { inner.anim.assignAnimation(name, t, undefined, 1, loop); } catch (_) { return; }
+        st._assigned.add(name);
+      }
+      goto(layer, name, 0.1);
+      if (!loop) {
+        clearTimeout(st._one);
+        const ms = Math.min((t.duration ? t.duration * 1000 : 800), 2600);
+        st._one = setTimeout(() => { if (!st.dead) goto(layer, st.moving ? (st.running ? "Run" : "Walk") : "Idle", 0.15); }, ms);
+      }
     },
     setDead(b) {
       if (!layer || b === st.dead) return;

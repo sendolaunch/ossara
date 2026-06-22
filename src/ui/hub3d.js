@@ -13,6 +13,7 @@ import { resolveCircle } from "../sim/hubCollide.js";
 import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
 import { loadCharacter } from "../view/character.js";
 import { ChaseCamera } from "../view/chaseCamera.js";
+import { MOVE, EMOTES, SPRINT_KEY, DASH_KEY } from "../config/moves.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -127,8 +128,10 @@ export class Hub {
     window.addEventListener("keydown", (e) => {
       if (!this.active) return;
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", "e", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", "e", " ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
       if (k === "e") this._ePressed = true;
+      if (k === DASH_KEY) this._dashPressed = true;
+      if (EMOTES[k]) this._emoteKey = k;
       this.keys.add(k);
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.key.toLowerCase()));
@@ -138,32 +141,52 @@ export class Hub {
   _tick(dt) {
     if (!this.active) return;
 
-    // camera-relative movement (basis from chase yaw — orbits with mouse drag)
     const fwd = { x: -Math.sin(this.chase.yaw), z: -Math.cos(this.chase.yaw) };
     const right = { x: Math.cos(this.chase.yaw), z: -Math.sin(this.chase.yaw) };
     const sF = (this.keys.has("w") ? 1 : 0) - (this.keys.has("s") ? 1 : 0);
     const sR = (this.keys.has("d") ? 1 : 0) - (this.keys.has("a") ? 1 : 0);
-    let mx = sF * fwd.x + sR * right.x;
-    let mz = sF * fwd.z + sR * right.z;
-    const m = Math.hypot(mx, mz);
-    const moving = m > 0;
-    if (moving) {
-      mx /= m;
-      mz /= m;
-      const nx = this.hero.x + mx * this.hero.speed * dt;
-      const nz = this.hero.z + mz * this.hero.speed * dt;
-      const res = resolveCircle(nx, nz, HERO_RADIUS, this.colliders);
-      this.hero.x = res.x;
-      this.hero.z = res.z;
-      this.hero.facing = Math.atan2(mx, mz);
+    let ix = sF * fwd.x + sR * right.x;
+    let iz = sF * fwd.z + sR * right.z;
+    const im = Math.hypot(ix, iz);
+    if (im > 0) { ix /= im; iz /= im; }
+    const running = this.keys.has(SPRINT_KEY);
+
+    this._dashCd = Math.max(0, (this._dashCd || 0) - dt);
+    if (this._dashPressed && this._dashCd <= 0) {
+      this._dashT = MOVE.dashTime; this._dashCd = MOVE.dashCooldown;
+      if (im > 0) { this._dashX = ix; this._dashZ = iz; }
+      else { this._dashX = Math.sin(this.hero.facing); this._dashZ = Math.cos(this.hero.facing); }
     }
-    if (this.heroCtl) this.heroCtl.setMoving(moving);
+    this._dashPressed = false;
+    const dashing = (this._dashT || 0) > 0;
+    if (dashing) this._dashT -= dt;
+
+    const dx = dashing ? this._dashX : ix;
+    const dz = dashing ? this._dashZ : iz;
+    const spd = this.hero.speed * (dashing ? MOVE.dashMul : running ? MOVE.runMul : MOVE.walkMul);
+    const movingNow = dashing || im > 0;
+    if (movingNow) {
+      const nx = this.hero.x + dx * spd * dt;
+      const nz = this.hero.z + dz * spd * dt;
+      const res = resolveCircle(nx, nz, HERO_RADIUS, this.colliders);
+      this.hero.x = res.x; this.hero.z = res.z;
+      this.hero.facing = Math.atan2(dx, dz);
+    }
+    if (this.heroCtl) {
+      this.heroCtl.setGait(running && im > 0 && !dashing);
+      this.heroCtl.setMoving(movingNow);
+      if (this._emoteKey) { this.heroCtl.playClip(EMOTES[this._emoteKey]); this._emoteKey = null; }
+      if (!movingNow) {
+        this._idleT = (this._idleT || 0) + dt;
+        if (this._idleT > MOVE.idleFidgetAfter) { this.heroCtl.playClip(MOVE.fidgetClip); this._idleT = -3; }
+      } else this._idleT = 0;
+    }
     if (this.heroEnt) {
       this.heroEnt.setPosition(this.hero.x, this._heroFoot || 0, this.hero.z);
       this.heroEnt.setLocalEulerAngles(0, (this.hero.facing * 180) / Math.PI, 0);
     }
 
-    this.chase.update(dt, { x: this.hero.x, y: this._heroFoot || 0, z: this.hero.z }, moving ? this.hero.facing : null);
+    this.chase.update(dt, { x: this.hero.x, y: this._heroFoot || 0, z: this.hero.z }, movingNow ? this.hero.facing : null);
 
     if (this.crystal) this.crystal.rotate(0, 30 * dt, 0);
 
