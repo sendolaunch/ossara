@@ -25,7 +25,7 @@ export class ChaseCamera {
     this.maxPitch = opts.maxPitch ?? 1.15;
     this.yaw = opts.yaw ?? 0.6;
     this.targetY = opts.targetY ?? 1.2;
-    this.autoTrail = opts.autoTrail !== false;
+    this.autoTrail = opts.autoTrail === true;   // OFF by default: camera holds; the hero turns under it (mouse-drag to orbit)
     this.bounds = opts.bounds || null;   // keep the camera inside the room
 
     // smoothed look-at target
