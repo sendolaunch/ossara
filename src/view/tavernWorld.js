@@ -117,25 +117,6 @@ export function buildTavernWorld(app) {
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
-  // rounded corners — quarter arc of overlapping posts → one smooth curved wall
-  {
-    const cornerMat = mat(0x82817e, { gloss: 0.1 });
-    const R = 4.2, H = 3.0, N = 26, rad = 0.6;   // diameter ~1.2, spacing ~0.25 → heavy overlap
-    const corners = [
-      { cx: -18 + R, cz: -14 + R, a0: Math.PI },        // NW
-      { cx: 18 - R,  cz: -14 + R, a0: 1.5 * Math.PI },  // NE
-      { cx: -18 + R, cz: 14 - R,  a0: 0.5 * Math.PI },  // SW
-      { cx: 18 - R,  cz: 14 - R,  a0: 0 },              // SE
-    ];
-    for (const c of corners) {
-      for (let i = 0; i <= N; i++) {
-        const t = c.a0 + (i / N) * (Math.PI / 2);
-        const x = c.cx + R * Math.cos(t), z = c.cz + R * Math.sin(t);
-        prim(root, "cylinder", cornerMat, x, H / 2, z, rad * 2, H, rad * 2);
-      }
-    }
-  }
-
   // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
   for (const s of TAVERN_STATIONS) {
@@ -181,6 +162,21 @@ function placeAll(app, root) {
     else prim(root, "box", fallbackFloor, f.x, -0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
   }
   for (const w of WALLS) put(w);
+  // rounded corners — quarter arc of tangent, textured kit-wall panels
+  const CORN = [
+    { cx: -18 + 4, cz: -14 + 4, a0: Math.PI },        // NW
+    { cx: 18 - 4,  cz: -14 + 4, a0: 1.5 * Math.PI },  // NE
+    { cx: -18 + 4, cz: 14 - 4,  a0: 0.5 * Math.PI },  // SW
+    { cx: 18 - 4,  cz: 14 - 4,  a0: 0 },              // SE
+  ];
+  const KC = 5, KR = 4.0;
+  for (const c of CORN) {
+    for (let i = 0; i < KC; i++) {
+      const t = c.a0 + ((i + 0.5) / KC) * (Math.PI / 2);
+      const x = c.cx + KR * Math.cos(t), z = c.cz + KR * Math.sin(t);
+      place(app, root, "wall", { x, z, ry: -(t * 180 / Math.PI) - 90, sx: 0.85 });
+    }
+  }
   for (const c of COLUMNS) put(c);
   for (const p of PROPS) put(p);
   for (const b of BANNERS) put(b);
