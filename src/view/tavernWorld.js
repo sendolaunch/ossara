@@ -117,10 +117,10 @@ export function buildTavernWorld(app) {
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
-  // rounded corners — quarter-circle curved walls (overlap trick like the bar)
+  // rounded corners — quarter arc of overlapping posts → one smooth curved wall
   {
-    const cornerMat = mat(0x7c7a78, { gloss: 0.12 });
-    const R = 4.2, H = 3.2, N = 24, EP = 0.10;   // EP tucks the arc ends into the walls
+    const cornerMat = mat(0x82817e, { gloss: 0.1 });
+    const R = 4.2, H = 3.0, N = 26, rad = 0.6;   // diameter ~1.2, spacing ~0.25 → heavy overlap
     const corners = [
       { cx: -18 + R, cz: -14 + R, a0: Math.PI },        // NW
       { cx: 18 - R,  cz: -14 + R, a0: 1.5 * Math.PI },  // NE
@@ -128,14 +128,10 @@ export function buildTavernWorld(app) {
       { cx: 18 - R,  cz: 14 - R,  a0: 0 },              // SE
     ];
     for (const c of corners) {
-      const sweep = Math.PI / 2 + EP * 2;
-      const stepW = (R * sweep) / N * 2.0;       // heavy overlap → smooth, no facets
       for (let i = 0; i <= N; i++) {
-        const t = c.a0 - EP + (i / N) * sweep;
+        const t = c.a0 + (i / N) * (Math.PI / 2);
         const x = c.cx + R * Math.cos(t), z = c.cz + R * Math.sin(t);
-        const yawDeg = (t * 180) / Math.PI + 90;  // tangent to the arc
-        const seg = prim(root, "box", cornerMat, x, H / 2, z, stepW, H, 0.5);
-        seg.setLocalEulerAngles(0, yawDeg, 0);
+        prim(root, "cylinder", cornerMat, x, H / 2, z, rad * 2, H, rad * 2);
       }
     }
   }
