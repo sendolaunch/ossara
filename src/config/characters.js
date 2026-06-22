@@ -26,6 +26,7 @@ export const CHAR_CLIPS = {
   death: "Death_A",
   interact: "Interact",
   pickup: "PickUp",
+  attack: "Throw",   // FREE pack has no melee swing; Throw is the placeholder
 };
 
 // Rig attachment bones (verified present in every character GLB).

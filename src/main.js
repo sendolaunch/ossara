@@ -46,6 +46,7 @@ function ensureHub() {
         mapSelect.show();
       },
       getActiveClass: () => profile.activeClass || "warden",
+      getActiveName: () => { const h = profile.heroes && profile.heroes[profile.activeClass]; return (h && h.username) || profile.name || ""; },
     });
   }
   return hub;

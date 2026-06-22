@@ -33,10 +33,11 @@ function prim(type, material) {
 }
 
 export class Hub {
-  constructor(container, { onOpenStation, onOpenMapSelect, getActiveClass }) {
+  constructor(container, { onOpenStation, onOpenMapSelect, getActiveClass, getActiveName }) {
     this.onOpenStation = onOpenStation;
     this.onOpenMapSelect = onOpenMapSelect;
     this.getActiveClass = getActiveClass || (() => "warden");
+    this.getActiveName = getActiveName || (() => "");
     this._loadedClass = null;
 
     const canvas = document.createElement("canvas");
@@ -95,6 +96,13 @@ export class Hub {
       letterSpacing: "1px", display: "none", pointerEvents: "none", zIndex: "5",
     });
     document.getElementById("ui").appendChild(this.prompt);
+
+    this.nameLabel = document.createElement("div");
+    Object.assign(this.nameLabel.style, { position:"absolute", transform:"translate(-50%,-100%)",
+      padding:"2px 10px", borderRadius:"6px", background:"rgba(7,8,6,0.7)", border:"1px solid #c8a14a",
+      color:"#e8d29a", font:"700 13px 'Cinzel', serif", letterSpacing:"1px", pointerEvents:"none",
+      whiteSpace:"nowrap", zIndex:"5", display:"none" });
+    document.getElementById("ui").appendChild(this.nameLabel);
 
     this.app.on("update", (dt) => this._tick(dt));
     this.app.start();
@@ -198,6 +206,13 @@ export class Hub {
       this.prompt.style.display = "none";
     }
     this._ePressed = false;
+
+    const nm = this.getActiveName();
+    if (nm && this.heroEnt) {
+      const sp = this.cam.camera.worldToScreen(new pc.Vec3(this.hero.x, (this._heroFoot||0)+2.25, this.hero.z));
+      if (sp.z > 0) { this.nameLabel.style.display="block"; this.nameLabel.style.left=sp.x+"px"; this.nameLabel.style.top=sp.y+"px"; this.nameLabel.textContent=nm; }
+      else this.nameLabel.style.display="none";
+    } else this.nameLabel.style.display="none";
   }
 
   show() {
@@ -221,5 +236,6 @@ export class Hub {
     this.canvas.style.display = "none";
     this.app.autoRender = false;
     this.prompt.style.display = "none";
+    this.nameLabel.style.display = "none";
   }
 }

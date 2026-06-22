@@ -133,6 +133,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     assign("Walk", CHAR_CLIPS.walk, true);
     assign("Run", CHAR_CLIPS.run, true);
     assign("Death", CHAR_CLIPS.death, false);
+    assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping
     layer = inner.anim.baseLayer || null;
     goto(layer, "Idle", 0);
   } catch (e) {
@@ -149,7 +150,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const wrap = new pc.Entity("hero");
   wrap.addChild(inner);
 
-  const st = { moving: false, dead: false };
+  const st = { moving: false, dead: false, _atk: null };
   return {
     wrap,
     foot,
@@ -162,6 +163,12 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       if (!layer || b === st.dead) return;
       st.dead = b;
       goto(layer, b ? "Death" : "Idle", b ? 0.1 : 0.15);
+    },
+    playAttack() {
+      if (!layer || st.dead) return;
+      goto(layer, "Attack", 0.05);
+      clearTimeout(st._atk);
+      st._atk = setTimeout(() => { if (!st.dead) goto(layer, st.moving ? "Walk" : "Idle", 0.12); }, 520);
     },
     playOnce(state) {
       goto(layer, state, 0.08);

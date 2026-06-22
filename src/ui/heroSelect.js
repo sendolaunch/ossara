@@ -20,6 +20,7 @@ import { CLASSES, CLASS_ORDER } from "../config/classes.js";
 import { openHeroNameModal } from "./nameModal.js";
 import { loadMyHeroNames } from "../web3/heronames.js";
 import { setHeroName, ensureHero } from "../sim/heroes.js";
+import { HeroPortrait } from "./heroPortrait.js";
 
 // ornate-stone palette (warm, torchlit — independent of the green UI theme)
 const GOLD = "#e8d29a";
@@ -197,7 +198,11 @@ export class HeroSelect {
     const sub = el("div", { fontSize: "12px", color: ASH, lineHeight: "1.4" }, "");
     wrap.append(ring, name, sub);
     wrap.onclick = () => this._select(cid);
-    return { wrap, ring, portrait, initial, name, sub, classId: cid };
+    const portrait3d = new HeroPortrait(ring, cid, {
+      onReady: () => { initial.style.display = "none"; portrait.style.display = "none"; },
+      onFail:  () => {},   // leave the 2D initial/portrait visible
+    });
+    return { wrap, ring, portrait, initial, name, sub, classId: cid, portrait3d };
   }
 
   _select(cid) {
@@ -257,6 +262,7 @@ export class HeroSelect {
     else { this._setEnter(false, "Enter the Undercroft ▸"); this.hint.textContent = "Choose a portal to begin."; }
     this._paint();
     this.el.style.display = "flex";
+    for (const cid of CLASS_ORDER) this.portals[cid].portrait3d.show();
     // pull server-side names — server wins so a cross-device claim shows up
     try {
       const names = await loadMyHeroNames();
@@ -273,7 +279,10 @@ export class HeroSelect {
     } catch (_) { /* offline / no-auth — local view stays */ }
   }
 
-  hide() { this.el.style.display = "none"; }
+  hide() {
+    for (const cid of CLASS_ORDER) this.portals[cid]?.portrait3d.hide();
+    this.el.style.display = "none";
+  }
 
   mount(root) { root.appendChild(this.el); this.el.style.display = "none"; return this; }
 }

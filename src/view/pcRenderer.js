@@ -437,6 +437,8 @@ export class PCRenderer {
       const moving = this._prevHero ? Math.hypot(h.x - this._prevHero.x, h.z - this._prevHero.z) > 0.002 : false;
       this.heroCtl.setMoving(moving && h.alive);
       this.heroCtl.setDead(!h.alive);
+      if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) this.heroCtl.playAttack();
+      this._prevAtkCd = h.attackCd;
       this._prevHero = { x: h.x, z: h.z };
     }
   }
