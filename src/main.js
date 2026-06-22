@@ -114,6 +114,8 @@ function showStation(id) {
     stash: "Stash",
     blackmarket: "The Black Market",
     incinerator: "Incinerator",
+    wardrobe: "Wardrobe",
+    bounty: "Bounty Board",
   };
   if (!stationModal) {
     stationModal = document.createElement("div");

@@ -13,6 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
+  RUNNER, ENTRANCE_STEPS, MIRROR,
 } from "../config/tavern.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
@@ -80,13 +81,33 @@ export function buildTavernWorld(app) {
     pointLight(root, PALETTE.plague, 1.0, 7, WINDOW.x, 2.4, WINDOW.z - 1.2);
   }
 
-  // ---- station markers (floor rune only — no per-station tinting lights) ---
+  // entrance runner (purple carpet) S → crystal
+  for (let z = RUNNER.from; z >= RUNNER.to; z -= 0.5)
+    prim(root, "box", mat(0x3a2a55, { emissive: 0.12 }), RUNNER.x, 0.05, z, RUNNER.width, 0.04, 0.5, false);
+  // ornate rune diamond around the crystal
+  for (const [dx, dz] of [[2,0],[-2,0],[0,2],[0,-2],[1.4,1.4],[1.4,-1.4],[-1.4,1.4],[-1.4,-1.4]])
+    prim(root, "box", mat(PALETTE.plague, { emissive: 0.7 }), dx, 0.07, dz, 0.7, 0.05, 0.7, false).setLocalEulerAngles(0, 45, 0);
+  // entrance steps
+  for (let i = 0; i < 3; i++)
+    prim(root, "box", mat(0x6b6552), ENTRANCE_STEPS.x, 0.05 - i * 0.12, ENTRANCE_STEPS.z + i * 0.7, 5, 0.14, 0.7, false);
+  // wardrobe mirror
+  if (MIRROR) {
+    prim(root, "box", mat(0x2a2018), MIRROR.x + 0.2, 1.4, MIRROR.z, 0.25, 2.6, 1.5);
+    prim(root, "box", mat(0xbcd6ff, { emissive: 0.22, gloss: 0.9 }), MIRROR.x + 0.04, 1.4, MIRROR.z, 0.08, 2.2, 1.1, false);
+  }
+
+  // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
   for (const s of TAVERN_STATIONS) {
     const accent = PALETTE[s.color] ?? PALETTE.plague;
     prim(root, "cylinder", mat(accent, { emissive: 0.35 }), s.x, 0.07, s.z, 1.4, 0.05, 1.4, false);
+    pointLight(root, accent, 0.5, 4, s.x, 1.4, s.z);
     stations.push({ id: s.id, name: s.name, x: s.x, z: s.z });
   }
+  // signature glows
+  pointLight(root, 0xff7a28, 1.3, 6, 14, 1.6, -11);   // forge fire
+  pointLight(root, 0xff4f1e, 1.2, 6, 14, 1.4, 11);    // incinerator
+  pointLight(root, 0x7a4cff, 0.8, 5, -14, 1.6, -10);  // black market
 
   // ---- async: load + place all kit geometry --------------------------------
   preloadKit(app, [...new Set([
