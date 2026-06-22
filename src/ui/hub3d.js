@@ -12,6 +12,7 @@ import { buildTavernWorld } from "../view/tavernWorld.js";
 import { resolveCircle } from "../sim/hubCollide.js";
 import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
 import { loadCharacter } from "../view/character.js";
+import { ChaseCamera } from "../view/chaseCamera.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -62,14 +63,13 @@ export class Hub {
     this.spawn = world.spawn;
     const C = world.camera;
 
-    // Fixed close camera — distance is LOCKED (no zoom). Arrows still orbit yaw.
-    this.camYaw = C.yaw;
-    this.camPitch = C.pitch;
-    this.camDist = C.dist;
-    this.camTarget = new pc.Vec3(this.spawn.x, C.targetY, this.spawn.z);
+    // DD1-style chase camera — trails behind the hero; mouse-drag orbits; wheel zooms close→medium.
     this.cam = new pc.Entity("camera");
-    this.cam.addComponent("camera", { fov: C.fov, nearClip: C.near, farClip: C.far, clearColor: col(0x0a140c) });
+    this.cam.addComponent("camera", { fov: C.fov, nearClip: C.near, farClip: C.far, clearColor: col(0x140d08) });
     this.app.root.addChild(this.cam);
+    this.chase = new ChaseCamera(this.canvas, this.cam, {
+      dist: C.dist, minDist: 6, maxDist: 14, pitch: C.pitch, yaw: C.yaw, targetY: C.targetY,
+    });
 
     const sun = new pc.Entity();
     sun.addComponent("light", { type: "directional", color: col(0xdfeac6), intensity: 0.8, castShadows: true, shadowResolution: 1024 });
@@ -136,13 +136,10 @@ export class Hub {
 
   _tick(dt) {
     if (!this.active) return;
-    // camera orbit via left/right arrows only (distance stays locked)
-    if (this.keys.has("arrowleft")) this.camYaw += 1.8 * dt;
-    if (this.keys.has("arrowright")) this.camYaw -= 1.8 * dt;
 
-    // camera-relative movement
-    const fwd = { x: -Math.sin(this.camYaw), z: -Math.cos(this.camYaw) };
-    const right = { x: Math.cos(this.camYaw), z: -Math.sin(this.camYaw) };
+    // camera-relative movement (basis from chase yaw — orbits with mouse drag)
+    const fwd = { x: -Math.sin(this.chase.yaw), z: -Math.cos(this.chase.yaw) };
+    const right = { x: Math.cos(this.chase.yaw), z: -Math.sin(this.chase.yaw) };
     const sF = (this.keys.has("w") ? 1 : 0) - (this.keys.has("s") ? 1 : 0);
     const sR = (this.keys.has("d") ? 1 : 0) - (this.keys.has("a") ? 1 : 0);
     let mx = sF * fwd.x + sR * right.x;
@@ -165,18 +162,7 @@ export class Hub {
       this.heroEnt.setLocalEulerAngles(0, (this.hero.facing * 180) / Math.PI, 0);
     }
 
-    // camera follow (fixed distance)
-    const k = 1 - Math.pow(0.001, Math.min(dt, 0.05));
-    this.camTarget.x += (this.hero.x - this.camTarget.x) * k;
-    this.camTarget.z += (this.hero.z - this.camTarget.z) * k;
-    const cp = Math.cos(this.camPitch);
-    const sp = Math.sin(this.camPitch);
-    this.cam.setPosition(
-      this.camTarget.x + this.camDist * cp * Math.sin(this.camYaw),
-      this.camTarget.y + this.camDist * sp,
-      this.camTarget.z + this.camDist * cp * Math.cos(this.camYaw)
-    );
-    this.cam.lookAt(this.camTarget.x, this.camTarget.y, this.camTarget.z);
+    this.chase.update(dt, { x: this.hero.x, y: this._heroFoot || 0, z: this.hero.z }, moving ? this.hero.facing : null);
 
     if (this.crystal) this.crystal.rotate(0, 30 * dt, 0);
 
@@ -221,8 +207,6 @@ export class Hub {
     this.app.autoRender = true;
     this.hero.x = this.spawn.x;
     this.hero.z = this.spawn.z;
-    this.camTarget.x = this.spawn.x;
-    this.camTarget.z = this.spawn.z;
     if (this.heroCtl && this._loadedClass !== this.getActiveClass()) {
       if (this.heroEnt) this.heroEnt.destroy();
       this.heroCtl = null;
