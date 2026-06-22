@@ -13,9 +13,10 @@ export const TILE = 4;
 export const HERO_RADIUS = 0.45;
 
 // Fixed close 3/4 camera (same feel as before, lifted a touch to read the hall).
-export const TAVERN_CAMERA = { fov: 52, dist: 12, pitch: 0.74, yaw: 0.62, targetY: 1.2, near: 0.1, far: 260 };
+export const TAVERN_CAMERA = { fov: 52, dist: 12, pitch: 0.66, yaw: 0, targetY: 1.2, near: 0.1, far: 260,
+  bounds: { minX: -13, maxX: 13, minZ: -9, maxZ: 9 } };
 
-export const TAVERN_SPAWN = { x: 0, z: 8.5 }; // just inside the south entrance
+export const TAVERN_SPAWN = { x: 0, z: 6 };
 
 // interior extents (wall centre-lines at ±14 X / ±10 Z)
 const COLS = [-12, -8, -4, 0, 4, 8, 12];

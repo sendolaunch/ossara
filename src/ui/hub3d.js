@@ -69,6 +69,7 @@ export class Hub {
     this.app.root.addChild(this.cam);
     this.chase = new ChaseCamera(this.canvas, this.cam, {
       dist: C.dist, minDist: 6, maxDist: 14, pitch: C.pitch, yaw: C.yaw, targetY: C.targetY,
+      bounds: C.bounds,
     });
 
     const sun = new pc.Entity();
@@ -79,7 +80,7 @@ export class Hub {
     this._loadHero();
 
     // hero state (simple walker — no sim)
-    this.hero = { x: this.spawn.x, z: this.spawn.z, facing: 0, speed: HERO.speed * 0.8 };
+    this.hero = { x: this.spawn.x, z: this.spawn.z, facing: Math.PI, speed: HERO.speed * 0.8 };
 
     // input
     this.keys = new Set();

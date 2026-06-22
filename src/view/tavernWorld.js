@@ -52,8 +52,8 @@ export function buildTavernWorld(app) {
   try {
     app.scene.fog = pc.FOG_LINEAR;
     app.scene.fogColor = col(0x130d08);
-    app.scene.fogStart = 22;
-    app.scene.fogEnd = 90;
+    app.scene.fogStart = 16;
+    app.scene.fogEnd = 64;
   } catch (_) {}
 
   const sun = new pc.Entity("sun");

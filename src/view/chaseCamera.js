@@ -26,6 +26,7 @@ export class ChaseCamera {
     this.yaw = opts.yaw ?? 0.6;
     this.targetY = opts.targetY ?? 1.2;
     this.autoTrail = opts.autoTrail !== false;
+    this.bounds = opts.bounds || null;   // keep the camera inside the room
 
     // smoothed look-at target
     this._tx = 0; this._ty = this.targetY; this._tz = 0;
@@ -93,11 +94,14 @@ export class ChaseCamera {
     }
 
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-    this.cam.setPosition(
-      this._tx + this.dist * cp * Math.sin(this.yaw),
-      this._ty + this.dist * sp,
-      this._tz + this.dist * cp * Math.cos(this.yaw)
-    );
+    let px = this._tx + this.dist * cp * Math.sin(this.yaw);
+    let py = this._ty + this.dist * sp;
+    let pz = this._tz + this.dist * cp * Math.cos(this.yaw);
+    if (this.bounds) {
+      px = clamp(px, this.bounds.minX, this.bounds.maxX);
+      pz = clamp(pz, this.bounds.minZ, this.bounds.maxZ);
+    }
+    this.cam.setPosition(px, py, pz);
     this.cam.lookAt(this._tx, this._ty, this._tz);
   }
 }
