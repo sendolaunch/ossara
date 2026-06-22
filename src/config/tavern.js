@@ -30,8 +30,7 @@ for (const z of [-6, 6]) { stub(-16, z); stub(-12, z); }
 for (const z of [-8, 0, 8]) { stub(16, z); stub(12, z); }
 export const WINDOW = { x: -12, z: NZ, ry: 0 };
 export const COLUMNS = [
-  { name: "wall_corner", x: WX, z: NZ, ry: 0 }, { name: "wall_corner", x: EX, z: NZ, ry: -90 },
-  { name: "wall_corner", x: WX, z: SZ, ry: 90 }, { name: "wall_corner", x: EX, z: SZ, ry: 180 },
+  // corners are rounded procedurally (chamfer) in tavernWorld — no kit corner pieces
   { name: "pillar_decorated", x: -8, z: -8, ry: 0 }, { name: "pillar_decorated", x: 8, z: -8, ry: 0 },
   { name: "pillar_decorated", x: -8, z: 8, ry: 0 }, { name: "pillar_decorated", x: 8, z: 8, ry: 0 },
 ];
@@ -66,12 +65,8 @@ export const BANNERS = [
   { name: "banner_green", x: -17.7, z: 6, ry: 90 }, { name: "banner_yellow", x: 17.7, z: -4, ry: -90 },
   { name: "banner_red", x: 17.7, z: 8, ry: -90 },
 ];
-export const MEZZANINE = {
-  stairs: { name: "stairs", x: 10, z: -10, ry: 180 },
-  deck: [ { name: "floor_wood_large_dark", x: 10, z: -13, y: 4 }, { name: "floor_wood_large_dark", x: 14, z: -13, y: 4 } ],
-  rail: [ { name: "wall_half", x: 10, z: -11, ry: 0, y: 4 }, { name: "wall_half", x: 14, z: -11, ry: 0, y: 4 } ],
-  banners: [ { name: "banner_thin_red", x: 12, z: -13.6, ry: 0, y: 4 } ],
-};
+// balcony removed (the raised deck showed the void past the walls)
+export const MEZZANINE = { stairs: null, deck: [], rail: [], banners: [] };
 export const TAVERN_STATIONS = [
   { id: "quartermaster", name: "Bar — Quartermaster (sell loot)", x: -3, z: -7, color: "gold" },
   { id: "bench", name: "Forge — Re-roll / Upgrade", x: 14, z: -11, color: "gold" },
@@ -102,10 +97,20 @@ const FURNITURE_COLLIDERS = [
   { x: -16.5, z: 0, hw: 1.4, hd: 2 }, { x: -16.2, z: 10.6, hw: 1.6, hd: 1.6 }, { x: 0, z: 0, hw: 1.6, hd: 1.6 },
   { x: 6, z: 8, hw: 1.2, hd: 2 },
 ];
-export const TAVERN_COLLIDERS = [...colliders, ...FURNITURE_COLLIDERS];
+// auto-solid: floor furniture (barrels/crates/chests/tables/shelves) blocks the player
+const SOLID = ["barrel", "crate", "chest", "table", "shelves", "shelf"];
+const PROP_COLLIDERS = PROPS
+  .filter((p) => (p.y || 0) < 1.4 && SOLID.some((s) => p.name.includes(s)))
+  .map((p) => ({ x: p.x, z: p.z, hw: p.name.includes("table_long") ? 1.6 : 0.85, hd: p.name.includes("table_long") ? 1.6 : 0.85 }));
+// chamfered corners get a small block so you can't slip into the cut
+const CORNER_COLLIDERS = [
+  { x: -16.4, z: -12.4, hw: 1.6, hd: 1.6 }, { x: 16.4, z: -12.4, hw: 1.6, hd: 1.6 },
+  { x: -16.4, z: 12.4, hw: 1.6, hd: 1.6 }, { x: 16.4, z: 12.4, hw: 1.6, hd: 1.6 },
+];
+
+export const TAVERN_COLLIDERS = [...colliders, ...FURNITURE_COLLIDERS, ...PROP_COLLIDERS, ...CORNER_COLLIDERS];
 export const TAVERN_PIECES = [...new Set([
   ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name),
   ...PROPS.map((p) => p.name), ...BANNERS.map((p) => p.name), ...CRYSTAL_DECOR.map((p) => p.name),
-  "torch_mounted", MEZZANINE.stairs.name,
-  ...MEZZANINE.deck.map((p) => p.name), ...MEZZANINE.rail.map((p) => p.name), ...MEZZANINE.banners.map((p) => p.name),
+  "torch_mounted",
 ])];

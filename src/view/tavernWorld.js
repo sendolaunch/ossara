@@ -117,6 +117,22 @@ export function buildTavernWorld(app) {
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
+  // chamfered corner walls (round off the box-corners of the keep)
+  {
+    const stoneWall = mat(0x8f886f);
+    const cdefs = [
+      { x: -18, z: -14, ry: -45 }, // NW
+      { x: 18, z: -14, ry: 45 },   // NE
+      { x: -18, z: 14, ry: 45 },   // SW
+      { x: 18, z: 14, ry: -45 },   // SE
+    ];
+    for (const c of cdefs) {
+      const inX = c.x > 0 ? -1 : 1, inZ = c.z > 0 ? -1 : 1;
+      const w = prim(root, "box", stoneWall, c.x + inX * 2.6, 1.6, c.z + inZ * 2.6, 7.5, 3.2, 0.7);
+      w.setLocalEulerAngles(0, c.ry, 0);
+    }
+  }
+
   // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
   for (const s of TAVERN_STATIONS) {
@@ -168,7 +184,7 @@ function placeAll(app, root) {
   for (const d of CRYSTAL_DECOR) put(d);
 
   // decorative mezzanine
-  put(MEZZANINE.stairs);
+  if (MEZZANINE.stairs) put(MEZZANINE.stairs);
   for (const d of MEZZANINE.deck) put(d);
   for (const r of MEZZANINE.rail) put(r);
   for (const b of MEZZANINE.banners) put(b);
