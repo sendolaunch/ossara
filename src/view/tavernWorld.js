@@ -117,6 +117,28 @@ export function buildTavernWorld(app) {
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
+  // rounded corners — quarter-circle curved walls (same overlap trick as the bar)
+  {
+    const cornerMat = mat(0x6a6d74, { gloss: 0.15 });
+    const R = 4.2, H = 3.0, N = 14;
+    const corners = [
+      { cx: -18 + R, cz: -14 + R, a0: Math.PI },        // NW: sweep 180°→270°
+      { cx: 18 - R,  cz: -14 + R, a0: 1.5 * Math.PI },  // NE: sweep 270°→360°
+      { cx: -18 + R, cz: 14 - R,  a0: 0.5 * Math.PI },  // SW: sweep  90°→180°
+      { cx: 18 - R,  cz: 14 - R,  a0: 0 },              // SE: sweep   0°→90°
+    ];
+    for (const c of corners) {
+      const stepW = ((Math.PI / 2) * R) / N * 1.7;      // overlap → no facets
+      for (let i = 0; i <= N; i++) {
+        const t = c.a0 + (i / N) * (Math.PI / 2);
+        const x = c.cx + R * Math.cos(t), z = c.cz + R * Math.sin(t);
+        const yawDeg = (t * 180) / Math.PI + 90;        // tangent to the arc
+        const seg = prim(root, "box", cornerMat, x, H / 2, z, stepW, H, 0.6);
+        seg.setLocalEulerAngles(0, yawDeg, 0);
+      }
+    }
+  }
+
   // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
   for (const s of TAVERN_STATIONS) {
@@ -162,11 +184,6 @@ function placeAll(app, root) {
     else prim(root, "box", fallbackFloor, f.x, -0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
   }
   for (const w of WALLS) put(w);
-  // chamfer each corner with a real (textured) kit wall rotated 45° — matches the stone
-  for (const c of [
-    { x: -16.4, z: -12.4, ry: -45 }, { x: 16.4, z: -12.4, ry: 45 },
-    { x: -16.4, z: 12.4, ry: 45 },  { x: 16.4, z: 12.4, ry: -45 },
-  ]) place(app, root, "wall", { x: c.x, z: c.z, ry: c.ry });
   for (const c of COLUMNS) put(c);
   for (const p of PROPS) put(p);
   for (const b of BANNERS) put(b);
