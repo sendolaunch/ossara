@@ -13,7 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR,
 } from "../config/tavern.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
@@ -94,6 +94,26 @@ export function buildTavernWorld(app) {
   if (MIRROR) {
     prim(root, "box", mat(0x2a2018), MIRROR.x + 0.2, 1.4, MIRROR.z, 0.25, 2.6, 1.5);
     prim(root, "box", mat(0xbcd6ff, { emissive: 0.22, gloss: 0.9 }), MIRROR.x + 0.04, 1.4, MIRROR.z, 0.08, 2.2, 1.1, false);
+  }
+
+  if (BAR) {
+    const barWood = mat(0x5a3d24, { gloss: 0.25 });
+    const barTop = mat(0x6b4a2c, { gloss: 0.3 });
+    const { cx, cz, radius: r } = BAR;
+    const N = 16;
+    prim(root, "cylinder", mat(0x3a2c1c), cx, 0.06, cz, (r + 1.2) * 2, 0.12, (r + 1.2) * 2, false); // raised plinth
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * Math.PI;                 // 0..PI, bulges +z into the room
+      const x = cx + r * Math.cos(t), z = cz + r * Math.sin(t);
+      const yawDeg = (t * 180) / Math.PI + 90;     // align with the arc tangent
+      const seg = prim(root, "box", barWood, x, 0.5, z, 1.15, 1.0, 0.7); seg.setLocalEulerAngles(0, yawDeg, 0);
+      const top = prim(root, "box", barTop, x, 1.02, z, 1.25, 0.12, 0.85, false); top.setLocalEulerAngles(0, yawDeg, 0);
+      if (i % 3 === 1) { const xb = cx + (r - 0.9) * Math.cos(t), zb = cz + (r - 0.9) * Math.sin(t);
+        prim(root, "sphere", mat(0x3a6b2c, { emissive: 0.06 }), xb, 1.18, zb, 0.18, 0.42, 0.18, false); } // bottle
+      if (i % 4 === 2) { const xs = cx + (r + 1.2) * Math.cos(t), zs = cz + (r + 1.2) * Math.sin(t);
+        prim(root, "cylinder", barWood, xs, 0.35, zs, 0.55, 0.7, 0.55); } // stool
+    }
+    pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----

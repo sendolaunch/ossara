@@ -36,11 +36,8 @@ export const COLUMNS = [
   { name: "pillar_decorated", x: -8, z: 8, ry: 0 }, { name: "pillar_decorated", x: 8, z: 8, ry: 0 },
 ];
 export const PROPS = [
-  { name: "table_long_tablecloth", x: -8, z: -12.6, ry: 90 }, { name: "table_long_tablecloth", x: -4, z: -12.6, ry: 90 },
-  { name: "wall_shelves", x: -8, z: -13.6, ry: 0, y: 1.6 }, { name: "wall_shelves", x: -4, z: -13.6, ry: 0, y: 1.6 },
-  { name: "bottle_A_green", x: -8.8, z: -11.7, ry: 0 }, { name: "bottle_B_green", x: -7, z: -11.7, ry: 0 },
-  { name: "coin_stack_medium", x: -4.6, z: -11.7, ry: 0 }, { name: "stool", x: -8, z: -10.7, ry: 0 },
-  { name: "stool", x: -4, z: -10.7, ry: 0 }, { name: "barrel_large", x: -11, z: -12.8, ry: 0 },
+  // bar = procedural curved counter (see BAR + tavernWorld); side barrel only
+  { name: "barrel_large", x: -11.5, z: -12.8, ry: 0 },
   { name: "table_medium", x: 16, z: -11, ry: -90 }, { name: "sword_shield", x: 16, z: -11, ry: -90, y: 1.0 },
   { name: "crates_stacked", x: 16.6, z: -13, ry: 0 }, { name: "barrel_large", x: 16.6, z: -9.2, ry: 0 },
   { name: "chest_gold", x: 16.2, z: -4, ry: -90, y: 0.17 }, { name: "chest", x: 16.4, z: -2.2, ry: -90, y: 0.17 },
@@ -76,7 +73,7 @@ export const MEZZANINE = {
   banners: [ { name: "banner_thin_red", x: 12, z: -13.6, ry: 0, y: 4 } ],
 };
 export const TAVERN_STATIONS = [
-  { id: "quartermaster", name: "Bar — Quartermaster (sell loot)", x: -6, z: -10.5, color: "gold" },
+  { id: "quartermaster", name: "Bar — Quartermaster (sell loot)", x: -3, z: -7, color: "gold" },
   { id: "bench", name: "Forge — Re-roll / Upgrade", x: 14, z: -11, color: "gold" },
   { id: "stash", name: "Stash — your storage", x: 14, z: -4, color: "bone" },
   { id: "salvager", name: "Salvager — break gear into mats", x: 14, z: 4, color: "ash" },
@@ -87,6 +84,10 @@ export const TAVERN_STATIONS = [
 ];
 export const TAVERN_CRYSTAL = { x: 0, z: 0 };
 export const INTERACT_R = 2.6;
+
+// big curved bar — a semicircle counter bulging south off the north wall,
+// its ends curving back into the wall. Built procedurally in tavernWorld.
+export const BAR = { cx: -3, cz: -14, radius: 5.5 };
 export const RUNNER = { from: 12, to: 2.5, x: 0, width: 2.4 };
 export const ENTRANCE_STEPS = { x: 0, z: 13.4 };
 export const MIRROR = { x: -17.5, z: 0, ry: 90 };
@@ -96,7 +97,7 @@ export const CRYSTAL_DECOR = [
   { name: "candle_thin_lit", x: -1.7, z: 1.7, ry: 0 },
 ];
 const FURNITURE_COLLIDERS = [
-  { x: -6, z: -12.6, hw: 4, hd: 1.2 }, { x: 16.4, z: -11, hw: 1.6, hd: 2 }, { x: 16.4, z: -4, hw: 1.6, hd: 2 },
+  { x: -3, z: -11.5, hw: 5.5, hd: 2.5 }, { x: 16.4, z: -11, hw: 1.6, hd: 2 }, { x: 16.4, z: -4, hw: 1.6, hd: 2 },
   { x: 16.4, z: 4, hw: 1.6, hd: 2 }, { x: 16.4, z: 11.5, hw: 1.6, hd: 1.6 }, { x: -16.3, z: -10, hw: 1.6, hd: 1.6 },
   { x: -16.5, z: 0, hw: 1.4, hd: 2 }, { x: -16.2, z: 10.6, hw: 1.6, hd: 1.6 }, { x: 0, z: 0, hw: 1.6, hd: 1.6 },
   { x: 6, z: 8, hw: 1.2, hd: 2 },
