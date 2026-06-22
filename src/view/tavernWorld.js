@@ -117,22 +117,6 @@ export function buildTavernWorld(app) {
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
-  // chamfered corner walls (round off the box-corners of the keep)
-  {
-    const stoneWall = mat(0x8f886f);
-    const cdefs = [
-      { x: -18, z: -14, ry: -45 }, // NW
-      { x: 18, z: -14, ry: 45 },   // NE
-      { x: -18, z: 14, ry: 45 },   // SW
-      { x: 18, z: 14, ry: -45 },   // SE
-    ];
-    for (const c of cdefs) {
-      const inX = c.x > 0 ? -1 : 1, inZ = c.z > 0 ? -1 : 1;
-      const w = prim(root, "box", stoneWall, c.x + inX * 1.3, 1.5, c.z + inZ * 1.3, 3.0, 3.0, 0.8);
-      w.setLocalEulerAngles(0, c.ry, 0);
-    }
-  }
-
   // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
   for (const s of TAVERN_STATIONS) {
@@ -178,6 +162,11 @@ function placeAll(app, root) {
     else prim(root, "box", fallbackFloor, f.x, -0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
   }
   for (const w of WALLS) put(w);
+  // chamfer each corner with a real (textured) kit wall rotated 45° — matches the stone
+  for (const c of [
+    { x: -16.4, z: -12.4, ry: -45 }, { x: 16.4, z: -12.4, ry: 45 },
+    { x: -16.4, z: 12.4, ry: 45 },  { x: 16.4, z: 12.4, ry: -45 },
+  ]) place(app, root, "wall", { x: c.x, z: c.z, ry: c.ry });
   for (const c of COLUMNS) put(c);
   for (const p of PROPS) put(p);
   for (const b of BANNERS) put(b);
