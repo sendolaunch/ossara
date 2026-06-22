@@ -45,6 +45,12 @@ Close every session by updating this file per the R16 ritual.
 
 ## Session log (newest first)
 
+### S6.6 — 2026-06-21 — Fix: Select-Heroes portraits (multi-app shader conflict → single-app multi-viewport)
+- Live-verified 6d0f2c6: only 1 of 4 portrait rings rendered (the rest blank), console spammed "Failed to compile vertex shader … while rendering undefined".
+- Root cause (logged in lessons): **multiple `pc.Application` instances on one page collide over shared GPU/shader state** — only the last-created app renders. 4 portrait apps was wrong. (Hub+mission already worked because only one autoRenders at a time.)
+- Fix: rewrote `src/ui/heroPortrait.js` as `HeroPortraitStage` — ONE app, ONE WebGL context, FOUR camera viewports whose `rect` maps to each ring's on-screen box (inscribed square so the round model stays in the circle), plus a full-window clear pass. Transparent click-through overlay; brighter key/rim lights.
+- Pending CC (R14): rewire `src/ui/heroSelect.js` from per-portal `new HeroPortrait(...)` to one `HeroPortraitStage` (import swap, `stage.add(cid, ring, {onReady})` per portal, `stage.show()/hide()`). `heroPortrait.js` already replaced on disk (Cowork). Verified by inspection (Read shows complete 162-line file; prior version node-checked clean); sandbox couldn't re-run node --check due to OneDrive sync lag (R5/R6) — CC's gate confirms.
+
 ### S6.5 — 2026-06-21 — 3D portraits + floating hero name + placeholder attack (authored; wiring pending CC)
 - LFS blocker resolved + live-verified first (see S6.3), so this builds on a known-good deploy.
 - New file (Cowork): `src/ui/heroPortrait.js` — per-ring transparent PlayCanvas viewport showing the order's KayKit character (idle + weapon) with a turntable sway; lazy WebGL (builds on first show), pauses render when hidden, 2D fallback on any failure (`onFail`).

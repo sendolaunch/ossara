@@ -12,6 +12,11 @@ Newest entries first within each section. Sections stay even when empty — they
 
 ## Engine / rendering
 
+**Multiple `pc.Application` instances on one page → only one renders, shader compile errors.**
+- **Symptom:** 4 Select-Heroes portrait rings each got their own `pc.Application`; only the last rendered, console spammed "Failed to compile vertex shader … while rendering undefined."
+- **Root cause:** PlayCanvas keeps a global current-application/graphics-device pointer; several simultaneously-rendering Applications collide over shader/GL state. (Hub + mission avoid it because only ONE autoRenders at a time.)
+- **Rule:** never run multiple PlayCanvas Apps rendering at once. For N sub-views on one screen, use ONE app with N cameras whose `camera.rect` maps to each on-screen box (single WebGL context). Keep at most one app autoRendering at any moment. (R20)
+
 **Nested-group ghost entity wouldn't render.**
 - **Symptom:** the build-placement ghost (a parent `pc.Entity` with child meshes) was invisible in PlayCanvas even though placement worked.
 - **Root cause:** a bare parent group has enable/transparency quirks, and material assigned to children right after `addComponent` isn't reliably applied.
