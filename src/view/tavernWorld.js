@@ -12,7 +12,7 @@ import { PALETTE } from "../config/palette.js";
 import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
-  FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR,
+  FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
 } from "../config/tavern.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
@@ -74,6 +74,11 @@ export function buildTavernWorld(app) {
   // ---- warm torch point lights (the mounted-torch meshes load async) -------
   for (const t of TORCHES) pointLight(root, 0xffb867, 1.6, 9, t.x, 2.4, t.z);
   pointLight(root, 0xffd9a0, 0.7, 26, 0, 6, 0);
+
+  if (WINDOW) {
+    prim(root, "box", mat(PALETTE.plague, { emissive: 0.6 }), WINDOW.x, 2.2, WINDOW.z - 0.6, 2.4, 2.6, 0.1, false);
+    pointLight(root, PALETTE.plague, 1.0, 7, WINDOW.x, 2.4, WINDOW.z - 1.2);
+  }
 
   // ---- station markers (floor rune only — no per-station tinting lights) ---
   const stations = [];

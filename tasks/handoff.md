@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 
 ## Session log (newest first)
 
+### S6.9–6.12 — 2026-06-21 — Hub feel sprint (camera, mood, movement, ritual) [LIVE-VERIFIED]
+- Locked the hub design + economy specs first: `tasks/hub-feel-spec.md` (DD1-tavern target, stations incl. new Wardrobe/Bounty/Incinerator, build order) and `tasks/economy-spec.md` (two-currency, demand-not-burn, creator-fee-funded prizes/LP, 2% marketplace fee→treasury, level-gated breaches, no P2W/staking/token-grind). Both supersede conflicting design-doc bits.
+- **Camera (`src/view/chaseCamera.js`, new):** DD1-style — mouse-drag orbit, clamped wheel zoom (6–14), stays inside the room (`bounds`), **auto-trail OFF** (camera holds, hero turns under it — the feel the user wanted). Verified live.
+- **Mood:** warm lighting (green contained to the crystal) + tighter fog; spawn faces into the room.
+- **Movement (`src/config/moves.js`, new + character.js control surface):** sprint (Shift→Run), dash (Space, 5s cooldown + `src/ui/dashPip.js` indicator), emotes (1–4 → Interact/Throw/Use_Item/PickUp), idle fidget. `setGait`/`playClip` added to the character control surface. Verified live (Run + emote states fire, console clean).
+- **Ward ritual (`src/ui/wardCharge.js`, new):** [E] on the dais → ~1.5s green-vignette "CHANNELING THE WARD…" charge + crystal flare, then map-select. Verified.
+- Commits: 7b6fd0a (camera), bounds/spawn/fog fix, 3a82356 (movement), S6.12 (dais + dash pip), dash 5s. All gates green; live-verified via Chrome MCP.
+- New tracked backlog (tasks): bigger hall + placement polish, critters (cat+dog), progression visuals (trophies/coin ledger), station gameplay (Stash→Forge→Salvager/Incinerator/Quartermaster→Wardrobe/Bounty), audio, economy wiring.
+
 ### S6.8 — 2026-06-21 — Hub redesign: KayKit Dungeon tavern (Dungeon-Defenders style)
 - User connected **KayKit Dungeon Remastered 1.1 (CC0)** as a folder; imported 211 gltf+bin + `dungeon_texture.png` (6.3 MB) to `public/models/dungeon/`. 4-unit grid; pieces pre-centred.
 - Locked art+layout with the user (floor-plan widget approved): wood-floored tavern hall, **Bar/Quartermaster** north, **Forge/Bench** NE, **Stash/chests** NW, **Salvager** W, **Black Market** E, **Ward-Crystal** centre, decorative stair-up **mezzanine**, spawn at south entrance. Mezzanine decorative-only (stations all ground-floor).

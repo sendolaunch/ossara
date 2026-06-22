@@ -113,6 +113,7 @@ function showStation(id) {
     bench: "Re-roll / Upgrade Bench",
     stash: "Stash",
     blackmarket: "The Black Market",
+    incinerator: "Incinerator",
   };
   if (!stationModal) {
     stationModal = document.createElement("div");
