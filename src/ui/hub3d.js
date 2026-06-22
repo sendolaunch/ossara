@@ -14,6 +14,8 @@ import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
 import { loadCharacter } from "../view/character.js";
 import { ChaseCamera } from "../view/chaseCamera.js";
 import { MOVE, EMOTES, SPRINT_KEY, DASH_KEY } from "../config/moves.js";
+import { WardCharge } from "./wardCharge.js";
+import { DashPip } from "./dashPip.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -106,6 +108,9 @@ export class Hub {
       whiteSpace:"nowrap", zIndex:"5", display:"none" });
     document.getElementById("ui").appendChild(this.nameLabel);
 
+    this.ward = new WardCharge(document.getElementById("ui"), { onComplete: () => this.onOpenMapSelect && this.onOpenMapSelect() });
+    this.dashPip = new DashPip(document.getElementById("ui"));
+
     this.app.on("update", (dt) => this._tick(dt));
     this.app.start();
     this.app.autoRender = false; // off until shown
@@ -141,6 +146,15 @@ export class Hub {
   _tick(dt) {
     if (!this.active) return;
 
+    if (this.ward.active) {
+      const p = this.ward.update(dt);
+      if (this.crystal) { const s = 1 + p * 0.6; this.crystal.setLocalScale(1.5 * s, 2.6 * s, 1.5 * s); this.crystal.rotate(0, 120 * dt, 0); }
+      if (this.heroCtl) this.heroCtl.setMoving(false);
+      this.prompt.style.display = "none";
+      this._ePressed = false;
+      return;
+    }
+
     const fwd = { x: -Math.sin(this.chase.yaw), z: -Math.cos(this.chase.yaw) };
     const right = { x: Math.cos(this.chase.yaw), z: -Math.sin(this.chase.yaw) };
     const sF = (this.keys.has("w") ? 1 : 0) - (this.keys.has("s") ? 1 : 0);
@@ -152,6 +166,7 @@ export class Hub {
     const running = this.keys.has(SPRINT_KEY);
 
     this._dashCd = Math.max(0, (this._dashCd || 0) - dt);
+    this.dashPip.update((this._dashCd || 0) / MOVE.dashCooldown);
     if (this._dashPressed && this._dashCd <= 0) {
       this._dashT = MOVE.dashTime; this._dashCd = MOVE.dashCooldown;
       if (im > 0) { this._dashX = ix; this._dashZ = iz; }
@@ -209,7 +224,7 @@ export class Hub {
       this.prompt.style.display = "block";
       this.prompt.textContent = near.kind === "crystal" ? "[E]  Step into the Ward-Crystal" : `[E]  ${near.name}`;
       if (this._ePressed) {
-        if (near.kind === "crystal") this.onOpenMapSelect && this.onOpenMapSelect();
+        if (near.kind === "crystal") this.ward.start();
         else this.onOpenStation && this.onOpenStation(near.id);
       }
     } else {
@@ -231,6 +246,8 @@ export class Hub {
     this.app.autoRender = true;
     this.hero.x = this.spawn.x;
     this.hero.z = this.spawn.z;
+    if (this.crystal) this.crystal.setLocalScale(1.5, 2.6, 1.5);
+    this.ward.cancel();
     if (this.heroCtl && this._loadedClass !== this.getActiveClass()) {
       if (this.heroEnt) this.heroEnt.destroy();
       this.heroCtl = null;

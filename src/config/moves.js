@@ -8,7 +8,7 @@ export const MOVE = {
   runMul: 1.7,         // hold Shift to sprint
   dashMul: 4.5,        // tap dash → brief burst
   dashTime: 0.22,      // seconds the dash lasts
-  dashCooldown: 0.6,   // seconds before you can dash again
+  dashCooldown: 1.2,   // seconds before you can dash again
   idleFidgetAfter: 7,  // seconds idle before a one-off fidget
   fidgetClip: "Idle_B",
 };
