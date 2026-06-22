@@ -117,23 +117,24 @@ export function buildTavernWorld(app) {
     pointLight(root, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
   }
 
-  // rounded corners — quarter-circle curved walls (same overlap trick as the bar)
+  // rounded corners — quarter-circle curved walls (overlap trick like the bar)
   {
-    const cornerMat = mat(0x6a6d74, { gloss: 0.15 });
-    const R = 4.2, H = 3.0, N = 14;
+    const cornerMat = mat(0x7c7a78, { gloss: 0.12 });
+    const R = 4.2, H = 3.2, N = 24, EP = 0.10;   // EP tucks the arc ends into the walls
     const corners = [
-      { cx: -18 + R, cz: -14 + R, a0: Math.PI },        // NW: sweep 180°→270°
-      { cx: 18 - R,  cz: -14 + R, a0: 1.5 * Math.PI },  // NE: sweep 270°→360°
-      { cx: -18 + R, cz: 14 - R,  a0: 0.5 * Math.PI },  // SW: sweep  90°→180°
-      { cx: 18 - R,  cz: 14 - R,  a0: 0 },              // SE: sweep   0°→90°
+      { cx: -18 + R, cz: -14 + R, a0: Math.PI },        // NW
+      { cx: 18 - R,  cz: -14 + R, a0: 1.5 * Math.PI },  // NE
+      { cx: -18 + R, cz: 14 - R,  a0: 0.5 * Math.PI },  // SW
+      { cx: 18 - R,  cz: 14 - R,  a0: 0 },              // SE
     ];
     for (const c of corners) {
-      const stepW = ((Math.PI / 2) * R) / N * 1.7;      // overlap → no facets
+      const sweep = Math.PI / 2 + EP * 2;
+      const stepW = (R * sweep) / N * 2.0;       // heavy overlap → smooth, no facets
       for (let i = 0; i <= N; i++) {
-        const t = c.a0 + (i / N) * (Math.PI / 2);
+        const t = c.a0 - EP + (i / N) * sweep;
         const x = c.cx + R * Math.cos(t), z = c.cz + R * Math.sin(t);
-        const yawDeg = (t * 180) / Math.PI + 90;        // tangent to the arc
-        const seg = prim(root, "box", cornerMat, x, H / 2, z, stepW, H, 0.6);
+        const yawDeg = (t * 180) / Math.PI + 90;  // tangent to the arc
+        const seg = prim(root, "box", cornerMat, x, H / 2, z, stepW, H, 0.5);
         seg.setLocalEulerAngles(0, yawDeg, 0);
       }
     }
