@@ -16,6 +16,7 @@ import { ChaseCamera } from "../view/chaseCamera.js";
 import { MOVE, EMOTES, SPRINT_KEY, DASH_KEY } from "../config/moves.js";
 import { WardCharge } from "./wardCharge.js";
 import { DashPip } from "./dashPip.js";
+import { FreeCam } from "./freeCam.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 function mat(colorKey, emissive = 0) {
@@ -110,6 +111,7 @@ export class Hub {
 
     this.ward = new WardCharge(document.getElementById("ui"), { onComplete: () => this.onOpenMapSelect && this.onOpenMapSelect() });
     this.dashPip = new DashPip(document.getElementById("ui"));
+    this.freeCam = new FreeCam(this.cam, this.canvas, document.getElementById("ui"));
 
     this.app.on("update", (dt) => this._tick(dt));
     this.app.start();
@@ -145,6 +147,8 @@ export class Hub {
 
   _tick(dt) {
     if (!this.active) return;
+
+    if (this.freeCam && this.freeCam.active) { this.freeCam.update(dt); return; }
 
     if (this.ward.active) {
       const p = this.ward.update(dt);
