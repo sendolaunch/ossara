@@ -167,16 +167,12 @@ function buildTiers(root) {
   const tread = mat(0x7a7460, { gloss: 0.1 });
   const fill = (x0, x1, z0, z1, top) =>
     prim(root, "box", stone, (x0 + x1) / 2, top / 2, (z0 + z1) / 2, x1 - x0, top, z1 - z0, false);
-  // solid tier masses — raised floors sit on solid stone (no voids/gaps)
-  fill(-18, -11, -14, 14, 1.5);   // left side nooks (hall), full depth
-  fill(11, 18, -14, 14, 1.5);     // right side nooks (hall), full depth
-  fill(-11, 11, -8, 5, 1.5);      // centre hall band
-  fill(-11, 11, -14, -8, 3.0);    // raised bar platform (back centre)
-  // entrance pit (centre front, z 5..14) stays open at y=0
-  for (let i = 0; i < 3; i++)     // entrance steps: hall(1.5) DOWN to pit(0)
-    prim(root, "box", tread, 0, (1.0 - i * 0.5) + 0.25, 5 + i * 0.7, 20, 0.5, 0.8, false);
-  for (let i = 0; i < 4; i++)     // grand staircase: hall(1.5) UP to bar(3.0), corridor
-    prim(root, "box", tread, 0, (1.875 + i * 0.375) - 0.19, -4 - i, 8, 0.5, 1.0, false);
+  fill(-18, 18, -14, 6, 2.5);    // hall base mass (0..2.5)
+  fill(-15, 15, -14, -6, 7);     // raised bar platform (0..7)
+  for (let i = 0; i < 4; i++)    // entrance steps: hall(2.5) DOWN to threshold(0), z 6..8
+    prim(root, "box", tread, 0, (2.5 - (i + 1) * 0.625) + 0.31, 6 + i * 0.55, 30, 0.62, 0.62, false);
+  for (let i = 0; i < 7; i++)    // grand staircase: hall(2.5) UP to bar(7), centre |x|<=5, z -2..-6
+    prim(root, "box", tread, 0, (2.5 + (i + 1) * 0.643) - 0.31, -2 - i * 0.6, 10, 0.62, 0.62, false);
 }
 
 function buildPosts(root) {
@@ -230,11 +226,12 @@ function placeAll(app, root) {
 }
 
 function buildStations(app, root) {
-  for (const s of TAVERN_STATIONS) {
-    const props = STATION_PROPS[s.id];
-    if (!props) continue;
-    const fy = tierFloorY(s.x, s.z);
-    for (const p of props)
-      place(app, root, p.name, { x: s.x + p.dx, z: s.z + p.dz, y: fy + (p.y || 0), ry: p.ry || 0 });
-  }
+  // Stage A: temp markers only — STATION_PROPS placement re-enabled in Stage C.
+  // for (const s of TAVERN_STATIONS) {
+  //   const props = STATION_PROPS[s.id];
+  //   if (!props) continue;
+  //   const fy = tierFloorY(s.x, s.z);
+  //   for (const p of props)
+  //     place(app, root, p.name, { x: s.x + p.dx, z: s.z + p.dz, y: fy + (p.y || 0), ry: p.ry || 0 });
+  // }
 }

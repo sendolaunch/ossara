@@ -1,4 +1,5 @@
-// Headless test for the 3-tier hub floor heights. Run: node test/hubFloor.test.mjs
+// Headless test for the redesigned 3-tier hub floor (0 / +2.5 / +7).
+// Run: node test/hubFloor.test.mjs
 import { floorHeightAt, tierFloorY, TIER } from "../src/sim/hubFloor.js";
 
 let pass = 0, fail = 0;
@@ -7,22 +8,21 @@ const eq = (a, b, msg) => {
   else { fail++; console.error("FAIL:", msg, "got", a, "want", b); }
 };
 
-// --- floorHeightAt (what the hero walks on) ---
-eq(floorHeightAt(0, 12), TIER.entrance, "spawn (0,12) is entrance tier");
-eq(floorHeightAt(0, 0), TIER.hall, "crystal (0,0) is hall tier");
-eq(floorHeightAt(-3, -14), TIER.bar, "bar (-3,-14) is bar tier");
-eq(floorHeightAt(14, -11), TIER.hall, "side forge stays hall");
-eq(floorHeightAt(14, 11), TIER.hall, "side incinerator stays hall");
-eq(floorHeightAt(-14, 0), TIER.hall, "side wardrobe stays hall");
-eq(floorHeightAt(0, 6), (TIER.hall + TIER.entrance) / 2, "entrance step midpoint ramps");
-eq(floorHeightAt(0, -6), (TIER.hall + TIER.bar) / 2, "grand stair midpoint ramps");
-eq(floorHeightAt(8, -12), TIER.bar, "wide bar platform reaches |x|<=10");
-eq(floorHeightAt(13, -12), TIER.hall, "side nook behind platform stays hall");
-eq(floorHeightAt(0, -2), TIER.hall, "in front of stairs is hall");
+// floorHeightAt (hero ride height)
+eq(floorHeightAt(0, 12), TIER.entry, "spawn is threshold (0)");
+eq(floorHeightAt(0, 0), TIER.hall, "crystal is hall (2.5)");
+eq(floorHeightAt(0, -14), TIER.bar, "bar is high tier (7)");
+eq(floorHeightAt(-16, -2), TIER.hall, "forge side stays hall");
+eq(floorHeightAt(16, 4), TIER.hall, "incinerator side stays hall");
+eq(floorHeightAt(-9, 12), TIER.entry, "bounty on threshold");
+eq(floorHeightAt(0, 7), 1.25, "entrance ramp midpoint");
+eq(floorHeightAt(0, -4), 4.75, "grand staircase midpoint");
+eq(floorHeightAt(8, -10), TIER.bar, "wide platform reaches |x|<=15");
+eq(floorHeightAt(0, -6), TIER.bar, "platform front edge is bar");
 
-// --- tierFloorY (flat seating for tiles/props) ---
-eq(tierFloorY(0, 6), TIER.entrance, "step region tile snaps to entrance");
-eq(tierFloorY(0, -6), TIER.bar, "stair region tile snaps to bar");
+// tierFloorY (flat seating)
+eq(tierFloorY(0, 7), TIER.entry, "step tile snaps to threshold");
+eq(tierFloorY(0, -4), TIER.bar, "stair tile snaps to bar");
 eq(tierFloorY(0, 0), TIER.hall, "hall tile stays hall");
 
 console.log(`hubFloor: ${pass} passed, ${fail} failed`);
