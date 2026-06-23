@@ -556,7 +556,10 @@ function placeAll(app, root) {
     else prim(root, "box", fallbackFloor, f.x, fy - 0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
   }
   for (const w of WALLS) put(w);
-  for (const w of WALLS) put(w, { y: 4 });           // second course → 8u tall
+  for (const w of WALLS) {
+    if (w.name === "wall_doorway") continue;         // keep the entry camera sightline open
+    put(w, { y: 4 });                                // second course -> 8u tall
+  }
   // rounded corners — quarter arc of tangent, textured kit-wall panels
   const CORN = [
     { cx: -18 + 4, cz: -14 + 4, a0: Math.PI },        // NW

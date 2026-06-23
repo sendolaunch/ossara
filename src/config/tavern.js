@@ -1,12 +1,13 @@
 // THE UNDERCROFT — layout DATA (Stage A/B: one open hall, 0 / +2.5 / +7 tiers,
 // and structural alcove anchors). Decoration/props/trophies are Stage C.
 import { TIER, tierFloorY } from "../sim/hubFloor.js";
+import { TROPHY_DISPLAYS } from "./trophies.js";
 
 export const TILE = 4;
 export const HERO_RADIUS = 0.45;
 export const TAVERN_CAMERA = {
-  fov: 54, dist: 14, pitch: 0.64, yaw: 0, targetY: 1.6, near: 0.1, far: 320,
-  bounds: { minX: -22, maxX: 22, minZ: -15, maxZ: 13 },
+  fov: 64, dist: 14, pitch: 0.84, yaw: 0, targetY: 1.8, near: 0.1, far: 320,
+  bounds: { minX: -22, maxX: 22, minZ: -20, maxZ: 24 },
 };
 export const TAVERN_SPAWN = { x: 0, z: 12 };
 
@@ -275,8 +276,6 @@ const CORNER_COLLIDERS = [
 const TIER_COLLIDERS = [
   { x: -9.5, z: -6, hw: 5.5, hd: 0.4 }, { x: 9.5, z: -6, hw: 5.5, hd: 0.4 },
   { x: -15, z: -10, hw: 0.4, hd: 4 }, { x: 15, z: -10, hw: 0.4, hd: 4 },
-  { x: 5.3, z: -10.2, hw: 1, hd: 1 }, { x: 3, z: -8.2, hw: 1, hd: 1 }, { x: 0, z: -7.5, hw: 1, hd: 1 },
-  { x: -3, z: -8.2, hw: 1, hd: 1 }, { x: -5.3, z: -10.2, hw: 1, hd: 1 },
 ];
 const ALCOVE_COLLIDERS = ALCOVES.flatMap((a) => {
   if (a.recessed && a.side === "left") return [
@@ -307,7 +306,33 @@ const ALCOVE_COLLIDERS = ALCOVES.flatMap((a) => {
     { x: a.x + a.radius, z: 13.1, hw: 0.35, hd: 0.8 },
   ];
 });
-export const TAVERN_COLLIDERS = [...colliders, ...CORNER_COLLIDERS, ...TIER_COLLIDERS, ...ALCOVE_COLLIDERS];
+const CEREMONY_COLLIDERS = CRYSTAL_CEREMONY.braziers.map((b) => ({ x: b.x, z: b.z, hw: 0.5, hd: 0.5 }));
+const STATION_STRUCTURE_COLLIDERS = [
+  { x: -19.4, z: -2.5, hw: 0.95, hd: 1.15 },
+  { x: -19.4, z: 4.5, hw: 0.95, hd: 1.15 },
+  { x: 19.4, z: -2.5, hw: 0.95, hd: 1.15 },
+  { x: 19.4, z: 4.5, hw: 0.95, hd: 1.15 },
+  { x: -9, z: 15.45, hw: 1.25, hd: 0.35 },
+  { x: 9, z: 15.45, hw: 1.25, hd: 0.35 },
+];
+const HALL_FURNITURE_COLLIDERS = [
+  { x: -10.6, z: -3.4, hw: 1.35, hd: 0.85 },
+  { x: -12.1, z: 3.1, hw: 1.05, hd: 1.05 },
+  { x: 12.1, z: 3.1, hw: 1.2, hd: 0.7 },
+  { x: 10.6, z: -3.4, hw: 1.15, hd: 1.15 },
+];
+const BAR_DECOR_COLLIDERS = [
+  { x: -12.2, z: -11.2, hw: 1.5, hd: 1.9 },
+  { x: 12.2, z: -11.2, hw: 1.5, hd: 1.9 },
+  { x: -9.3, z: -5.8, hw: 4.5, hd: 0.35 },
+  { x: 9.3, z: -5.8, hw: 4.5, hd: 0.35 },
+];
+const TROPHY_COLLIDERS = TROPHY_DISPLAYS.map((t) => ({ x: t.x, z: t.z, hw: 0.75, hd: 0.45 }));
+export const TAVERN_COLLIDERS = [
+  ...colliders, ...CORNER_COLLIDERS, ...TIER_COLLIDERS, ...ALCOVE_COLLIDERS,
+  ...CEREMONY_COLLIDERS, ...STATION_STRUCTURE_COLLIDERS, ...HALL_FURNITURE_COLLIDERS,
+  ...BAR_DECOR_COLLIDERS, ...TROPHY_COLLIDERS,
+];
 export const TAVERN_PIECES = [...new Set([
   ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name), "torch_mounted",
 ])];

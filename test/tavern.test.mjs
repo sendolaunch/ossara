@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, ATMOSPHERE_DECOR, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, ATMOSPHERE_DECOR, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_CAMERA, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { STATION_PROPS } from "../src/config/stations.js";
 import { TROPHY_DISPLAYS } from "../src/config/trophies.js";
@@ -106,7 +106,7 @@ for (const a of HALL_ANCHORS) {
   ok(Math.abs(a.x) >= 7, `hall anchor "${a.id}" stays off the spawn-crystal-bar sightline`);
   ok(Math.hypot(a.x - TAVERN_CRYSTAL.x, a.z - TAVERN_CRYSTAL.z) >= 7, `hall anchor "${a.id}" stays outside the crystal walking ring`);
   ok(a.maxHeight <= 1.35, `hall anchor "${a.id}" remains low profile`);
-  ok(!overlaps(a.x, a.z), `hall anchor "${a.id}" center is not inside a collider`);
+  ok(!overlaps(a.x * 0.72, a.z * 0.72), `hall anchor "${a.id}" has a clear approach from the hall`);
   ok(!("trophy" in a) && !("progression" in a), `hall anchor "${a.id}" has no trophy progression hook`);
 }
 
@@ -179,6 +179,18 @@ for (const t of TROPHY_DISPLAYS) {
   ok(Math.abs(t.x) >= 5 || Math.abs(t.z) >= 12, `trophy "${t.id}" lives on the perimeter`);
   ok(Math.hypot(t.x - TAVERN_CRYSTAL.x, t.z - TAVERN_CRYSTAL.z) >= 9, `trophy "${t.id}" stays clear of the crystal approach`);
 }
+
+// 13) Stage D: production collision blocks objects while preserving core paths.
+for (const b of CRYSTAL_CEREMONY.braziers)
+  ok(overlaps(b.x, b.z), "ward brazier has collision");
+for (const a of HALL_ANCHORS)
+  ok(overlaps(a.x, a.z), `hall furniture "${a.id}" has collision`);
+for (const t of TROPHY_DISPLAYS)
+  ok(overlaps(t.x, t.z), `trophy "${t.id}" has collision`);
+for (const z of [-2.2, -3.2, -4.2, -5.2, -6.4, -7.4])
+  ok(!overlaps(0, z), `central staircase path clear at z=${z}`);
+ok(TAVERN_CAMERA.bounds.maxZ >= TAVERN_SPAWN.z + 10, "spawn camera has room to sit behind the hero");
+ok(TAVERN_CAMERA.bounds.minZ <= -20, "bar camera has room to frame the high platform");
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);
