@@ -16,6 +16,7 @@ import {
   RUNNER, ENTRANCE_STEPS, MIRROR, BAR,
 } from "../config/tavern.js";
 import { floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
+import { STATION_PROPS, BARTENDER } from "../config/stations.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -145,6 +146,7 @@ export function buildTavernWorld(app) {
     "torch_mounted",
     ...(MEZZANINE.stairs ? [MEZZANINE.stairs.name] : []),
     ...MEZZANINE.deck.map((p) => p.name), ...MEZZANINE.rail.map((p) => p.name), ...MEZZANINE.banners.map((p) => p.name),
+    ...Object.values(STATION_PROPS).flat().map((p) => p.name), BARTENDER.model,
   ])])
     .then(() => placeAll(app, root))
     .catch((e) => console.warn("[tavernWorld] kit place skipped:", e));
@@ -223,4 +225,21 @@ function placeAll(app, root) {
   for (const d of MEZZANINE.deck) put(d);
   for (const r of MEZZANINE.rail) put(r);
   for (const b of MEZZANINE.banners) put(b);
+
+  buildStations(app, root);
+}
+
+function buildStations(app, root) {
+  for (const s of TAVERN_STATIONS) {
+    const props = STATION_PROPS[s.id];
+    if (!props) continue;
+    const fy = tierFloorY(s.x, s.z);
+    for (const p of props)
+      place(app, root, p.name, { x: s.x + p.dx, z: s.z + p.dz, y: fy + (p.y || 0), ry: p.ry || 0 });
+  }
+  // Orc Raider bartender, behind the centred bar
+  place(app, root, BARTENDER.model, {
+    x: BARTENDER.x, z: BARTENDER.z, y: tierFloorY(BARTENDER.x, BARTENDER.z),
+    ry: BARTENDER.ry, scale: BARTENDER.scale,
+  });
 }
