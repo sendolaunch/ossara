@@ -82,7 +82,7 @@ export const INTERACT_R = 2.6;
 
 // big curved bar — a semicircle counter bulging south off the north wall,
 // its ends curving back into the wall. Built procedurally in tavernWorld.
-export const BAR = { cx: -3, cz: -14, radius: 5.5 };
+export const BAR = { cx: 0, cz: -14, radius: 5.5 };
 export const RUNNER = { from: 12, to: 2.5, x: 0, width: 2.4 };
 export const ENTRANCE_STEPS = { x: 0, z: 13.4 };
 export const MIRROR = { x: -17.5, z: 0, ry: 90 };
@@ -116,6 +116,10 @@ const TIER_COLLIDERS = [
   { x: -11, z: -11, hw: 0.4, hd: 3 }, { x: 11, z: -11, hw: 0.4, hd: 3 },
   // entrance pit: wall off the sides so you descend only via the front steps
   { x: -11, z: 10.5, hw: 0.4, hd: 3.5 }, { x: 11, z: 10.5, hw: 0.4, hd: 3.5 },
+  // curved bar counter (approximated along its arc)
+  { x: 4.5, z: -10.8, hw: 0.9, hd: 0.9 }, { x: 2.5, z: -9.1, hw: 0.9, hd: 0.9 },
+  { x: 0, z: -8.6, hw: 0.9, hd: 0.9 }, { x: -2.5, z: -9.1, hw: 0.9, hd: 0.9 },
+  { x: -4.5, z: -10.8, hw: 0.9, hd: 0.9 },
 ];
 export const TAVERN_COLLIDERS = [...colliders, ...FURNITURE_COLLIDERS, ...PROP_COLLIDERS, ...CORNER_COLLIDERS, ...TIER_COLLIDERS];
 export const TAVERN_PIECES = [...new Set([

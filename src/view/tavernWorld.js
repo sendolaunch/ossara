@@ -122,6 +122,7 @@ export function buildTavernWorld(app) {
   }
 
   buildTiers(root);
+  buildPosts(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
   const stations = [];
@@ -176,6 +177,13 @@ function buildTiers(root) {
     prim(root, "box", tread, 0, (1.875 + i * 0.375) - 0.19, -4 - i, 8, 0.5, 1.0, false);
 }
 
+function buildPosts(root) {
+  const wood = mat(0x3f2c1a, { gloss: 0.15 });
+  const post = (x, z) => prim(root, "box", wood, x, 4, z, 0.7, 8, 0.7, true);
+  for (const z of [-12, -6, 0, 6, 12]) { post(-17.2, z); post(17.2, z); }   // side walls
+  for (const x of [-12, -6, 6, 12]) { post(x, -13.2); post(x, 13.2); }      // front/back
+}
+
 function placeAll(app, root) {
   const put = (p, extra = {}) => place(app, root, p.name, { x: p.x, z: p.z, y: p.y || 0, ry: p.ry || 0, ...extra });
 
@@ -204,7 +212,7 @@ function placeAll(app, root) {
         place(app, root, "wall", { x, z, y: wy, ry: -(t * 180 / Math.PI) - 90, sx: 0.85 });
     }
   }
-  for (const c of COLUMNS) put(c);
+  for (const c of COLUMNS) put(c, { y: tierFloorY(c.x, c.z) });
   for (const p of PROPS) put(p, { y: (p.y || 0) + tierFloorY(p.x, p.z) });
   for (const b of BANNERS) put(b);
   for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: 2.5, z: t.z, ry: t.ry });
