@@ -12,6 +12,7 @@ import { buildTavernWorld } from "../view/tavernWorld.js";
 import { resolveCircle } from "../sim/hubCollide.js";
 import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
 import { loadCharacter } from "../view/character.js";
+import { createBartender } from "../view/bartender.js";
 import { ChaseCamera } from "../view/chaseCamera.js";
 import { MOVE, EMOTES, SPRINT_KEY, DASH_KEY } from "../config/moves.js";
 import { WardCharge } from "./wardCharge.js";
@@ -66,6 +67,7 @@ export class Hub {
     this.crystalPos = world.crystal;
     this.crystal = world.crystalEntity;
     this.spawn = world.spawn;
+    createBartender(this.app, world.root).then((b) => { this.bartender = b; });
     const C = world.camera;
 
     // DD1-style chase camera — trails behind the hero; mouse-drag orbits; wheel zooms close→medium.
@@ -148,6 +150,8 @@ export class Hub {
 
   _tick(dt) {
     if (!this.active) return;
+
+    if (this.bartender) this.bartender.update(dt);
 
     if (this.freeCam && this.freeCam.active) { this.freeCam.update(dt); return; }
 

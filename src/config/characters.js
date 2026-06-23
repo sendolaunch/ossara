@@ -41,6 +41,7 @@ export const CHARACTERS = {
   hunter:       { model: DIR + "Ranger.glb",        weapon: WPN + "bow.gltf",                                              targetHeight: 1.8,  scale: 1 },
   stormcaller:  { model: DIR + "Mage.glb",          weapon: WPN + "staff.gltf",                                            targetHeight: 1.8,  scale: 1 },
   plaguedoctor: { model: DIR + "Rogue_Hooded.glb",  weapon: WPN + "dagger.gltf",                                           targetHeight: 1.78, scale: 1 },
+  bartender_orc: { model: "models/npc/OrcRaider.glb", targetHeight: 2.4, scale: 1 },
 };
 
 export const CHAR_FALLBACK = "warden";

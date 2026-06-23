@@ -68,7 +68,7 @@ export const BANNERS = [
 // balcony removed (the raised deck showed the void past the walls)
 export const MEZZANINE = { stairs: null, deck: [], rail: [], banners: [] };
 export const TAVERN_STATIONS = [
-  { id: "quartermaster", name: "Bar — Quartermaster (sell loot)", x: 0, z: -7.5, color: "gold" },
+  { id: "quartermaster", name: "Bar — Quartermaster (sell loot)", x: 0, z: -6.5, color: "gold" },
   { id: "bench", name: "Forge — Re-roll / Upgrade", x: 14, z: -11, color: "gold" },
   { id: "stash", name: "Stash — your storage", x: 14, z: -4, color: "bone" },
   { id: "salvager", name: "Salvager — break gear into mats", x: 14, z: 4, color: "ash" },
