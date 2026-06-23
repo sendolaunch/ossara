@@ -111,8 +111,10 @@ const CORNER_COLLIDERS = [
 // tier colliders: keep the player from skipping the stairs onto the bar platform
 // or shortcutting past the entrance steps via the side
 const TIER_COLLIDERS = [
-  { x: -7, z: -8, hw: 3, hd: 0.4 }, { x: 7, z: -8, hw: 3, hd: 0.4 },
-  { x: -10, z: -11, hw: 0.4, hd: 3 }, { x: 10, z: -11, hw: 0.4, hd: 3 },
+  // bar platform: block the front (except central stair gap |x|<4) + the sides
+  { x: -7.5, z: -8, hw: 3.5, hd: 0.4 }, { x: 7.5, z: -8, hw: 3.5, hd: 0.4 },
+  { x: -11, z: -11, hw: 0.4, hd: 3 }, { x: 11, z: -11, hw: 0.4, hd: 3 },
+  // entrance pit: wall off the sides so you descend only via the front steps
   { x: -11, z: 10.5, hw: 0.4, hd: 3.5 }, { x: 11, z: 10.5, hw: 0.4, hd: 3.5 },
 ];
 export const TAVERN_COLLIDERS = [...colliders, ...FURNITURE_COLLIDERS, ...PROP_COLLIDERS, ...CORNER_COLLIDERS, ...TIER_COLLIDERS];

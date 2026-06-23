@@ -21,7 +21,7 @@ export const ENTRANCE = { zFlat: 7, zStepTop: 5 };
 // back-centre bar platform: the raised platform is the band z <= zFlat, |x| <= platHalfX.
 // The grand staircase (the only way up) is the central corridor |x| <= halfX, ramping over
 // [zStepTop, zFlat]. Platform sides outside the stairs are walled off (riser + collider).
-export const BARP = { zFlat: -8, zStepTop: -4, halfX: 4, platHalfX: 10 };
+export const BARP = { zFlat: -8, zStepTop: -4, halfX: 4, platHalfX: 11 };
 
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
 const lerp = (a, b, t) => a + (b - a) * clamp01(t);

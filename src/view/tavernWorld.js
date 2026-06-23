@@ -162,20 +162,18 @@ export function buildTavernWorld(app) {
 function buildTiers(root) {
   const stone = mat(0x6f6a58, { gloss: 0.12 });
   const tread = mat(0x7a7460, { gloss: 0.1 });
-  // entrance steps: hall(1.5) DOWN to entrance(0) across the foyer front (z 5..6.4)
-  for (let i = 0; i < 3; i++)
+  const fill = (x0, x1, z0, z1, top) =>
+    prim(root, "box", stone, (x0 + x1) / 2, top / 2, (z0 + z1) / 2, x1 - x0, top, z1 - z0, false);
+  // solid tier masses — raised floors sit on solid stone (no voids/gaps)
+  fill(-18, -11, -14, 14, 1.5);   // left side nooks (hall), full depth
+  fill(11, 18, -14, 14, 1.5);     // right side nooks (hall), full depth
+  fill(-11, 11, -8, 5, 1.5);      // centre hall band
+  fill(-11, 11, -14, -8, 3.0);    // raised bar platform (back centre)
+  // entrance pit (centre front, z 5..14) stays open at y=0
+  for (let i = 0; i < 3; i++)     // entrance steps: hall(1.5) DOWN to pit(0)
     prim(root, "box", tread, 0, (1.0 - i * 0.5) + 0.25, 5 + i * 0.7, 20, 0.5, 0.8, false);
-  // entrance-pit side risers (x = ±11, z 7..14)
-  for (const sx of [-11, 11])
-    prim(root, "box", stone, sx, 0.75, 10.5, 0.5, 1.5, 7, false);
-  // grand staircase: hall(1.5) UP to bar(3.0), central corridor (z -4..-7)
-  for (let i = 0; i < 4; i++)
+  for (let i = 0; i < 4; i++)     // grand staircase: hall(1.5) UP to bar(3.0), corridor
     prim(root, "box", tread, 0, (1.875 + i * 0.375) - 0.19, -4 - i, 8, 0.5, 1.0, false);
-  // bar-platform front risers (split around the stair gap |x|<=4) + side faces
-  prim(root, "box", stone, -7, 2.25, -8, 6, 1.5, 0.5, false);
-  prim(root, "box", stone, 7, 2.25, -8, 6, 1.5, 0.5, false);
-  for (const sx of [-10, 10])
-    prim(root, "box", stone, sx, 2.25, -11, 0.5, 1.5, 6, false);
 }
 
 function placeAll(app, root) {
@@ -189,6 +187,7 @@ function placeAll(app, root) {
     else prim(root, "box", fallbackFloor, f.x, fy - 0.05, f.z, TILE - 0.05, 0.12, TILE - 0.05, false);
   }
   for (const w of WALLS) put(w);
+  for (const w of WALLS) put(w, { y: 4 });           // second course → 8u tall
   // rounded corners — quarter arc of tangent, textured kit-wall panels
   const CORN = [
     { cx: -18 + 4, cz: -14 + 4, a0: Math.PI },        // NW
@@ -201,7 +200,8 @@ function placeAll(app, root) {
     for (let i = 0; i < KC; i++) {
       const t = c.a0 + ((i + 0.5) / KC) * (Math.PI / 2);
       const x = c.cx + KR * Math.cos(t), z = c.cz + KR * Math.sin(t);
-      place(app, root, "wall", { x, z, ry: -(t * 180 / Math.PI) - 90, sx: 0.85 });
+      for (const wy of [0, 4])
+        place(app, root, "wall", { x, z, y: wy, ry: -(t * 180 / Math.PI) - 90, sx: 0.85 });
     }
   }
   for (const c of COLUMNS) put(c);
