@@ -32,16 +32,25 @@ function run(world, steps, dt, input = {}) {
 section("pathing");
 {
   ok(Array.isArray(LEVEL.lanes) && LEVEL.lanes.length === 5, "first breach defines five enemy lanes");
+  const expectedLaneIds = ["north-gate", "northwest-stairs", "northeast-market", "southwest-crypt", "southeast-garden"];
+  ok(LEVEL.cols >= 45 && LEVEL.rows >= 35, "fallen courtyard is significantly larger than the tiny tutorial map");
+  ok(expectedLaneIds.every((id) => LEVEL.lanes.some((lane) => lane.id === id)), "all five required lane ids exist");
   for (const lane of LEVEL.lanes) {
     ok(!!lane.id, `${lane.name || "lane"} has an id`);
     ok(!!lane.name, `${lane.id || "lane"} has a display name`);
+    ok(!!lane.silhouette, `${lane.id} has a distinct greybox silhouette`);
     ok(!!lane.spawn, `${lane.id} has a spawn`);
     ok(Array.isArray(lane.waypoints) && lane.waypoints.length >= 2, `${lane.id} has readable waypoints`);
     ok(lane.waypoints[0].col === lane.spawn.col && lane.waypoints[0].row === lane.spawn.row, `${lane.id} path starts at its spawn`);
     const lastWp = lane.waypoints[lane.waypoints.length - 1];
     const distToCore = Math.abs(lastWp.col - LEVEL.core.col) + Math.abs(lastWp.row - LEVEL.core.row);
     ok(distToCore <= 1, `${lane.id} path reaches the Ward-Crystal`);
+    ok(!!lane.choke, `${lane.id} has an explicit choke point`);
+    ok(lane.waypoints.some((wp) => wp.col === lane.choke.col && wp.row === lane.choke.row), `${lane.id} choke sits on its lane`);
+    ok(Array.isArray(lane.buildShoulders) && lane.buildShoulders.length >= 2, `${lane.id} has build shoulders near its approach`);
+    ok(LEVEL.buildableZones.some((zone) => zone.laneId === lane.id), `${lane.id} has a buildable zone near its choke`);
   }
+  ok(LEVEL.buildableZones.some((zone) => zone.laneId === "core"), "central crystal apron has a buildable zone");
   ok(LEVEL.breach && !Array.isArray(LEVEL.breach), "legacy first breach alias still exposes one default spawn");
   ok(LEVEL.core && !Array.isArray(LEVEL.core), "first breach has exactly one core");
   ok(LEVEL.waypoints[0].col === LEVEL.breach.col && LEVEL.waypoints[0].row === LEVEL.breach.row, "legacy path starts at the default enemy spawn");
@@ -101,28 +110,31 @@ section("building rules");
       ok(!w.buildableAt(cell.col, cell.row), `cannot build on ${lane.id} path cell ${cellKey(cell.col, cell.row)}`);
     }
     ok(!w.buildableAt(lane.spawn.col, lane.spawn.row), `cannot build on ${lane.id} spawn`);
+    for (const shoulder of lane.buildShoulders) {
+      ok(w.buildableAt(shoulder.col, shoulder.row), `can build on ${lane.id} shoulder ${cellKey(shoulder.col, shoulder.row)}`);
+    }
   }
-  ok(!w.buildableAt(14, 13), "cannot build on a blocked ruin/statue base");
+  ok(!w.buildableAt(16, 17), "cannot build on a blocked ruin/statue base");
   ok(!w.buildableAt(LEVEL.core.col, LEVEL.core.row), "cannot build on the core");
-  ok(!w.buildableAt(19, 13), "cannot build in the core reserved zone");
+  ok(!w.buildableAt(22, 16), "cannot build in the core reserved zone");
   const heroSpawn = worldToGrid(w.hero._spawn.x, w.hero._spawn.z, LEVEL);
   ok(!w.buildableAt(heroSpawn.col, heroSpawn.row), "cannot build on the hero spawn");
-  ok(w.buildableAt(18, 10), "can build on a north choke shoulder");
-  ok(w.buildableAt(22, 10), "can build on the opposite north choke shoulder");
-  ok(w.buildableAt(18, 12), "can build near the Ward approach");
-  ok(w.buildableAt(18, 15), "can build near the lower Ward approach");
-  ok(w.buildableAt(0, 8), "can build on an empty off-lane tile");
+  ok(w.buildableAt(21, 10), "can build on a north choke shoulder");
+  ok(w.buildableAt(27, 10), "can build on the opposite north choke shoulder");
+  ok(w.buildableAt(21, 13), "can build near the Ward approach");
+  ok(w.buildableAt(27, 13), "can build near the opposite Ward approach");
+  ok(w.buildableAt(4, 12), "can build on an empty off-lane tile");
 
   const before = w.marrow;
-  const r1 = w.tryPlaceTower("ballista", 0, 8);
+  const r1 = w.tryPlaceTower("ballista", 4, 12);
   ok(r1.ok, "valid placement succeeds");
   ok(w.marrow === before - TOWERS.ballista.cost, "marrow deducted by tower cost");
-  ok(!w.buildableAt(0, 8), "tile is occupied after placing");
+  ok(!w.buildableAt(4, 12), "tile is occupied after placing");
 
-  const r2 = w.tryPlaceTower("ballista", 0, 8);
+  const r2 = w.tryPlaceTower("ballista", 4, 12);
   ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
 
-  const r3 = w.tryPlaceTower("ballista", 20, 6);
+  const r3 = w.tryPlaceTower("ballista", 24, 11);
   ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
 
   for (const lane of LEVEL.lanes) {
@@ -137,7 +149,7 @@ section("building rules");
   ok(!rSpawn.ok && rSpawn.reason === "reserved", "cannot place on the hero spawn");
 
   w.marrow = 0;
-  const r4 = w.tryPlaceTower("ballista", 0, 9);
+  const r4 = w.tryPlaceTower("ballista", 4, 13);
   ok(!r4.ok && r4.reason === "marrow", "cannot afford without marrow");
 }
 
@@ -221,7 +233,7 @@ section("a tower kills enemies and grants marrow");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const place = w.tryPlaceTower("ballista", 18, 10);
+  const place = w.tryPlaceTower("ballista", 21, 10);
   ok(place.ok, "tower placed next to the lane");
   const marrowBefore = w.marrow;
   w.startWave();
@@ -254,8 +266,8 @@ section("object pooling reuses dead enemies");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  w.tryPlaceTower("ballista", 18, 10);
-  w.tryPlaceTower("spire", 22, 10);
+  w.tryPlaceTower("ballista", 21, 10);
+  w.tryPlaceTower("spire", 27, 10);
   w.startWave();
   run(w, 4000, 0.05, {});
   ok(w.enemyPool.pooledCount > 0, "dead enemies were returned to the pool");

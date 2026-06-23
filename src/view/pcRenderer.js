@@ -6,7 +6,7 @@
 import * as pc from "playcanvas";
 import { PALETTE } from "../config/palette.js";
 import { TOWERS } from "../config/towers.js";
-import { gridToWorld, worldToGrid } from "../sim/pathing.js";
+import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { loadCharacter } from "./character.js";
@@ -31,6 +31,14 @@ function prim(type, material, app) {
   const e = new pc.Entity();
   e.addComponent("render", { type, castShadows: true, receiveShadows: true });
   if (material && e.render && e.render.meshInstances[0]) e.render.meshInstances[0].material = material;
+  return e;
+}
+
+function addBox(root, material, x, z, sx, sy, sz, y = sy / 2) {
+  const e = prim("box", material);
+  e.setLocalScale(sx, sy, sz);
+  e.setPosition(x, y, z);
+  root.addChild(e);
   return e;
 }
 
@@ -142,17 +150,11 @@ export class PCRenderer {
       this.app.root.addChild(tile);
     }
 
-    const buildHintMat = mat("ash", 0.04);
-    const buildHints = [
-      [9, 6], [10, 6], [11, 6], [12, 6], [13, 6],
-      [9, 8], [10, 8], [11, 8], [12, 8], [13, 8],
-      [18, 6], [19, 6], [20, 6], [21, 6],
-      [18, 8], [19, 8], [20, 8], [21, 8],
-    ];
-    for (const [c, r] of buildHints) {
-      const key = `${c},${r}`;
+    const buildHintMat = mat("ash", 0.035);
+    for (const cell of expandRects(level.buildableZones || [])) {
+      const key = `${cell.col},${cell.row}`;
       if (world.pathSet.has(key) || world.blockedSet.has(key) || world.reservedSet.has(key)) continue;
-      const w = gridToWorld(c, r, level);
+      const w = gridToWorld(cell.col, cell.row, level);
       const tile = prim("box", buildHintMat);
       tile.setLocalScale(0.82, 0.035, 0.82);
       tile.setPosition(w.x, 0.012, w.z);
@@ -160,16 +162,53 @@ export class PCRenderer {
     }
 
     // THE BREACH — a glowing tear in the world where the dead pour through
-    const bw = gridToWorld(level.breach.col, level.breach.row, level);
-    const breach = prim("sphere", mat("plague", 1.7));
-    breach.setLocalScale(0.6, 3.4, 2.8);
-    breach.setPosition(bw.x - 0.2, 1.7, bw.z);
-    this.app.root.addChild(breach);
-    const breachLight = new pc.Entity();
-    breachLight.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 3, range: 16 });
-    breachLight.setPosition(bw.x, 2, bw.z);
-    this.app.root.addChild(breachLight);
-    this.breachEntity = breach;
+    this.breachEntities = [];
+    const gateMat = mat("ash");
+    const stairMat = mat("bone");
+    const markerMat = mat("rot", 0.08);
+    const portalMat = mat("plague", 1.55);
+    const addGatePortal = (lane, x, z, side = "north") => {
+      const horizontal = side === "north" || side === "south";
+      const sx = horizontal ? 3.2 : 0.8;
+      const sz = horizontal ? 0.8 : 3.2;
+      const left = horizontal ? [-1.8, 0] : [0, -1.8];
+      const right = horizontal ? [1.8, 0] : [0, 1.8];
+      addBox(this.app.root, gateMat, x + left[0], z + left[1], 0.55, 1.8, 0.55);
+      addBox(this.app.root, gateMat, x + right[0], z + right[1], 0.55, 1.8, 0.55);
+      addBox(this.app.root, gateMat, x, z, sx, 0.35, sz, 1.85);
+      const portal = prim("sphere", portalMat);
+      portal.setLocalScale(horizontal ? 0.75 : 0.55, 2.4, horizontal ? 0.55 : 0.75);
+      portal.setPosition(x, 1.1, z);
+      this.app.root.addChild(portal);
+      this.breachEntities.push(portal);
+      const light = new pc.Entity(`${lane.id}-breach-light`);
+      light.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 1.35, range: 9 });
+      light.setPosition(x, 1.8, z);
+      this.app.root.addChild(light);
+    };
+    const addLaneMarker = (lane) => {
+      const w = gridToWorld(lane.spawn.col, lane.spawn.row, level);
+      if (lane.id === "north-gate") {
+        addGatePortal(lane, w.x, w.z, "north");
+      } else if (lane.id === "northwest-stairs") {
+        addGatePortal(lane, w.x, w.z, "west");
+        for (let i = 0; i < 4; i++) addBox(this.app.root, stairMat, w.x + i * 0.55, w.z + 1.8 + i * 0.45, 2.8 - i * 0.35, 0.14, 0.42, 0.07 + i * 0.04);
+      } else if (lane.id === "northeast-market") {
+        addGatePortal(lane, w.x, w.z, "east");
+        addBox(this.app.root, markerMat, w.x - 2.2, w.z - 1.4, 1.5, 0.45, 0.8);
+        addBox(this.app.root, markerMat, w.x - 2.2, w.z + 1.4, 1.5, 0.45, 0.8);
+      } else if (lane.id === "southwest-crypt") {
+        addGatePortal(lane, w.x, w.z, "west");
+        addBox(this.app.root, gateMat, w.x + 1.8, w.z - 1.8, 0.5, 0.9, 1.2);
+        addBox(this.app.root, gateMat, w.x + 1.8, w.z + 1.8, 0.5, 0.9, 1.2);
+      } else if (lane.id === "southeast-garden") {
+        addGatePortal(lane, w.x, w.z, "east");
+        addBox(this.app.root, markerMat, w.x - 1.8, w.z - 1.8, 1.2, 0.35, 1.2);
+        addBox(this.app.root, markerMat, w.x - 1.8, w.z + 1.8, 1.2, 0.35, 1.2);
+      }
+    };
+    for (const lane of level.lanes || []) addLaneMarker(lane);
+    this.breachEntity = this.breachEntities[0] || null;
 
     // THE WARD — the failing seal you defend: rune dais + ring + crystal
     const cw = gridToWorld(level.core.col, level.core.row, level);
