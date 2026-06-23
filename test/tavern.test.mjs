@@ -6,11 +6,18 @@ import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
   ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
+import { STATION_PROPS } from "../src/config/stations.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
 const piece = (n) => fileURLToPath(new URL(`../public/models/dungeon/${n}`, import.meta.url));
+const assetPath = (name) => {
+  const i = name.indexOf("/");
+  const pack = i >= 0 ? name.slice(0, i) : "dungeon";
+  const file = i >= 0 ? name.slice(i + 1) : name;
+  return fileURLToPath(new URL(`../public/models/${pack}/${file}`, import.meta.url));
+};
 
 // 1) every referenced piece exists as .gltf + .bin
 for (const name of TAVERN_PIECES) {
@@ -95,6 +102,21 @@ for (const a of HALL_ANCHORS) {
   ok(!overlaps(a.x, a.z), `hall anchor "${a.id}" center is not inside a collider`);
   ok(!("trophy" in a) && !("progression" in a), `hall anchor "${a.id}" has no trophy progression hook`);
 }
+
+// 8) Stage C.1: every interactable station has real KayKit/kit dressing assets.
+const requiredStationProps = ["forge", "salvager", "stash", "incinerator", "bounty", "wardrobe"];
+for (const id of requiredStationProps) {
+  const props = STATION_PROPS[id] || [];
+  ok(props.length >= 6, `station "${id}" has a recognizable prop kit`);
+  ok(props.some((p) => p.name.startsWith("dungeon/") || p.name.startsWith("resource/") || p.name.startsWith("rpgtools/")), `station "${id}" uses real kit assets`);
+  for (const p of props) {
+    const base = assetPath(p.name);
+    ok(existsSync(base + ".gltf"), `station prop exists: ${p.name}.gltf`);
+    ok(existsSync(base + ".bin"), `station prop data exists: ${p.name}.bin`);
+  }
+}
+for (const a of ALCOVES)
+  ok(STATION_PROPS[a.propsId]?.length > 0, `alcove "${a.id}" has station identity props`);
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

@@ -121,6 +121,7 @@ export function buildTavernWorld(app) {
   buildTiers(root);
   buildAlcoves(root);
   buildHallAnchors(root);
+  buildStationIdentity(root);
   buildPosts(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
@@ -274,6 +275,107 @@ function buildSeatingNook(root, m) {
   prim(root, "sphere", mat(0x6a1f2b, { gloss: 0.25 }), -0.22, 0.75, 0.06, 0.18, 0.16, 0.18, false);
 }
 
+function buildStationIdentity(root) {
+  const stationByProps = new Map(TAVERN_STATIONS.map((s) => [s.propsId || s.id, s]));
+  const forge = stationByProps.get("forge");
+  const salvager = stationByProps.get("salvager");
+  const stash = stationByProps.get("stash");
+  const incinerator = stationByProps.get("incinerator");
+  const bounty = stationByProps.get("bounty");
+  const wardrobe = stationByProps.get("wardrobe");
+  if (forge) buildForgeIdentity(root, forge);
+  if (salvager) buildSalvagerIdentity(root, salvager);
+  if (stash) buildStashIdentity(root, stash);
+  if (incinerator) buildIncineratorIdentity(root, incinerator);
+  if (bounty) buildBountyIdentity(root, bounty);
+  if (wardrobe) buildWardrobeIdentity(root, wardrobe);
+}
+
+function buildForgeIdentity(root, s) {
+  const y = s.y;
+  const ember = mat(0xff7a28, { emissive: 1.15, gloss: 0.25 });
+  const iron = mat(0x2b2926, { gloss: 0.2 });
+  const soot = mat(0x15110e, { gloss: 0.05 });
+  const coal = mat(0x1b1714, { gloss: 0.08 });
+  prim(root, "cylinder", soot, s.x + 0.08, y + 0.04, s.z + 0.08, 2.9, 0.035, 2.15, false);
+  prim(root, "box", iron, s.x - 0.85, y + 1.15, s.z - 0.2, 0.55, 2.3, 0.55, true);
+  prim(root, "box", iron, s.x - 0.55, y + 2.25, s.z - 0.2, 1.15, 0.34, 0.55, true);
+  prim(root, "box", ember, s.x - 0.18, y + 0.42, s.z - 0.2, 1.1, 0.38, 0.75, false);
+  prim(root, "sphere", coal, s.x + 0.75, y + 0.18, s.z + 1.55, 0.9, 0.32, 0.75, true);
+  for (const dz of [-0.75, 0, 0.75])
+    prim(root, "box", iron, s.x - 1.08, y + 1.35, s.z + dz, 0.08, 1.2, 0.07, true).setLocalEulerAngles(0, 0, 18);
+  pointLight(root, 0xff7a28, 1.7, 5.5, s.x + 0.1, y + 1.15, s.z - 0.15);
+}
+
+function buildSalvagerIdentity(root, s) {
+  const y = s.y;
+  const steel = mat(0x7c8790, { emissive: 0.08, gloss: 0.35 });
+  const dark = mat(0x24282a, { gloss: 0.2 });
+  const shard = mat(0xb7c6cc, { gloss: 0.4 });
+  prim(root, "box", dark, s.x + 0.02, y + 0.03, s.z, 2.55, 0.04, 2.0, false);
+  for (const [dx, dz, r] of [[-0.8, -1.05, 22], [-0.4, 1.15, -18], [0.75, 0.95, 33], [0.88, -1.12, -28]]) {
+    const p = prim(root, "box", shard, s.x + dx, y + 0.28, s.z + dz, 0.55, 0.12, 0.16, true);
+    p.setLocalEulerAngles(0, r, 0);
+  }
+  for (const dz of [-1.55, 1.55]) {
+    prim(root, "box", steel, s.x - 0.95, y + 0.65, s.z + dz, 0.18, 1.1, 0.1, true).setLocalEulerAngles(0, 0, 22);
+  }
+  pointLight(root, 0x8fb4c8, 0.55, 4.5, s.x, y + 1.3, s.z);
+}
+
+function buildStashIdentity(root, s) {
+  const y = s.y;
+  const gold = mat(PALETTE.gold, { emissive: 0.32, gloss: 0.55 });
+  const vault = mat(0x34312c, { gloss: 0.25 });
+  const dark = mat(0x1d1a17, { gloss: 0.1 });
+  prim(root, "box", vault, s.x + 0.9, y + 1.1, s.z, 0.35, 2.2, 3.6, true);
+  prim(root, "box", vault, s.x + 0.15, y + 2.05, s.z, 1.5, 0.28, 3.45, true);
+  prim(root, "cylinder", dark, s.x - 0.15, y + 0.06, s.z, 3.4, 0.045, 3.9, false);
+  for (const dz of [-1.2, -0.4, 0.4, 1.2])
+    prim(root, "box", gold, s.x - 0.1, y + 0.23, s.z + dz, 0.55, 0.16, 0.24, false);
+  pointLight(root, PALETTE.gold, 1.15, 5.5, s.x - 0.15, y + 1.2, s.z);
+}
+
+function buildIncineratorIdentity(root, s) {
+  const y = s.y;
+  const red = mat(0xff3b1f, { emissive: 1.25, gloss: 0.2 });
+  const metal = mat(0x282523, { gloss: 0.28 });
+  const scorch = mat(0x120d0b, { gloss: 0.05 });
+  prim(root, "cylinder", scorch, s.x - 0.05, y + 0.045, s.z, 3.2, 0.04, 3.0, false);
+  prim(root, "box", metal, s.x + 0.05, y + 0.86, s.z, 1.45, 1.7, 1.1, true);
+  prim(root, "box", red, s.x - 0.55, y + 0.72, s.z, 0.08, 0.75, 0.72, false);
+  for (const dz of [-0.55, 0.55]) {
+    const pipe = prim(root, "cylinder", metal, s.x - 0.8, y + 1.7, s.z + dz, 0.22, 1.45, 0.22, true);
+    pipe.setLocalEulerAngles(0, 0, 90);
+  }
+  prim(root, "box", red, s.x + 0.35, y + 0.08, s.z, 1.8, 0.04, 1.8, false);
+  pointLight(root, 0xff3b1f, 1.7, 6.0, s.x - 0.35, y + 1.2, s.z);
+}
+
+function buildBountyIdentity(root, s) {
+  const y = s.y;
+  const board = mat(0x5a3a22, { gloss: 0.12 });
+  const paper = mat(0xd6c99b, { gloss: 0.05 });
+  prim(root, "box", board, s.x, y + 1.38, s.z + 0.85, 2.65, 1.5, 0.18, true);
+  for (const [dx, dy, r] of [[-0.72, 0.2, -7], [0.05, 0.35, 4], [0.78, 0.12, 8], [-0.2, -0.28, -4]]) {
+    const note = prim(root, "box", paper, s.x + dx, y + 1.38 + dy, s.z + 0.74, 0.48, 0.42, 0.035, false);
+    note.setLocalEulerAngles(0, 0, r);
+  }
+  pointLight(root, 0xffd79a, 0.45, 3.5, s.x, y + 1.0, s.z - 0.4);
+}
+
+function buildWardrobeIdentity(root, s) {
+  const y = s.y;
+  const frame = mat(0x3b2518, { gloss: 0.15 });
+  const glass = mat(0xb7d3ff, { emissive: 0.18, gloss: 0.9 });
+  const cloth = mat(0x5f2d55, { gloss: 0.22 });
+  prim(root, "box", frame, s.x - 0.72, y + 1.22, s.z - 0.55, 0.22, 2.35, 1.05, true);
+  prim(root, "box", glass, s.x - 0.84, y + 1.22, s.z - 0.55, 0.06, 1.95, 0.78, false);
+  for (const dz of [-1.28, -0.95, -0.62])
+    prim(root, "box", cloth, s.x + 0.05, y + 1.08, s.z + dz, 0.12, 1.25, 0.34, true);
+  pointLight(root, 0xb7d3ff, 0.4, 3.4, s.x - 0.7, y + 1.5, s.z - 0.55);
+}
+
 function buildTiers(root) {
   const stone = mat(0x6f6a58, { gloss: 0.12 });
   const tread = mat(0x7a7460, { gloss: 0.1 });
@@ -396,12 +498,11 @@ function placeAll(app, root) {
 }
 
 function buildStations(app, root) {
-  // Stage B pass 1: temp markers only; station prop dressing waits for a later pass.
-  // for (const s of TAVERN_STATIONS) {
-  //   const props = STATION_PROPS[s.id];
-  //   if (!props) continue;
-  //   const fy = tierFloorY(s.x, s.z);
-  //   for (const p of props)
-  //     place(app, root, p.name, { x: s.x + p.dx, z: s.z + p.dz, y: fy + (p.y || 0), ry: p.ry || 0 });
-  // }
+  for (const s of TAVERN_STATIONS) {
+    const props = STATION_PROPS[s.propsId || s.id];
+    if (!props) continue;
+    const fy = s.y ?? tierFloorY(s.x, s.z);
+    for (const p of props)
+      place(app, root, p.name, { x: s.x + p.dx, z: s.z + p.dz, y: fy + (p.y || 0), ry: p.ry || 0, scale: p.scale || 1 });
+  }
 }
