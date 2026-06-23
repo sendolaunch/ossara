@@ -13,7 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, BAR_DECOR,
 } from "../config/tavern.js";
 import { BARP, floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 import { STATION_PROPS } from "../config/stations.js";
@@ -116,6 +116,9 @@ export function buildTavernWorld(app) {
         prim(barRoot, "cylinder", barWood, xs, 0.35, zs, 0.6, 0.7, 0.6); } // stool
     }
     pointLight(barRoot, 0xffd9a0, 1.0, 9, cx, 2.3, cz + r * 0.5); // warm bar light
+    pointLight(root, 0xffc46e, 1.25, 9, -4.1, TIER.bar + 2.65, -12.95);
+    pointLight(root, 0xffc46e, 1.25, 9, 4.1, TIER.bar + 2.65, -12.95);
+    pointLight(root, PALETTE.gold, 0.8, 8, 0, TIER.bar + 2.3, -13.1);
   }
 
   buildTiers(root);
@@ -142,6 +145,7 @@ export function buildTavernWorld(app) {
   preloadKit(app, [...new Set([
     ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name),
     ...PROPS.map((p) => p.name), ...BANNERS.map((p) => p.name), ...CRYSTAL_DECOR.map((p) => p.name),
+    ...BAR_DECOR.map((p) => p.name),
     "torch_mounted",
     ...(MEZZANINE.stairs ? [MEZZANINE.stairs.name] : []),
     ...MEZZANINE.deck.map((p) => p.name), ...MEZZANINE.rail.map((p) => p.name), ...MEZZANINE.banners.map((p) => p.name),
@@ -455,7 +459,7 @@ function buildPosts(root) {
 }
 
 function placeAll(app, root) {
-  const put = (p, extra = {}) => place(app, root, p.name, { x: p.x, z: p.z, y: p.y || 0, ry: p.ry || 0, ...extra });
+  const put = (p, extra = {}) => place(app, root, p.name, { x: p.x, z: p.z, y: p.y || 0, ry: p.ry || 0, scale: p.scale || 1, sx: p.sx ?? null, ...extra });
 
   // floors (primitive wood fallback per missing tile)
   const fallbackFloor = mat(0x5a4026);
@@ -485,6 +489,7 @@ function placeAll(app, root) {
   for (const c of COLUMNS) put(c, { y: tierFloorY(c.x, c.z) });
   for (const p of PROPS) put(p, { y: (p.y || 0) + tierFloorY(p.x, p.z) });
   for (const b of BANNERS) put(b);
+  for (const b of BAR_DECOR) put(b);
   for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: TIER.hall, z: t.z, ry: t.ry });
   for (const d of CRYSTAL_DECOR) put(d, { y: (d.y || 0) + tierFloorY(d.x, d.z) });
 

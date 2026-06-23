@@ -184,6 +184,36 @@ export const HALL_ANCHORS = [
     maxHeight: 0.9,
   },
 ];
+export const BAR_DECOR = [
+  { name: "dungeon/sword_shield_gold", x: -2.1, y: TIER.bar + 2.15, z: -13.72, ry: 0 },
+  { name: "dungeon/sword_shield", x: 2.1, y: TIER.bar + 2.15, z: -13.72, ry: 0 },
+  { name: "dungeon/banner_triple_red", x: -5.6, y: TIER.bar + 1.25, z: -13.8, ry: 0 },
+  { name: "dungeon/banner_triple_yellow", x: 5.6, y: TIER.bar + 1.25, z: -13.8, ry: 0 },
+  { name: "dungeon/wall_shelves", x: -8.3, y: TIER.bar + 1.45, z: -13.45, ry: 0 },
+  { name: "dungeon/wall_shelves", x: 8.3, y: TIER.bar + 1.45, z: -13.45, ry: 0 },
+  { name: "dungeon/bottle_A_labeled_green", x: -8.8, y: TIER.bar + 1.86, z: -13.1, ry: -20 },
+  { name: "dungeon/bottle_B_brown", x: -8.25, y: TIER.bar + 1.88, z: -13.05, ry: 12 },
+  { name: "dungeon/bottle_C_green", x: -7.7, y: TIER.bar + 1.86, z: -13.12, ry: 34 },
+  { name: "dungeon/bottle_A_brown", x: 7.65, y: TIER.bar + 1.86, z: -13.1, ry: -15 },
+  { name: "dungeon/bottle_B_green", x: 8.25, y: TIER.bar + 1.88, z: -13.05, ry: 8 },
+  { name: "dungeon/bottle_C_brown", x: 8.82, y: TIER.bar + 1.86, z: -13.12, ry: 24 },
+  { name: "rpgtools/lantern", x: -4.1, y: TIER.bar + 2.45, z: -12.95, ry: 0 },
+  { name: "rpgtools/lantern", x: 4.1, y: TIER.bar + 2.45, z: -12.95, ry: 0 },
+  { name: "dungeon/barrel_large_decorated", x: -10.7, y: TIER.bar, z: -11.4, ry: 0 },
+  { name: "dungeon/barrel_small_stack", x: -12.0, y: TIER.bar, z: -10.0, ry: 25 },
+  { name: "dungeon/barrel_large", x: 10.7, y: TIER.bar, z: -11.4, ry: 0 },
+  { name: "dungeon/crates_stacked", x: 12.0, y: TIER.bar, z: -10.0, ry: -25 },
+  { name: "dungeon/shelf_large", x: -12.3, y: TIER.bar, z: -12.5, ry: 0 },
+  { name: "dungeon/shelf_large", x: 12.3, y: TIER.bar, z: -12.5, ry: 0 },
+  { name: "dungeon/stool_round", x: -5.1, y: TIER.bar, z: -7.35, ry: 0 },
+  { name: "dungeon/stool_round", x: -3.3, y: TIER.bar, z: -7.05, ry: 0 },
+  { name: "dungeon/stool_round", x: 3.3, y: TIER.bar, z: -7.05, ry: 0 },
+  { name: "dungeon/stool_round", x: 5.1, y: TIER.bar, z: -7.35, ry: 0 },
+  { name: "dungeon/barrier_half", x: -11.2, y: TIER.bar, z: -5.8, ry: 0 },
+  { name: "dungeon/barrier_half", x: -7.4, y: TIER.bar, z: -5.8, ry: 0 },
+  { name: "dungeon/barrier_half", x: 7.4, y: TIER.bar, z: -5.8, ry: 0 },
+  { name: "dungeon/barrier_half", x: 11.2, y: TIER.bar, z: -5.8, ry: 0 },
+];
 export const INTERACT_R = 2.6;
 export const BAR = { cx: 0, cz: -14, radius: 6.5 };
 export const RUNNER = { from: 11, to: 2.5, x: 0, width: 2.4 };

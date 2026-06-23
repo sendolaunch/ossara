@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { STATION_PROPS } from "../src/config/stations.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
@@ -117,6 +117,21 @@ for (const id of requiredStationProps) {
 }
 for (const a of ALCOVES)
   ok(STATION_PROPS[a.propsId]?.length > 0, `alcove "${a.id}" has station identity props`);
+
+// 9) Stage C.2: the high bar has dominant real-asset dressing without closing the stair lane.
+ok(BAR_DECOR.length >= 24, "bar has a dense grandeur dressing layer");
+ok(BAR_DECOR.some((p) => p.name.includes("sword_shield")), "bar includes a trophy wall");
+ok(BAR_DECOR.filter((p) => p.name.includes("bottle")).length >= 6, "bar includes bottle shelves");
+ok(BAR_DECOR.filter((p) => p.name.includes("banner")).length >= 2, "bar includes hanging banners");
+ok(BAR_DECOR.filter((p) => p.name.includes("lantern")).length >= 2, "bar includes lanterns");
+ok(BAR_DECOR.filter((p) => p.name.includes("barrel")).length >= 3, "bar includes barrels");
+ok(BAR_DECOR.filter((p) => p.name.includes("barrier_half")).every((p) => Math.abs(p.x) > 6), "bar railing leaves the central stairs open");
+for (const p of BAR_DECOR) {
+  const base = assetPath(p.name);
+  ok(existsSync(base + ".gltf"), `bar decor exists: ${p.name}.gltf`);
+  ok(existsSync(base + ".bin"), `bar decor data exists: ${p.name}.bin`);
+  ok(p.y >= TIER.bar, `bar decor "${p.name}" is placed on the high tier`);
+}
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);
