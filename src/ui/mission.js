@@ -39,10 +39,19 @@ export class Mission {
     this.input.onSelectChange = (id) => this.hud.setSelected(id);
     this.input.onPlaceResult = (res) => {
       if (!res.ok) {
-        if (res.reason === "marrow") this.hud.toast("Not enough Marrow.", CSS.blood);
-        else if (res.reason === "blocked") this.hud.toast("Can't build there.", CSS.blood);
+        const messages = {
+          marrow: "Not enough Marrow.",
+          blocked: "Can't build on ruins.",
+          path: "Can't build on the enemy lane.",
+          occupied: "A defense already holds that spot.",
+          reserved: "Keep the crystal, breach, and hero spawn clear.",
+          bounds: "Build inside the mission grounds.",
+          phase: "Build mode is locked during combat.",
+        };
+        this.hud.toast(messages[res.reason] || "Can't build there.", CSS.blood);
       }
     };
+    this.input.onBuildBlocked = () => this.hud.toast("Build mode is locked during combat.", CSS.blood);
 
     this.exitBtn = document.createElement("button");
     this.exitBtn.className = "oss-btn ghost";

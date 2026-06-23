@@ -8,7 +8,7 @@ import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
 import { TOWERS } from "../src/config/towers.js";
 import { CLASS_KITS } from "../src/config/kits.js";
-import { buildLanePath, pointAtDistance, pathCellSet, cellKey } from "../src/sim/pathing.js";
+import { buildLanePath, pointAtDistance, pathCellSet, cellKey, worldToGrid } from "../src/sim/pathing.js";
 
 let pass = 0;
 let fail = 0;
@@ -67,6 +67,9 @@ section("building rules");
   const w = new World(LEVEL);
   ok(!w.buildableAt(0, 9), "cannot build on the lane");
   ok(!w.buildableAt(1, 1), "cannot build on a ruin (obstacle)");
+  ok(!w.buildableAt(LEVEL.core.col, LEVEL.core.row), "cannot build on the core");
+  const heroSpawn = worldToGrid(w.hero._spawn.x, w.hero._spawn.z, LEVEL);
+  ok(!w.buildableAt(heroSpawn.col, heroSpawn.row), "cannot build on the hero spawn");
   ok(w.buildableAt(0, 0), "can build on an empty off-lane tile");
 
   const before = w.marrow;
@@ -76,10 +79,16 @@ section("building rules");
   ok(!w.buildableAt(0, 0), "tile is occupied after placing");
 
   const r2 = w.tryPlaceTower("ballista", 0, 0);
-  ok(!r2.ok && r2.reason === "blocked", "cannot stack towers on one tile");
+  ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
 
-  const r3 = w.tryPlaceTower("ballista", 0, 9);
-  ok(!r3.ok && r3.reason === "blocked", "cannot place on the lane");
+  const r3 = w.tryPlaceTower("ballista", 5, 9);
+  ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
+
+  const rCore = w.tryPlaceTower("ballista", LEVEL.core.col, LEVEL.core.row);
+  ok(!rCore.ok && rCore.reason === "reserved", "cannot place on the core");
+
+  const rSpawn = w.tryPlaceTower("ballista", heroSpawn.col, heroSpawn.row);
+  ok(!rSpawn.ok && rSpawn.reason === "reserved", "cannot place on the hero spawn");
 
   w.marrow = 0;
   const r4 = w.tryPlaceTower("ballista", 0, 1);

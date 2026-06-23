@@ -65,6 +65,7 @@ export class HUD {
     this._lastWaveIndex = -1;
     this._heroIconId = null;
     this.rewardSummary = null;
+    this.selectedTowerId = null;
     this._build();
   }
 
@@ -120,9 +121,13 @@ export class HUD {
     this.root.appendChild(hr);
 
     // ---- build bar (bottom) ----
-    const bottom = el("div", { position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "10px", alignItems: "flex-end" });
+    const bottom = el("div", { position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" });
+    this.elBuildInfo = el("div", {
+      ...panel(), padding: "7px 12px", minWidth: "360px", textAlign: "center",
+      color: CSS.ash, font: "700 11px ui-monospace, monospace", letterSpacing: ".4px",
+    }, "Select a defense with 1/2/3 or click a card.");
     this.towerRow = el("div", { display: "flex", gap: "10px", alignItems: "flex-end" });
-    bottom.appendChild(this.towerRow);
+    bottom.append(this.elBuildInfo, this.towerRow);
     this.root.appendChild(bottom);
 
     // ---- hint ----
@@ -182,6 +187,7 @@ export class HUD {
   }
 
   setSelected(id) {
+    this.selectedTowerId = id || null;
     for (const [tid, b] of Object.entries(this.towerBtns || {})) {
       const on = tid === id;
       b.style.borderColor = on ? CSS.plague : "rgba(110,230,90,0.22)";
@@ -226,6 +232,20 @@ export class HUD {
     this.wardBar.style.width = `${wardRatio * 100}%`;
     this.wardBar.style.background = wardRatio <= 0.34 ? CSS.blood : CSS.plague;
     this.elMarrow.textContent = `${Math.floor(world.marrow)}`;
+    if (this.elBuildInfo) {
+      if (world.phase !== "prep") {
+        this.elBuildInfo.textContent = "Combat phase: building locked. Hold the lane and protect the Ward.";
+        this.elBuildInfo.style.color = CSS.gold;
+      } else if (this.selectedTowerId && TOWERS[this.selectedTowerId]) {
+        const t = TOWERS[this.selectedTowerId];
+        const afford = world.marrow >= t.cost;
+        this.elBuildInfo.textContent = `${t.name} · Cost ${t.cost} Marrow · Click place · R rotate · Right-click/Esc cancel`;
+        this.elBuildInfo.style.color = afford ? CSS.plague : CSS.blood;
+      } else {
+        this.elBuildInfo.textContent = `Build phase: ${Math.floor(world.marrow)} Marrow available · Select a defense with 1/2/3 or click a card.`;
+        this.elBuildInfo.style.color = CSS.ash;
+      }
+    }
 
     // phase banner
     if (world.phase === "prep") {
@@ -312,6 +332,7 @@ export class HUD {
     this._lastPhase = null;
     this._lastWaveIndex = -1;
     this.rewardSummary = null;
+    this.selectedTowerId = null;
     this.overlay.style.display = "none";
   }
 }

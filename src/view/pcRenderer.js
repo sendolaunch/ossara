@@ -5,6 +5,7 @@
 
 import * as pc from "playcanvas";
 import { PALETTE } from "../config/palette.js";
+import { TOWERS } from "../config/towers.js";
 import { gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
@@ -188,7 +189,8 @@ export class PCRenderer {
       this.app.root.addChild(block);
     }
 
-    // hover highlight
+    // Build target marker. Kept disabled in Stage 1 so the hero never reads as
+    // the build target; visible feedback is attached to the tower ghost.
     this.hover = prim("box", null);
     this.hover.setLocalScale(1, 0.12, 1);
     this.hoverMat = new pc.StandardMaterial();
@@ -220,6 +222,19 @@ export class PCRenderer {
     }
     this.ghost.enabled = false;
     this.app.root.addChild(this.ghost);
+
+    this.rangeMat = new pc.StandardMaterial();
+    this.rangeMat.diffuse = col(PALETTE.plague);
+    this.rangeMat.emissive = col(PALETTE.plague);
+    this.rangeMat.emissiveIntensity = 0.35;
+    this.rangeMat.opacity = 0.26;
+    this.rangeMat.blendType = pc.BLEND_NORMAL;
+    this.rangeMat.depthWrite = false;
+    this.rangeMat.cull = pc.CULLFACE_NONE;
+    this.rangeMat.update();
+    this.rangeRing = prim("torus", this.rangeMat);
+    this.rangeRing.enabled = false;
+    this.app.root.addChild(this.rangeRing);
 
     this._loadHero();
   }
@@ -322,16 +337,19 @@ export class PCRenderer {
     return { ...worldToGrid(hx, hz, level), x: hx, z: hz };
   }
 
-  setHover(col2, row, level, state) {
+  setHover(col2, row, level, state, opts = {}) {
     if (col2 == null) {
       if (this.hover) this.hover.enabled = false;
       if (this.ghost) this.ghost.enabled = false;
+      if (this.rangeRing) this.rangeRing.enabled = false;
       return;
     }
     const w = gridToWorld(col2, row, level);
     const okc = state === "ok";
     const tint = col(okc ? PALETTE.plague : PALETTE.blood);
-    this.hover.enabled = true;
+    const tower = opts.towerId ? TOWERS[opts.towerId] : null;
+    const range = opts.range || tower?.range || 1;
+    this.hover.enabled = false;
     this.hover.setPosition(w.x, 0.06, w.z);
     this.hoverMat.diffuse = tint;
     this.hoverMat.opacity = okc ? 0.4 : 0.28;
@@ -339,13 +357,19 @@ export class PCRenderer {
     if (this.ghost) {
       this.ghost.enabled = true;
       this.ghost.setPosition(w.x, 0.8, w.z);
+      this.ghost.setLocalEulerAngles(0, opts.rotation || 0, 0);
       this.ghostMat.diffuse = tint;
       this.ghostMat.emissive = tint;
       this.ghostMat.update();
     }
-    if (!this._ghostLogged) {
-      this._ghostLogged = true;
-      console.log("[OSSARA] build ghost active — setHover is running.");
+    if (this.rangeRing) {
+      this.rangeRing.enabled = true;
+      this.rangeRing.setPosition(w.x, 0.08, w.z);
+      this.rangeRing.setLocalScale(range, range, range);
+      this.rangeMat.diffuse = tint;
+      this.rangeMat.emissive = tint;
+      this.rangeMat.opacity = okc ? 0.24 : 0.18;
+      this.rangeMat.update();
     }
   }
 

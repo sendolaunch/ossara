@@ -17,10 +17,12 @@ export class Input {
     this.pendingSlam = false;
     this.pendingStart = false;
     this.selected = null;
+    this.rotation = 0;
     this.hoverCell = null;
     this._mouse = null;
     this.onPlaceResult = null;
     this.onSelectChange = null;
+    this.onBuildBlocked = null;
 
     this._bind(renderer.domElement);
   }
@@ -28,10 +30,11 @@ export class Input {
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r"].includes(k)) e.preventDefault();
       if (k === "q") this.pendingSlam = true;
       if (k === "enter") this.pendingStart = true;
-      if (k === "escape") this.select(null);
+      if (k === "escape") this.cancelBuild();
+      if (k === "r" && this.selected) this.rotateBuild();
       if (k === "1") this._selectIdx(0);
       if (k === "2") this._selectIdx(1);
       if (k === "3") this._selectIdx(2);
@@ -48,7 +51,7 @@ export class Input {
     });
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      this.select(null);
+      this.cancelBuild();
     });
     canvas.addEventListener("click", () => this._tryPlace());
     canvas.addEventListener(
@@ -62,8 +65,27 @@ export class Input {
   }
 
   select(id) {
+    const world = this.getWorld();
+    if (id && world && world.phase !== "prep") {
+      this.cancelBuild();
+      if (this.onBuildBlocked) this.onBuildBlocked("phase");
+      return;
+    }
     this.selected = id && TOWERS[id] ? id : null;
+    this.rotation = 0;
+    if (!this.selected) this.renderer.setHover(null);
     if (this.onSelectChange) this.onSelectChange(this.selected);
+  }
+
+  cancelBuild() {
+    this.selected = null;
+    this.hoverCell = null;
+    this.renderer.setHover(null);
+    if (this.onSelectChange) this.onSelectChange(null);
+  }
+
+  rotateBuild() {
+    this.rotation = (this.rotation + Math.PI / 2) % (Math.PI * 2);
   }
 
   _selectIdx(i) {
@@ -79,7 +101,14 @@ export class Input {
   _tryPlace() {
     if (!this.selected || !this.hoverCell) return;
     const world = this.getWorld();
-    const res = world.tryPlaceTower(this.selected, this.hoverCell.col, this.hoverCell.row);
+    if (world.phase !== "prep") {
+      const res = { ok: false, reason: "phase" };
+      const selected = this.selected;
+      this.cancelBuild();
+      if (this.onPlaceResult) this.onPlaceResult(res, selected);
+      return;
+    }
+    const res = world.tryPlaceTower(this.selected, this.hoverCell.col, this.hoverCell.row, { facing: this.rotation });
     if (this.onPlaceResult) this.onPlaceResult(res, this.selected);
   }
 
@@ -93,6 +122,10 @@ export class Input {
 
   refreshHover() {
     const world = this.getWorld();
+    if (world.phase !== "prep") {
+      this.cancelBuild();
+      return;
+    }
     if (!this._mouse) {
       this.hoverCell = null;
       this.renderer.setHover(null);
@@ -110,9 +143,15 @@ export class Input {
       return;
     }
     const def = TOWERS[this.selected];
-    const buildable = world.buildableAt(cell.col, cell.row);
-    const affordable = world.marrow >= def.cost;
-    this.renderer.setHover(cell.col, cell.row, world.level, buildable && affordable ? "ok" : "bad");
+    const status = world.placementStatus
+      ? world.placementStatus(this.selected, cell.col, cell.row)
+      : { ok: world.buildableAt(cell.col, cell.row) && world.marrow >= def.cost, reason: "legacy" };
+    this.renderer.setHover(cell.col, cell.row, world.level, status.ok ? "ok" : "bad", {
+      towerId: this.selected,
+      range: def.range,
+      rotation: this.rotation,
+      reason: status.reason,
+    });
   }
 
   consume() {

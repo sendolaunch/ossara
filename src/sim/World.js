@@ -43,6 +43,12 @@ export class World {
     this.projPool = new Pool(createProjectile, resetProjectile);
     this.towers = [];
     this.hero = createHero(this.heroDef, level);
+    const heroSpawnGrid = worldToGrid(this.hero._spawn.x, this.hero._spawn.z, level);
+    this.reservedSet = new Set([
+      cellKey(level.core.col, level.core.row),
+      cellKey(level.breach.col, level.breach.row),
+      cellKey(heroSpawnGrid.col, heroSpawnGrid.row),
+    ]);
     const _B = this.bonuses;
     this.hero.ability = { ...this.hero.ability };
     this.hero.attackDamage *= 1 + (_B.heroDamagePct || 0) / 100;
@@ -95,12 +101,21 @@ export class World {
 
   // ---- building -------------------------------------------------------------
 
+  placementStatus(typeId, col, row, opts = {}) {
+    const k = cellKey(col, row);
+    if (typeId && !TOWERS[typeId]) return { ok: false, reason: "unknown" };
+    if (col < 0 || row < 0 || col >= this.level.cols || row >= this.level.rows) return { ok: false, reason: "bounds" };
+    if (this.reservedSet.has(k)) return { ok: false, reason: "reserved" };
+    if (this.pathSet.has(k)) return { ok: false, reason: "path" };
+    if (this.blockedSet.has(k)) return { ok: false, reason: "blocked" };
+    if (this.occupied.has(k)) return { ok: false, reason: "occupied" };
+    const def = typeId ? TOWERS[typeId] : null;
+    if (!opts.ignoreCost && def && this.marrow < def.cost) return { ok: false, reason: "marrow" };
+    return { ok: true, reason: "ok" };
+  }
+
   buildableAt(col, row) {
-    if (col < 0 || row < 0 || col >= this.level.cols || row >= this.level.rows) return false;
-    if (this.pathSet.has(cellKey(col, row))) return false; // not on the lane
-    if (this.blockedSet.has(cellKey(col, row))) return false; // not on a ruin
-    if (this.occupied.has(cellKey(col, row))) return false; // not stacked
-    return true;
+    return this.placementStatus(null, col, row, { ignoreCost: true }).ok;
   }
 
   _blockedAt(x, z) {
@@ -108,14 +123,14 @@ export class World {
     return this.blockedSet.has(cellKey(g.col, g.row));
   }
 
-  tryPlaceTower(typeId, col, row) {
+  tryPlaceTower(typeId, col, row, opts = {}) {
     const def = TOWERS[typeId];
     if (!def) return { ok: false, reason: "unknown tower" };
-    if (!this.buildableAt(col, row)) return { ok: false, reason: "blocked" };
-    if (this.marrow < def.cost) return { ok: false, reason: "marrow" };
+    const status = this.placementStatus(typeId, col, row);
+    if (!status.ok) return { ok: false, reason: status.reason === "unknown" ? "unknown tower" : status.reason };
     this.marrow -= def.cost;
     const w = gridToWorld(col, row, this.level);
-    const tower = createTower(def, col, row, w);
+    const tower = createTower(def, col, row, w, { facing: opts.facing || 0 });
     tower.damage *= 1 + (this.bonuses.towerDamagePct || 0) / 100;
     tower.range *= 1 + (this.bonuses.rangePct || 0) / 100;
     tower.fireRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
