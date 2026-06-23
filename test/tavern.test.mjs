@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { STATION_PROPS } from "../src/config/stations.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
@@ -138,6 +138,23 @@ for (const p of BAR_DECOR) {
   ok(existsSync(base + ".bin"), `bar decor data exists: ${p.name}.bin`);
   ok(p.y >= TIER.bar, `bar decor "${p.name}" is placed on the high tier`);
 }
+
+// 10) Stage C.4: landmark corners have discoverable lived-in detail kits.
+for (const a of HALL_ANCHORS) {
+  const props = HALL_ANCHOR_PROPS[a.id] || [];
+  ok(props.length >= 5, `hall anchor "${a.id}" has lived-in detail props`);
+  for (const p of props) {
+    const base = assetPath(p.name);
+    ok(existsSync(base + ".gltf"), `hall anchor prop exists: ${p.name}.gltf`);
+    ok(existsSync(base + ".bin"), `hall anchor prop data exists: ${p.name}.bin`);
+    ok(p.y >= TIER.hall, `hall anchor prop "${p.name}" sits at or above the hall tier`);
+    ok(Math.hypot(p.x - TAVERN_CRYSTAL.x, p.z - TAVERN_CRYSTAL.z) >= 6.0, `hall anchor prop "${p.name}" stays out of the crystal ring`);
+  }
+}
+ok(HALL_ANCHOR_PROPS.warTable.some((p) => p.name.includes("map") || p.name.includes("journal")), "war table includes planning materials");
+ok(HALL_ANCHOR_PROPS.plagueShrine.some((p) => p.name.includes("candle")), "plague shrine includes candles");
+ok(HALL_ANCHOR_PROPS.boneReliquary.some((p) => p.name.includes("shelf") || p.name.includes("sword_shield")), "bone reliquary includes shelves/trophy pieces");
+ok(HALL_ANCHOR_PROPS.seatingNook.some((p) => p.name.includes("plate") || p.name.includes("bottle")), "seating nook includes casual clutter");
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

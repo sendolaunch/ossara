@@ -186,6 +186,38 @@ export const HALL_ANCHORS = [
     maxHeight: 0.9,
   },
 ];
+export const HALL_ANCHOR_PROPS = {
+  warTable: [
+    { name: "rpgtools/map", x: -10.78, y: TIER.hall + 0.72, z: -3.32, ry: -10 },
+    { name: "rpgtools/journal_open", x: -9.92, y: TIER.hall + 0.72, z: -3.64, ry: 24 },
+    { name: "rpgtools/blueprint", x: -11.24, y: TIER.hall + 0.72, z: -2.95, ry: -34 },
+    { name: "rpgtools/map_rolled", x: -10.1, y: TIER.hall + 0.72, z: -2.78, ry: 54 },
+    { name: "dungeon/book_brown", x: -11.4, y: TIER.hall + 0.72, z: -3.72, ry: -20 },
+  ],
+  plagueShrine: [
+    { name: "dungeon/candle_lit", x: -12.9, y: TIER.hall, z: 2.55, ry: 0 },
+    { name: "dungeon/candle_triple", x: -11.28, y: TIER.hall, z: 2.65, ry: 0 },
+    { name: "dungeon/candle_thin_lit", x: -12.65, y: TIER.hall, z: 3.86, ry: 0 },
+    { name: "resource/Gems_Sack", x: -11.34, y: TIER.hall, z: 3.8, ry: 18 },
+    { name: "resource/Gems_Pile_Small", x: -12.05, y: TIER.hall, z: 4.25, ry: 0 },
+  ],
+  boneReliquary: [
+    { name: "dungeon/shelf_small", x: 13.0, y: TIER.hall, z: 3.55, ry: -90 },
+    { name: "dungeon/shelf_small_candles", x: 11.2, y: TIER.hall, z: 2.55, ry: 90 },
+    { name: "dungeon/sword_shield_broken", x: 12.0, y: TIER.hall + 0.18, z: 4.15, ry: -22 },
+    { name: "dungeon/candle_melted", x: 11.28, y: TIER.hall, z: 3.82, ry: 0 },
+    { name: "dungeon/book_grey", x: 12.72, y: TIER.hall + 0.62, z: 3.18, ry: 12 },
+  ],
+  seatingNook: [
+    { name: "dungeon/table_round_small", x: 10.6, y: TIER.hall, z: -3.4, ry: 0 },
+    { name: "dungeon/chair", x: 9.18, y: TIER.hall, z: -3.7, ry: 65 },
+    { name: "dungeon/chair", x: 11.95, y: TIER.hall, z: -3.65, ry: -65 },
+    { name: "dungeon/plate_food_A", x: 10.28, y: TIER.hall + 0.72, z: -3.18, ry: 0 },
+    { name: "dungeon/plate_small", x: 10.9, y: TIER.hall + 0.72, z: -3.52, ry: 0 },
+    { name: "dungeon/bottle_A_brown", x: 10.78, y: TIER.hall + 0.78, z: -3.04, ry: 28 },
+    { name: "dungeon/book_tan", x: 9.78, y: TIER.hall + 0.72, z: -4.1, ry: 44 },
+  ],
+};
 export const BAR_DECOR = [
   { name: "dungeon/sword_shield_gold", x: -2.1, y: TIER.bar + 2.15, z: -13.72, ry: 0 },
   { name: "dungeon/sword_shield", x: 2.1, y: TIER.bar + 2.15, z: -13.72, ry: 0 },
