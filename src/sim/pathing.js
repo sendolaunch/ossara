@@ -63,14 +63,26 @@ export function expandRects(rects) {
 
 export function pathCellSet(level) {
   const set = new Set();
-  for (const cell of expandWaypoints(level.waypoints)) set.add(cellKey(cell.col, cell.row));
+  for (const lane of getLevelLanes(level)) {
+    for (const cell of expandWaypoints(lane.waypoints)) set.add(cellKey(cell.col, cell.row));
+  }
   return set;
 }
 
-// Build the world-space polyline enemies walk, with cumulative segment lengths
-// so we can advance by distance and interpolate position.
-export function buildLanePath(level) {
-  const pts = level.waypoints.map((w) => gridToWorld(w.col, w.row, level));
+export function getLevelLanes(level) {
+  if (Array.isArray(level.lanes) && level.lanes.length) return level.lanes;
+  return [{
+    id: "legacy",
+    name: "Legacy Lane",
+    spawn: level.breach || (level.waypoints && level.waypoints[0]) || { col: 0, row: 0 },
+    waypoints: level.waypoints || [],
+    threatRating: 1,
+    telegraphs: [],
+  }];
+}
+
+function buildPathFromWaypoints(level, waypoints) {
+  const pts = waypoints.map((w) => gridToWorld(w.col, w.row, level));
   const segLen = [];
   let total = 0;
   for (let i = 0; i < pts.length - 1; i++) {
@@ -81,6 +93,22 @@ export function buildLanePath(level) {
     total += len;
   }
   return { pts, segLen, total };
+}
+
+// Build the world-space polyline enemies walk, with cumulative segment lengths
+// so we can advance by distance and interpolate position. Legacy callers receive
+// the first configured lane when a multi-lane level is supplied.
+export function buildLanePath(level) {
+  const lane = getLevelLanes(level)[0];
+  return { ...buildPathFromWaypoints(level, lane.waypoints), id: lane.id, name: lane.name, lane };
+}
+
+export function buildLanePaths(level) {
+  const paths = {};
+  for (const lane of getLevelLanes(level)) {
+    paths[lane.id] = { ...buildPathFromWaypoints(level, lane.waypoints), id: lane.id, name: lane.name, lane };
+  }
+  return paths;
 }
 
 // Given distance travelled along the lane, return {x, z, done}.

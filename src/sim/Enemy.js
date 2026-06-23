@@ -17,13 +17,14 @@ export function createEnemy() {
     radius: 0.3,
     color: "ash",
     boss: false,
+    laneId: "",
     alive: false,
     counted: false, // bounty/leak resolved exactly once
     reachedCore: false,
   };
 }
 
-export function resetEnemy(e, def, id, startPos) {
+export function resetEnemy(e, def, id, startPos, laneId = "") {
   e.id = id;
   e.type = def.id;
   e.x = startPos.x;
@@ -37,6 +38,7 @@ export function resetEnemy(e, def, id, startPos) {
   e.radius = def.radius;
   e.color = def.color;
   e.boss = !!def.boss;
+  e.laneId = laneId;
   e.alive = true;
   e.counted = false;
   e.reachedCore = false;

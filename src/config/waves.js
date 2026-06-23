@@ -15,7 +15,7 @@ export const TUTORIAL_WAVES = [
     warning: "Slow husks only. Watch how the lane feeds your towers.",
     prepTime: 30,
     reward: 40,
-    groups: [{ type: "husk", count: 5, interval: 1.4, delay: 0 }],
+    groups: [{ type: "husk", laneId: "north-gate", count: 5, interval: 1.4, delay: 0 }],
   },
   {
     name: "Quick Dead",
@@ -24,8 +24,8 @@ export const TUTORIAL_WAVES = [
     prepTime: 20,
     reward: 0,
     groups: [
-      { type: "husk", count: 6, interval: 1.1, delay: 0 },
-      { type: "sprinter", count: 3, interval: 1.6, delay: 4 },
+      { type: "husk", laneId: "north-gate", count: 6, interval: 1.1, delay: 0 },
+      { type: "sprinter", laneId: "north-gate", count: 3, interval: 1.6, delay: 4 },
     ],
   },
 ];
@@ -37,7 +37,7 @@ export const WAVES = [
     warning: "Slow husks only. Learn where your defenses can reach.",
     prepTime: 34,
     reward: 45,
-    groups: [{ type: "husk", count: 6, interval: 1.45, delay: 0 }],
+    groups: [{ type: "husk", laneId: "north-gate", count: 6, interval: 1.45, delay: 0 }],
   },
   {
     name: "Quick Dead",
@@ -46,8 +46,8 @@ export const WAVES = [
     prepTime: 24,
     reward: 50,
     groups: [
-      { type: "husk", count: 8, interval: 1.1, delay: 0 },
-      { type: "sprinter", count: 3, interval: 1.7, delay: 5 },
+      { type: "husk", laneId: "north-gate", count: 8, interval: 1.1, delay: 0 },
+      { type: "sprinter", laneId: "north-gate", count: 3, interval: 1.7, delay: 5 },
     ],
   },
   {
@@ -57,8 +57,8 @@ export const WAVES = [
     prepTime: 24,
     reward: 60,
     groups: [
-      { type: "husk", count: 8, interval: 0.9, delay: 0 },
-      { type: "brute", count: 1, interval: 1, delay: 6 },
+      { type: "husk", laneId: "north-gate", count: 8, interval: 0.9, delay: 0 },
+      { type: "brute", laneId: "north-gate", count: 1, interval: 1, delay: 6 },
     ],
   },
   {
@@ -68,9 +68,9 @@ export const WAVES = [
     prepTime: 22,
     reward: 70,
     groups: [
-      { type: "husk", count: 12, interval: 0.7, delay: 0 },
-      { type: "sprinter", count: 8, interval: 1.0, delay: 4 },
-      { type: "brute", count: 2, interval: 5, delay: 10 },
+      { type: "husk", laneId: "north-gate", count: 12, interval: 0.7, delay: 0 },
+      { type: "sprinter", laneId: "north-gate", count: 8, interval: 1.0, delay: 4 },
+      { type: "brute", laneId: "north-gate", count: 2, interval: 5, delay: 10 },
     ],
   },
   {
@@ -80,10 +80,10 @@ export const WAVES = [
     prepTime: 28,
     reward: 0,
     groups: [
-      { type: "husk", count: 10, interval: 0.75, delay: 0 },
-      { type: "sprinter", count: 8, interval: 0.9, delay: 3 },
-      { type: "brute", count: 3, interval: 4, delay: 8 },
-      { type: "herald", count: 1, interval: 1, delay: 18 }, // the boss closes the slice
+      { type: "husk", laneId: "north-gate", count: 10, interval: 0.75, delay: 0 },
+      { type: "sprinter", laneId: "north-gate", count: 8, interval: 0.9, delay: 3 },
+      { type: "brute", laneId: "north-gate", count: 3, interval: 4, delay: 8 },
+      { type: "herald", laneId: "north-gate", count: 1, interval: 1, delay: 18 }, // the boss closes the slice
     ],
   },
 ];

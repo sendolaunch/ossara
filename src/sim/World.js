@@ -8,7 +8,7 @@ import { TOWERS } from "../config/towers.js";
 import { WAVES } from "../config/waves.js";
 import { HERO } from "../config/hero.js";
 import { CLASS_KITS } from "../config/kits.js";
-import { buildLanePath, pointAtDistance, pathCellSet, gridToWorld, worldToGrid, cellKey, expandRects } from "./pathing.js";
+import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, gridToWorld, worldToGrid, cellKey, expandRects, getLevelLanes } from "./pathing.js";
 import { Pool } from "./pool.js";
 import { createEnemy, resetEnemy } from "./Enemy.js";
 import { createProjectile, resetProjectile } from "./Projectile.js";
@@ -28,13 +28,17 @@ export class World {
     this.heroDef = opts.hero || CLASS_KITS.warden.hero;
     this.availableTowers = opts.towers || Object.keys(TOWERS);
     this.bonuses = opts.bonuses || {};
-    this.lane = buildLanePath(level);
+    this.lanePaths = buildLanePaths(level);
+    this.laneIds = Object.keys(this.lanePaths);
+    this.defaultLaneId = this.laneIds[0] || "legacy";
+    this.lane = this.lanePaths[this.defaultLaneId] || buildLanePath(level);
     this.pathSet = pathCellSet(level);
     this.occupied = new Set(); // cell keys with a tower on them
 
     // impassable ruins (obstacle rects minus any cell on the lane)
     this.blockedSet = new Set();
-    for (const cell of expandRects(level.obstacles || [])) {
+    const blockedZones = [...(level.obstacles || []), ...(level.blockedZones || [])];
+    for (const cell of expandRects(blockedZones)) {
       const k = cellKey(cell.col, cell.row);
       if (!this.pathSet.has(k)) this.blockedSet.add(k);
     }
@@ -42,13 +46,18 @@ export class World {
     this.enemyPool = new Pool(createEnemy, resetEnemy);
     this.projPool = new Pool(createProjectile, resetProjectile);
     this.towers = [];
-    this.hero = createHero(this.heroDef, level);
+    const heroDef = level.heroSpawn ? { ...this.heroDef, spawn: level.heroSpawn } : this.heroDef;
+    this.hero = createHero(heroDef, level);
     const heroSpawnGrid = worldToGrid(this.hero._spawn.x, this.hero._spawn.z, level);
     this.reservedSet = new Set([
       cellKey(level.core.col, level.core.row),
-      cellKey(level.breach.col, level.breach.row),
       cellKey(heroSpawnGrid.col, heroSpawnGrid.row),
     ]);
+    for (const lane of getLevelLanes(level)) {
+      if (lane.spawn) this.reservedSet.add(cellKey(lane.spawn.col, lane.spawn.row));
+    }
+    if (level.breach) this.reservedSet.add(cellKey(level.breach.col, level.breach.row));
+    for (const cell of expandRects(level.reservedZones || [])) this.reservedSet.add(cellKey(cell.col, cell.row));
     const _B = this.bonuses;
     this.hero.ability = { ...this.hero.ability };
     this.hero.attackDamage *= 1 + (_B.heroDamagePct || 0) / 100;
@@ -148,7 +157,7 @@ export class World {
     this.schedule = [];
     for (const g of wave.groups) {
       for (let i = 0; i < g.count; i++) {
-        this.schedule.push({ type: g.type, time: g.delay + i * g.interval });
+        this.schedule.push({ type: g.type, laneId: g.laneId || this.defaultLaneId, time: g.delay + i * g.interval });
       }
     }
     this.schedule.sort((a, b) => a.time - b.time);
@@ -158,10 +167,11 @@ export class World {
     return true;
   }
 
-  _spawnEnemy(typeId) {
+  _spawnEnemy(typeId, laneId = this.defaultLaneId) {
     const def = ENEMIES[typeId];
-    const start = pointAtDistance(this.lane, 0);
-    this.enemyPool.acquire(def, this._nextId++, start);
+    const path = this.lanePaths[laneId] || this.lane;
+    const start = pointAtDistance(path, 0);
+    this.enemyPool.acquire(def, this._nextId++, start, path.id || laneId || this.defaultLaneId);
   }
 
   // ---- main tick ------------------------------------------------------------
@@ -178,7 +188,8 @@ export class World {
     if (this.phase === "active") {
       this.waveElapsed += dt;
       while (this.spawnCursor < this.schedule.length && this.schedule[this.spawnCursor].time <= this.waveElapsed) {
-        this._spawnEnemy(this.schedule[this.spawnCursor].type);
+        const spawn = this.schedule[this.spawnCursor];
+        this._spawnEnemy(spawn.type, spawn.laneId);
         this.spawnCursor++;
       }
     }
@@ -200,7 +211,8 @@ export class World {
     for (const e of this.enemies) {
       if (!e.alive) continue;
       e.dist += e.speed * dt;
-      const p = pointAtDistance(this.lane, e.dist);
+      const lane = this.lanePaths[e.laneId] || this.lane;
+      const p = pointAtDistance(lane, e.dist);
       e.x = p.x;
       e.z = p.z;
       if (p.done && !e.counted) {

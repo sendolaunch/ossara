@@ -8,7 +8,7 @@ import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
 import { TOWERS } from "../src/config/towers.js";
 import { CLASS_KITS } from "../src/config/kits.js";
-import { buildLanePath, pointAtDistance, pathCellSet, cellKey, worldToGrid, expandWaypoints } from "../src/sim/pathing.js";
+import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, cellKey, worldToGrid, expandWaypoints } from "../src/sim/pathing.js";
 
 let pass = 0;
 let fail = 0;
@@ -31,16 +31,25 @@ function run(world, steps, dt, input = {}) {
 // ---------------------------------------------------------------------------
 section("pathing");
 {
-  ok(LEVEL.breach && !Array.isArray(LEVEL.breach), "first breach has exactly one enemy spawn");
+  ok(Array.isArray(LEVEL.lanes) && LEVEL.lanes.length === 5, "first breach defines five enemy lanes");
+  for (const lane of LEVEL.lanes) {
+    ok(!!lane.id, `${lane.name || "lane"} has an id`);
+    ok(!!lane.name, `${lane.id || "lane"} has a display name`);
+    ok(!!lane.spawn, `${lane.id} has a spawn`);
+    ok(Array.isArray(lane.waypoints) && lane.waypoints.length >= 2, `${lane.id} has readable waypoints`);
+    ok(lane.waypoints[0].col === lane.spawn.col && lane.waypoints[0].row === lane.spawn.row, `${lane.id} path starts at its spawn`);
+    const lastWp = lane.waypoints[lane.waypoints.length - 1];
+    const distToCore = Math.abs(lastWp.col - LEVEL.core.col) + Math.abs(lastWp.row - LEVEL.core.row);
+    ok(distToCore <= 1, `${lane.id} path reaches the Ward-Crystal`);
+  }
+  ok(LEVEL.breach && !Array.isArray(LEVEL.breach), "legacy first breach alias still exposes one default spawn");
   ok(LEVEL.core && !Array.isArray(LEVEL.core), "first breach has exactly one core");
-  ok(LEVEL.waypoints[0].col === LEVEL.breach.col && LEVEL.waypoints[0].row === LEVEL.breach.row, "path starts at the enemy spawn");
+  ok(LEVEL.waypoints[0].col === LEVEL.breach.col && LEVEL.waypoints[0].row === LEVEL.breach.row, "legacy path starts at the default enemy spawn");
   const lastWp = LEVEL.waypoints[LEVEL.waypoints.length - 1];
-  ok(lastWp.col === LEVEL.core.col && lastWp.row === LEVEL.core.row, "path ends at the core");
+  ok(lastWp.col === LEVEL.core.col && lastWp.row === LEVEL.core.row, "legacy path ends at the core");
 
   const cells = expandWaypoints(LEVEL.waypoints);
   ok(cells.length >= 2, "path expands into readable cells");
-  ok(cells.length <= 30, "tutorial path stays short enough to read at a glance");
-  ok(new Set(cells.map((c) => c.row)).size === 1, "tutorial path is a single clear lane");
   for (let i = 1; i < cells.length; i++) {
     const d = Math.abs(cells[i].col - cells[i - 1].col) + Math.abs(cells[i].row - cells[i - 1].row);
     ok(d === 1, `path cell ${i} continues from the previous cell`);
@@ -54,9 +63,16 @@ section("pathing");
   ok(end.done, "past end of lane reports done");
 
   const set = pathCellSet(LEVEL);
-  ok(set.has(cellKey(LEVEL.breach.col, LEVEL.breach.row)), "breach cell is on the lane");
-  ok(set.has(cellKey(LEVEL.core.col, LEVEL.core.row)), "core cell is on the lane");
-  ok(set.has(cellKey(11, 7)), "mid-map choke is on the lane");
+  const pathsByLane = buildLanePaths(LEVEL);
+  ok(Object.keys(pathsByLane).length === 5, "lane path builder returns all five lanes");
+  for (const laneDef of LEVEL.lanes) {
+    ok(!!pathsByLane[laneDef.id], `${laneDef.id} has a world-space path`);
+    ok(set.has(cellKey(laneDef.spawn.col, laneDef.spawn.row)), `${laneDef.id} spawn is in the combined path set`);
+    for (const cell of expandWaypoints(laneDef.waypoints)) {
+      ok(set.has(cellKey(cell.col, cell.row)), `${laneDef.id} path cell ${cellKey(cell.col, cell.row)} is in the combined path set`);
+    }
+  }
+  ok(set.has(cellKey(LEVEL.core.col, LEVEL.core.row)), "core cell is in the combined path set");
 }
 
 // ---------------------------------------------------------------------------
@@ -80,31 +96,39 @@ section("first breach pacing");
 section("building rules");
 {
   const w = new World(LEVEL);
-  ok(!w.buildableAt(10, 7), "cannot build on the lane");
-  ok(!w.buildableAt(9, 5), "cannot build on a low curb (obstacle)");
+  for (const lane of LEVEL.lanes) {
+    for (const cell of expandWaypoints(lane.waypoints)) {
+      ok(!w.buildableAt(cell.col, cell.row), `cannot build on ${lane.id} path cell ${cellKey(cell.col, cell.row)}`);
+    }
+    ok(!w.buildableAt(lane.spawn.col, lane.spawn.row), `cannot build on ${lane.id} spawn`);
+  }
+  ok(!w.buildableAt(14, 13), "cannot build on a blocked ruin/statue base");
   ok(!w.buildableAt(LEVEL.core.col, LEVEL.core.row), "cannot build on the core");
+  ok(!w.buildableAt(19, 13), "cannot build in the core reserved zone");
   const heroSpawn = worldToGrid(w.hero._spawn.x, w.hero._spawn.z, LEVEL);
   ok(!w.buildableAt(heroSpawn.col, heroSpawn.row), "cannot build on the hero spawn");
-  ok(w.buildableAt(11, 6), "can build on the upper choke shoulder");
-  ok(w.buildableAt(11, 8), "can build on the lower choke shoulder");
-  ok(w.buildableAt(20, 6), "can build near the upper Ward approach");
-  ok(w.buildableAt(20, 8), "can build near the lower Ward approach");
-  ok(w.buildableAt(0, 0), "can build on an empty off-lane tile");
+  ok(w.buildableAt(18, 10), "can build on a north choke shoulder");
+  ok(w.buildableAt(22, 10), "can build on the opposite north choke shoulder");
+  ok(w.buildableAt(18, 12), "can build near the Ward approach");
+  ok(w.buildableAt(18, 15), "can build near the lower Ward approach");
+  ok(w.buildableAt(0, 8), "can build on an empty off-lane tile");
 
   const before = w.marrow;
-  const r1 = w.tryPlaceTower("ballista", 0, 0);
+  const r1 = w.tryPlaceTower("ballista", 0, 8);
   ok(r1.ok, "valid placement succeeds");
   ok(w.marrow === before - TOWERS.ballista.cost, "marrow deducted by tower cost");
-  ok(!w.buildableAt(0, 0), "tile is occupied after placing");
+  ok(!w.buildableAt(0, 8), "tile is occupied after placing");
 
-  const r2 = w.tryPlaceTower("ballista", 0, 0);
+  const r2 = w.tryPlaceTower("ballista", 0, 8);
   ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
 
-  const r3 = w.tryPlaceTower("ballista", 10, 7);
+  const r3 = w.tryPlaceTower("ballista", 20, 6);
   ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
 
-  const rBreach = w.tryPlaceTower("ballista", LEVEL.breach.col, LEVEL.breach.row);
-  ok(!rBreach.ok && rBreach.reason === "reserved", "cannot place on the enemy spawn");
+  for (const lane of LEVEL.lanes) {
+    const rSpawn = w.tryPlaceTower("ballista", lane.spawn.col, lane.spawn.row);
+    ok(!rSpawn.ok && rSpawn.reason === "reserved", `cannot place on ${lane.id} spawn`);
+  }
 
   const rCore = w.tryPlaceTower("ballista", LEVEL.core.col, LEVEL.core.row);
   ok(!rCore.ok && rCore.reason === "reserved", "cannot place on the core");
@@ -113,8 +137,66 @@ section("building rules");
   ok(!rSpawn.ok && rSpawn.reason === "reserved", "cannot place on the hero spawn");
 
   w.marrow = 0;
-  const r4 = w.tryPlaceTower("ballista", 0, 1);
+  const r4 = w.tryPlaceTower("ballista", 0, 9);
   ok(!r4.ok && r4.reason === "marrow", "cannot afford without marrow");
+}
+
+// ---------------------------------------------------------------------------
+section("multi-lane spawning");
+{
+  for (const laneDef of LEVEL.lanes) {
+    const w = new World(LEVEL);
+    w._spawnEnemy("husk", laneDef.id);
+    const e = w.enemies[0];
+    const path = w.lanePaths[laneDef.id];
+    const start = pointAtDistance(path, 0);
+    ok(e && e.laneId === laneDef.id, `${laneDef.id} enemy records its lane id`);
+    ok(approx(e.x, start.x) && approx(e.z, start.z), `${laneDef.id} enemy starts on its lane spawn`);
+    w._updateEnemies(1);
+    const progressed = pointAtDistance(path, e.speed);
+    ok(approx(e.x, progressed.x) && approx(e.z, progressed.z), `${laneDef.id} enemy follows its lane path`);
+  }
+
+  const laneIds = new Set(LEVEL.lanes.map((lane) => lane.id));
+  ok(WAVES.every((wave) => wave.groups.every((group) => !group.laneId || laneIds.has(group.laneId))), "wave lane ids resolve against level lanes");
+
+  const customWaves = [{
+    name: "Lane Smoke",
+    prepTime: 1,
+    reward: 0,
+    groups: [{ type: "husk", laneId: "southeast-garden", count: 1, interval: 1, delay: 0 }],
+  }];
+  const w = new World(LEVEL, customWaves);
+  w.startWave();
+  w.update(0.1, {});
+  ok(w.enemies[0]?.laneId === "southeast-garden", "wave groups can spawn on a requested lane");
+}
+
+// ---------------------------------------------------------------------------
+section("legacy single-lane fallback");
+{
+  const legacy = {
+    cols: 5,
+    rows: 5,
+    tile: 1,
+    breach: { col: 0, row: 2 },
+    core: { col: 4, row: 2 },
+    waypoints: [{ col: 0, row: 2 }, { col: 4, row: 2 }],
+    obstacles: [],
+    coreHp: 5,
+    startingMarrow: 50,
+  };
+  const w = new World(legacy, [{
+    name: "Legacy Smoke",
+    prepTime: 1,
+    reward: 0,
+    groups: [{ type: "husk", count: 1, interval: 1, delay: 0 }],
+  }]);
+  ok(w.defaultLaneId === "legacy", "legacy level defaults to a synthetic lane id");
+  ok(w.lane.total > 0, "legacy level builds a lane path");
+  w.startWave();
+  w.update(0.1, {});
+  ok(w.enemies[0]?.laneId === "legacy", "legacy wave groups spawn without lane ids");
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +221,7 @@ section("a tower kills enemies and grants marrow");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const place = w.tryPlaceTower("ballista", 10, 6);
+  const place = w.tryPlaceTower("ballista", 18, 10);
   ok(place.ok, "tower placed next to the lane");
   const marrowBefore = w.marrow;
   w.startWave();
@@ -153,7 +235,6 @@ section("hero auto-attacks and slam damages");
 {
   const w = new World(LEVEL);
   // place hero right on an early lane tile
-  const onLane = { col: 1, row: 5 };
   const wp = buildLanePath(LEVEL);
   const p = pointAtDistance(wp, 1.0);
   w.hero.x = p.x;
@@ -173,8 +254,8 @@ section("object pooling reuses dead enemies");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  w.tryPlaceTower("ballista", 10, 6);
-  w.tryPlaceTower("spire", 12, 8);
+  w.tryPlaceTower("ballista", 18, 10);
+  w.tryPlaceTower("spire", 22, 10);
   w.startWave();
   run(w, 4000, 0.05, {});
   ok(w.enemyPool.pooledCount > 0, "dead enemies were returned to the pool");
