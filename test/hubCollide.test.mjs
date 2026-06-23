@@ -1,7 +1,7 @@
 // Headless tests for hub hero collision (run via `node test/hubCollide.test.mjs`).
 // Proves the walker is pushed out of walls before any browser eyeball.
 import { resolveCircle } from "../src/sim/hubCollide.js";
-import { HERO_RADIUS, HUB_COLLIDERS } from "../src/config/hubLayout.js";
+import { HERO_RADIUS, TAVERN_COLLIDERS } from "../src/config/tavern.js";
 
 let pass = 0;
 let fail = 0;
@@ -49,18 +49,18 @@ function overlaps(x, z, box) {
   ok(!overlaps(o.x, o.z, wall), "no overlap after resolve (single wall)");
 }
 
-// 5) Against the REAL hub colliders: a hero shoved into the north keep wall ends
+// 5) Against the REAL tavern colliders: a hero shoved into the north wall ends
 //    up clear of every collider (corner-settling across multiple passes).
 {
-  const o = resolveCircle(0, -9.9, r, HUB_COLLIDERS); // jammed into north wall (z=-10)
-  const clear = HUB_COLLIDERS.every((w) => !overlaps(o.x, o.z, w));
-  ok(clear, `clear of all ${HUB_COLLIDERS.length} hub colliders after resolve`);
+  const o = resolveCircle(0, -13.9, r, TAVERN_COLLIDERS); // jammed into north wall (z=-14)
+  const clear = TAVERN_COLLIDERS.every((w) => !overlaps(o.x, o.z, w));
+  ok(clear, `clear of all ${TAVERN_COLLIDERS.length} tavern colliders after resolve`);
 }
 
-// 6) Walking through an open doorway (central divider gap at x=-7, z≈0) is allowed.
+// 6) Walking through the live south entrance doorway is allowed.
 {
-  const o = resolveCircle(-7, 0, r, HUB_COLLIDERS); // door gap is z:[-2.5,2.5]
-  ok(Math.abs(o.x + 7) < 0.6 && Math.abs(o.z) < 0.6, `doorway passable (x=${o.x.toFixed(2)}, z=${o.z.toFixed(2)})`);
+  const o = resolveCircle(0, 14, r, TAVERN_COLLIDERS); // door gap at x=0, z=14
+  ok(Math.abs(o.x) < 0.6 && Math.abs(o.z - 14) < 0.6, `entrance passable (x=${o.x.toFixed(2)}, z=${o.z.toFixed(2)})`);
 }
 
 console.log(`hubCollide: ${pass}/${pass + fail} assertions passed`);

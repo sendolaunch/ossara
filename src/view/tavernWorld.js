@@ -13,7 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR, BAR,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES,
 } from "../config/tavern.js";
 import { floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 import { STATION_PROPS } from "../config/stations.js";
@@ -123,6 +123,7 @@ export function buildTavernWorld(app) {
   }
 
   buildTiers(root);
+  buildAlcoves(root);
   buildPosts(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
@@ -167,12 +168,41 @@ function buildTiers(root) {
   const tread = mat(0x7a7460, { gloss: 0.1 });
   const fill = (x0, x1, z0, z1, top) =>
     prim(root, "box", stone, (x0 + x1) / 2, top / 2, (z0 + z1) / 2, x1 - x0, top, z1 - z0, false);
-  fill(-18, 18, -14, 6, 2.5);    // hall base mass (0..2.5)
-  fill(-15, 15, -14, -6, 7);     // raised bar platform (0..7)
-  for (let i = 0; i < 4; i++)    // entrance steps: hall(2.5) DOWN to threshold(0), z 6..8
-    prim(root, "box", tread, 0, (2.5 - (i + 1) * 0.625) + 0.31, 6 + i * 0.55, 30, 0.62, 0.62, false);
-  for (let i = 0; i < 7; i++)    // grand staircase: hall(2.5) UP to bar(7), centre |x|<=5, z -2..-6
-    prim(root, "box", tread, 0, (2.5 + (i + 1) * 0.643) - 0.31, -2 - i * 0.6, 10, 0.62, 0.62, false);
+  fill(-18, 18, -14, 6, TIER.hall);    // hall base mass (entry..hall)
+  fill(-15, 15, -14, -6, TIER.bar);     // raised bar platform (entry..bar)
+  const entryStepH = (TIER.hall - TIER.entry) / 4;
+  for (let i = 0; i < 4; i++)    // entrance steps: hall DOWN to threshold, z 6..8
+    prim(root, "box", tread, 0, TIER.hall - (i + 1) * entryStepH + entryStepH / 2, 6 + i * 0.55, 30, entryStepH, 0.62, false);
+  const barStepH = (TIER.bar - TIER.hall) / 7;
+  for (let i = 0; i < 7; i++)    // grand staircase: hall UP to bar, centre |x|<=5, z -2..-6
+    prim(root, "box", tread, 0, TIER.hall + (i + 1) * barStepH - barStepH / 2, -2 - i * 0.6, 10, barStepH, 0.62, false);
+}
+
+function buildAlcoves(root) {
+  const stone = mat(0x5b5548, { gloss: 0.1 });
+  const floor = mat(0x4a4035, { gloss: 0.12 });
+  const wallH = 2.7;
+  const segs = 8;
+  const addArc = (a, cx, cz, start, end) => {
+    for (let i = 0; i < segs; i++) {
+      const t = start + ((i + 0.5) / segs) * (end - start);
+      const x = cx + a.radius * Math.cos(t);
+      const z = cz + a.radius * Math.sin(t);
+      const yaw = -(t * 180) / Math.PI + 90;
+      const wall = prim(root, "box", stone, x, a.y + wallH / 2, z, 1.0, wallH, 0.42, true);
+      wall.setLocalEulerAngles(0, yaw, 0);
+    }
+  };
+
+  for (const a of ALCOVES) {
+    const sx = a.side === "front" ? a.radius * 2.1 : a.depth * 2.2;
+    const sz = a.side === "front" ? a.depth * 2.2 : a.radius * 2.1;
+    prim(root, "cylinder", floor, a.x, a.y + 0.035, a.z, sx, 0.07, sz, false);
+
+    if (a.side === "left") addArc(a, -15.35, a.z, Math.PI / 2, Math.PI * 1.5);
+    else if (a.side === "right") addArc(a, 15.35, a.z, -Math.PI / 2, Math.PI / 2);
+    else addArc(a, a.x, 11.45, 0, Math.PI);
+  }
 }
 
 function buildPosts(root) {
@@ -213,7 +243,7 @@ function placeAll(app, root) {
   for (const c of COLUMNS) put(c, { y: tierFloorY(c.x, c.z) });
   for (const p of PROPS) put(p, { y: (p.y || 0) + tierFloorY(p.x, p.z) });
   for (const b of BANNERS) put(b);
-  for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: 2.5, z: t.z, ry: t.ry });
+  for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: TIER.hall, z: t.z, ry: t.ry });
   for (const d of CRYSTAL_DECOR) put(d, { y: (d.y || 0) + tierFloorY(d.x, d.z) });
 
   // decorative mezzanine
@@ -226,7 +256,7 @@ function placeAll(app, root) {
 }
 
 function buildStations(app, root) {
-  // Stage A: temp markers only — STATION_PROPS placement re-enabled in Stage C.
+  // Stage B pass 1: temp markers only; station prop dressing waits for a later pass.
   // for (const s of TAVERN_STATIONS) {
   //   const props = STATION_PROPS[s.id];
   //   if (!props) continue;

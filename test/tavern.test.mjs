@@ -4,8 +4,9 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
+import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
@@ -41,6 +42,15 @@ for (const s of TAVERN_STATIONS) {
   const d = Math.hypot(dx, dz) || 1;
   const fx = s.x + (dx / d) * 1.8, fz = s.z + (dz / d) * 1.8; // a step toward centre
   ok(!overlaps(fx, fz), `station "${s.id}" has a clear approach tile`);
+}
+
+// 4) Stage B pass 1: six structural alcoves feed the live station anchors.
+ok(ALCOVES.length === 6, "six Stage B alcoves are declared");
+for (const a of ALCOVES) {
+  const expectedY = a.tier === "entry" ? TIER.entry : TIER.hall;
+  ok(a.y === expectedY, `alcove "${a.id}" y matches its tier`);
+  ok(floorHeightAt(a.x, a.z) === expectedY, `alcove "${a.id}" anchor sits on its tier`);
+  ok(TAVERN_STATIONS.some((s) => s.id === a.stationId && s.alcove === a.id && s.x === a.x && s.z === a.z), `station anchor uses alcove "${a.id}"`);
 }
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);

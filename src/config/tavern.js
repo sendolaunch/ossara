@@ -1,6 +1,6 @@
-// THE UNDERCROFT — layout DATA (Stage A: one open curved hall, no interior partitions,
-// dramatic 0 / +2.5 / +7 verticality). Decoration/props/trophies are Stage C.
-import { tierFloorY } from "../sim/hubFloor.js";
+// THE UNDERCROFT — layout DATA (Stage A/B: one open hall, 0 / +2.5 / +7 tiers,
+// and structural alcove anchors). Decoration/props/trophies are Stage C.
+import { TIER, tierFloorY } from "../sim/hubFloor.js";
 
 export const TILE = 4;
 export const HERO_RADIUS = 0.45;
@@ -47,15 +47,61 @@ export const TORCHES = [
 ];
 export const MEZZANINE = { stairs: null, deck: [], rail: [], banners: [] };
 
+export const ALCOVES = [
+  {
+    id: "forge", stationId: "bench", propsId: "forge",
+    name: "Forge", stationName: "Forge - Re-roll / Upgrade",
+    side: "left", tier: "hall", y: TIER.hall, x: -15.7, z: -2.5, color: "gold",
+    radius: 2.3, depth: 1.2,
+  },
+  {
+    id: "salvager", stationId: "salvager", propsId: "salvager",
+    name: "Salvager", stationName: "Salvager - break gear into mats",
+    side: "left", tier: "hall", y: TIER.hall, x: -15.7, z: 4.5, color: "ash",
+    radius: 2.3, depth: 1.2,
+  },
+  {
+    id: "stash", stationId: "stash", propsId: "stash",
+    name: "Stash", stationName: "Stash - your storage",
+    side: "right", tier: "hall", y: TIER.hall, x: 15.7, z: -2.5, color: "bone",
+    radius: 2.3, depth: 1.2,
+  },
+  {
+    id: "incinerator", stationId: "incinerator", propsId: "incinerator",
+    name: "Incinerator", stationName: "Incinerator - burn trash items",
+    side: "right", tier: "hall", y: TIER.hall, x: 15.7, z: 4.5, color: "blood",
+    radius: 2.3, depth: 1.2,
+  },
+  {
+    id: "bounty", stationId: "bounty", propsId: "bounty",
+    name: "Bounty Board", stationName: "Bounty Board - daily goals",
+    side: "front", tier: "entry", y: TIER.entry, x: -9, z: 11.5, color: "ash",
+    radius: 2.1, depth: 1.0,
+  },
+  {
+    id: "wardrobe", stationId: "wardrobe", propsId: "wardrobe",
+    name: "Wardrobe", stationName: "Wardrobe - cosmetics",
+    side: "front", tier: "entry", y: TIER.entry, x: 9, z: 11.5, color: "bone",
+    radius: 2.1, depth: 1.0,
+  },
+];
+
+const stationFromAlcove = (a) => ({
+  id: a.stationId,
+  name: a.stationName,
+  x: a.x,
+  z: a.z,
+  y: a.y,
+  color: a.color,
+  alcove: a.id,
+  propsId: a.propsId,
+});
+
 export const TAVERN_STATIONS = [
-  { id: "quartermaster", name: "Bar — Quartermaster (sell loot)", x: 0, z: -6, color: "gold" },
-  { id: "bench", name: "Forge — Re-roll / Upgrade", x: -16, z: -2, color: "gold" },
-  { id: "salvager", name: "Salvager — break gear into mats", x: -16, z: 4, color: "ash" },
-  { id: "stash", name: "Stash — your storage", x: 16, z: -2, color: "bone" },
-  { id: "incinerator", name: "Incinerator — burn trash items", x: 16, z: 4, color: "blood" },
-  { id: "blackmarket", name: "Black Market — trade in $OSSA", x: -14, z: -8, color: "blood" },
-  { id: "wardrobe", name: "Wardrobe — cosmetics", x: 9, z: 12, color: "bone" },
-  { id: "bounty", name: "Bounty Board — daily goals", x: -9, z: 12, color: "ash" },
+  { id: "quartermaster", name: "Bar - Quartermaster (sell loot)", x: 0, z: -6, y: TIER.bar, color: "gold" },
+  ...ALCOVES.map(stationFromAlcove),
+  // Deferred but still interactable; not part of the six Stage B alcoves yet.
+  { id: "blackmarket", name: "Black Market - trade in $OSSA", x: -14, z: -8, y: TIER.bar, color: "blood" },
 ];
 
 export const TAVERN_CRYSTAL = { x: 0, z: 0 };
@@ -75,7 +121,21 @@ const TIER_COLLIDERS = [
   { x: 5.3, z: -10.2, hw: 1, hd: 1 }, { x: 3, z: -8.2, hw: 1, hd: 1 }, { x: 0, z: -7.5, hw: 1, hd: 1 },
   { x: -3, z: -8.2, hw: 1, hd: 1 }, { x: -5.3, z: -10.2, hw: 1, hd: 1 },
 ];
-export const TAVERN_COLLIDERS = [...colliders, ...CORNER_COLLIDERS, ...TIER_COLLIDERS];
+const ALCOVE_COLLIDERS = ALCOVES.flatMap((a) => {
+  if (a.side === "left") return [
+    { x: -17.7, z: a.z - a.radius, hw: 0.8, hd: 0.35 },
+    { x: -17.7, z: a.z + a.radius, hw: 0.8, hd: 0.35 },
+  ];
+  if (a.side === "right") return [
+    { x: 17.7, z: a.z - a.radius, hw: 0.8, hd: 0.35 },
+    { x: 17.7, z: a.z + a.radius, hw: 0.8, hd: 0.35 },
+  ];
+  return [
+    { x: a.x - a.radius, z: 13.1, hw: 0.35, hd: 0.8 },
+    { x: a.x + a.radius, z: 13.1, hw: 0.35, hd: 0.8 },
+  ];
+});
+export const TAVERN_COLLIDERS = [...colliders, ...CORNER_COLLIDERS, ...TIER_COLLIDERS, ...ALCOVE_COLLIDERS];
 export const TAVERN_PIECES = [...new Set([
   ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name), "torch_mounted",
 ])];

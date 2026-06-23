@@ -10,7 +10,7 @@ import { MODELS } from "../config/models.js";
 import { HERO } from "../config/hero.js";
 import { buildTavernWorld } from "../view/tavernWorld.js";
 import { resolveCircle } from "../sim/hubCollide.js";
-import { HERO_RADIUS, INTERACT_R } from "../config/hubLayout.js";
+import { HERO_RADIUS, INTERACT_R } from "../config/tavern.js";
 import { loadCharacter } from "../view/character.js";
 import { createBartender } from "../view/bartender.js";
 import { ChaseCamera } from "../view/chaseCamera.js";
