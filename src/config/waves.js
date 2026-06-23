@@ -10,11 +10,17 @@
 // -> defend without dying. Used when a mission is launched in tutorial mode.
 export const TUTORIAL_WAVES = [
   {
+    name: "First Footsteps",
+    hint: "Build beside the road, then start the wave when you are ready.",
+    warning: "Slow husks only. Watch how the lane feeds your towers.",
     prepTime: 30,
     reward: 40,
     groups: [{ type: "husk", count: 5, interval: 1.4, delay: 0 }],
   },
   {
+    name: "Quick Dead",
+    hint: "Sprinters are fragile, but they punish uncovered corners.",
+    warning: "Fast enemies enter after the husks.",
     prepTime: 20,
     reward: 0,
     groups: [
@@ -26,42 +32,58 @@ export const TUTORIAL_WAVES = [
 
 export const WAVES = [
   {
-    prepTime: 20,
-    reward: 30,
-    groups: [{ type: "husk", count: 8, interval: 1.1, delay: 0 }],
-  },
-  {
-    prepTime: 16,
-    reward: 35,
-    groups: [
-      { type: "husk", count: 10, interval: 0.9, delay: 0 },
-      { type: "sprinter", count: 5, interval: 1.4, delay: 3 },
-    ],
-  },
-  {
-    prepTime: 16,
+    name: "First Footsteps",
+    hint: "Build beside the road. Towers cannot be placed on the enemy lane.",
+    warning: "Slow husks only. Learn where your defenses can reach.",
+    prepTime: 34,
     reward: 45,
+    groups: [{ type: "husk", count: 6, interval: 1.45, delay: 0 }],
+  },
+  {
+    name: "Quick Dead",
+    hint: "Add coverage near a bend. Sprinters arrive after the first group.",
+    warning: "Carrion-sprinters are fast but fragile.",
+    prepTime: 24,
+    reward: 50,
     groups: [
-      { type: "sprinter", count: 12, interval: 0.7, delay: 0 },
-      { type: "brute", count: 2, interval: 4, delay: 2 },
+      { type: "husk", count: 8, interval: 1.1, delay: 0 },
+      { type: "sprinter", count: 3, interval: 1.7, delay: 5 },
     ],
   },
   {
-    prepTime: 18,
+    name: "The Gate-Bruiser",
+    hint: "A brute is coming. Strengthen one choke and fight beside it.",
+    warning: "Mini-boss: a plague-brute enters the lane.",
+    prepTime: 24,
     reward: 60,
     groups: [
-      { type: "husk", count: 14, interval: 0.6, delay: 0 },
-      { type: "brute", count: 4, interval: 3, delay: 4 },
-      { type: "sprinter", count: 8, interval: 0.9, delay: 8 },
+      { type: "husk", count: 8, interval: 0.9, delay: 0 },
+      { type: "brute", count: 1, interval: 1, delay: 6 },
     ],
   },
   {
+    name: "Ward Under Pressure",
+    hint: "Use your Marrow. Spread damage across two bends before the rush.",
+    warning: "Mixed enemies will pressure the Ward from multiple timings.",
     prepTime: 22,
+    reward: 70,
+    groups: [
+      { type: "husk", count: 12, interval: 0.7, delay: 0 },
+      { type: "sprinter", count: 8, interval: 1.0, delay: 4 },
+      { type: "brute", count: 2, interval: 5, delay: 10 },
+    ],
+  },
+  {
+    name: "Final Stand",
+    hint: "Spend everything. Hold the last bend and be ready for the Herald.",
+    warning: "Final stand: the Herald comes behind the rush.",
+    prepTime: 28,
     reward: 0,
     groups: [
-      { type: "sprinter", count: 10, interval: 0.8, delay: 0 },
-      { type: "brute", count: 5, interval: 2.5, delay: 5 },
-      { type: "herald", count: 1, interval: 1, delay: 14 }, // the boss closes the slice
+      { type: "husk", count: 10, interval: 0.75, delay: 0 },
+      { type: "sprinter", count: 8, interval: 0.9, delay: 3 },
+      { type: "brute", count: 3, interval: 4, delay: 8 },
+      { type: "herald", count: 1, interval: 1, delay: 18 }, // the boss closes the slice
     ],
   },
 ];

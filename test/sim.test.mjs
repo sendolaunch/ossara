@@ -5,6 +5,7 @@
 
 import { World } from "../src/sim/World.js";
 import { LEVEL } from "../src/config/level.js";
+import { WAVES } from "../src/config/waves.js";
 import { TOWERS } from "../src/config/towers.js";
 import { CLASS_KITS } from "../src/config/kits.js";
 import { buildLanePath, pointAtDistance, pathCellSet, cellKey } from "../src/sim/pathing.js";
@@ -44,6 +45,23 @@ section("pathing");
 }
 
 // ---------------------------------------------------------------------------
+section("first breach pacing");
+{
+  ok(LEVEL.coreHp >= 24, "first breach gives new players a forgiving Ward health pool");
+  ok(LEVEL.startingMarrow >= 180, "first breach starts with enough Marrow for basic coverage");
+  ok(WAVES.length === 5, "first breach has five intentional waves");
+  ok(WAVES.every((w) => w.name && w.hint && w.warning), "each wave has teaching/pressure HUD copy");
+  ok(WAVES[0].prepTime >= 30, "wave 1 gives a long first build phase");
+  ok(WAVES[0].groups.every((g) => g.type === "husk"), "wave 1 teaches with husks only");
+  ok(WAVES[1].groups.some((g) => g.type === "sprinter"), "wave 2 introduces sprinters");
+  ok(WAVES.slice(1, -1).some((w) => w.groups.some((g) => g.type === "brute" && g.count === 1)), "middle waves include a single brute mini-boss moment");
+  const final = WAVES[WAVES.length - 1];
+  ok(final.name === "Final Stand", "final wave is explicitly framed as a final stand");
+  ok(final.groups.some((g) => g.type === "herald" && g.count === 1 && g.delay >= 15), "final wave ends with a delayed Herald boss");
+  ok(WAVES.slice(0, -1).every((w) => w.reward > 0), "pre-final waves fund recovery and rebuilding");
+}
+
+// ---------------------------------------------------------------------------
 section("building rules");
 {
   const w = new World(LEVEL);
@@ -76,7 +94,7 @@ section("enemy leaks to core when undefended");
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
   const coreBefore = w.core.hp;
-  w.startWave(); // wave 1 = 8 husks
+  w.startWave(); // wave 1 = slow husks
   // run long enough for at least one husk to traverse (~16s) plus margin
   run(w, 3000, 0.05, {});
   ok(w.stats.leaked > 0, "at least one enemy reached the core");

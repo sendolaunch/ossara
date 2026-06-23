@@ -43,6 +43,6 @@ export const LEVEL = {
     { col: 20, row: 16, w: 5, h: 2 }, // SE rubble
   ],
 
-  coreHp: 20,
-  startingMarrow: 150,
+  coreHp: 24,
+  startingMarrow: 180,
 };

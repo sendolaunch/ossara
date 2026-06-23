@@ -61,6 +61,8 @@ export class HUD {
     this.cb = cb;
     this.root = root;
     this._lastStatus = "playing";
+    this._lastPhase = null;
+    this._lastWaveIndex = -1;
     this._heroIconId = null;
     this.rewardSummary = null;
     this._build();
@@ -188,6 +190,7 @@ export class HUD {
   }
 
   setMission(mission, difficulty) {
+    this.mission = mission || null;
     if (this.elMission) this.elMission.textContent = (mission?.name || "The First Seal").toUpperCase();
     if (this.elDifficulty) this.elDifficulty.textContent = difficulty?.label || difficulty?.name || "Initiate";
   }
@@ -201,7 +204,8 @@ export class HUD {
     const drops = this.rewardSummary?.drops || [];
     const dropText = drops.length ? ` Recovered ${drops.length} relic${drops.length === 1 ? "" : "s"}.` : "";
     const kills = world ? ` ${world.stats.kills} dead put down.` : "";
-    this.elEndSub.textContent = `The seal holds.${kills}${dropText}`;
+    const name = this.mission?.name || "The First Seal";
+    this.elEndSub.textContent = `${name} holds.${kills}${dropText}`;
   }
 
   toast(msg, color = CSS.plague) {
@@ -214,6 +218,7 @@ export class HUD {
 
   update(world) {
     const wv = Math.min(world.waveIndex + 1, world.totalWaves);
+    const currentWave = world.waves[Math.min(world.waveIndex, world.totalWaves - 1)] || {};
     this.elWave.textContent = `WAVE ${wv} / ${world.totalWaves}`;
     const wardRatio = Math.max(0, world.core.hp / world.core.maxHp);
     this.elWard.textContent = `${Math.max(0, Math.ceil(world.core.hp))} / ${world.core.maxHp}`;
@@ -225,15 +230,24 @@ export class HUD {
     // phase banner
     if (world.phase === "prep") {
       const t = Math.max(0, Math.ceil(world.prepTimer));
-      this.elPhase.textContent = `BUILD PHASE · ${t}s`;
+      this.elPhase.textContent = `BUILD · ${wv}/${world.totalWaves} · ${currentWave.name || "Prepare"} · ${t}s`;
       this.elPhase.style.color = CSS.plague;
       this.elStart.style.display = "";
+      this.elHint.textContent = currentWave.hint || "Build beside the lane, then start the wave.";
     } else if (world.phase === "active") {
-      this.elPhase.textContent = `COMBAT · WAVE ${wv}/${world.totalWaves}`;
+      this.elPhase.textContent = `COMBAT · ${currentWave.name || `WAVE ${wv}`}`;
       this.elPhase.style.color = CSS.gold;
       this.elStart.style.display = "none";
+      this.elHint.textContent = currentWave.warning || "Hold the breach. Move with WASD and use Q when enemies cluster.";
     } else {
       this.elStart.style.display = "none";
+    }
+
+    if (world.phase !== this._lastPhase || world.waveIndex !== this._lastWaveIndex) {
+      if (world.phase === "prep" && currentWave.hint) this.toast(currentWave.hint, CSS.plague);
+      if (world.phase === "active" && currentWave.warning) this.toast(currentWave.warning, wv === world.totalWaves ? CSS.gold : CSS.plague);
+      this._lastPhase = world.phase;
+      this._lastWaveIndex = world.waveIndex;
     }
 
     // hero panel
@@ -295,6 +309,8 @@ export class HUD {
 
   reset() {
     this._lastStatus = "playing";
+    this._lastPhase = null;
+    this._lastWaveIndex = -1;
     this.rewardSummary = null;
     this.overlay.style.display = "none";
   }
