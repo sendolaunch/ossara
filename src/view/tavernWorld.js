@@ -13,9 +13,9 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY,
 } from "../config/tavern.js";
-import { floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
+import { BARP, floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 import { STATION_PROPS } from "../config/stations.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
@@ -69,10 +69,9 @@ export function buildTavernWorld(app) {
 
   // ---- Ward-Crystal (procedural centrepiece + portal) ----------------------
   const cx = TAVERN_CRYSTAL.x, cz = TAVERN_CRYSTAL.z;
-  prim(root, "cylinder", mat(0x4a4035), cx, 0.12 + TIER.hall, cz, 3.2, 0.24, 3.2);
-  prim(root, "cylinder", mat(PALETTE.plague, { emissive: 0.5 }), cx, 0.26 + TIER.hall, cz, 2.4, 0.06, 2.4, false);
+  buildCrystalCeremony(root, cx, cz);
   const crystalEntity = prim(root, "sphere", mat(PALETTE.plague, { emissive: 1.8, gloss: 0.7 }), cx, 1.9 + TIER.hall, cz, 1.5, 2.6, 1.5, false);
-  pointLight(root, PALETTE.plague, 1.5, 9, cx, 2.2 + TIER.hall, cz);
+  pointLight(root, PALETTE.plague, 1.9, 10, cx, 2.2 + TIER.hall, cz);
 
   // ---- warm torch point lights (the mounted-torch meshes load async) -------
   for (const t of TORCHES) pointLight(root, 0xffb867, 1.6, 9, t.x, 2.4, t.z);
@@ -86,9 +85,6 @@ export function buildTavernWorld(app) {
   // entrance runner (purple carpet) S → crystal
   for (let z = RUNNER.from; z >= RUNNER.to; z -= 0.5)
     prim(root, "box", mat(0x3a2a55, { emissive: 0.12 }), RUNNER.x, 0.05 + floorHeightAt(RUNNER.x, z), z, RUNNER.width, 0.04, 0.5, false);
-  // ornate rune diamond around the crystal
-  for (const [dx, dz] of [[2,0],[-2,0],[0,2],[0,-2],[1.4,1.4],[1.4,-1.4],[-1.4,1.4],[-1.4,-1.4]])
-    prim(root, "box", mat(PALETTE.plague, { emissive: 0.7 }), dx, 0.07 + TIER.hall, dz, 0.7, 0.05, 0.7, false).setLocalEulerAngles(0, 45, 0);
   // entrance steps
   for (let i = 0; i < 3; i++)
     prim(root, "box", mat(0x6b6552), ENTRANCE_STEPS.x, 0.05 - i * 0.12, ENTRANCE_STEPS.z + i * 0.7, 5, 0.14, 0.7, false);
@@ -163,9 +159,53 @@ export function buildTavernWorld(app) {
   };
 }
 
+function buildCrystalCeremony(root, cx, cz) {
+  const stone = mat(0x4a4035);
+  const darkStone = mat(0x332d27);
+  const rune = mat(PALETTE.plague, { emissive: 0.75, gloss: 0.35 });
+  const candle = mat(0xd8cfaa, { gloss: 0.18 });
+  const flame = mat(PALETTE.plague, { emissive: 1.2, gloss: 0.35 });
+  const ember = mat(0xb2ff66, { emissive: 0.85, gloss: 0.25 });
+
+  prim(root, "cylinder", stone, cx, TIER.hall + 0.08, cz, CRYSTAL_CEREMONY.daisRadius * 2, 0.16, CRYSTAL_CEREMONY.daisRadius * 2, false);
+  prim(root, "cylinder", darkStone, cx, TIER.hall + 0.19, cz, 4.9, 0.08, 4.9, false);
+  prim(root, "cylinder", rune, cx, TIER.hall + 0.25, cz, 3.0, 0.035, 3.0, false);
+
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    const x = cx + Math.cos(a) * CRYSTAL_CEREMONY.innerRuneRadius;
+    const z = cz + Math.sin(a) * CRYSTAL_CEREMONY.innerRuneRadius;
+    const mark = prim(root, "box", rune, x, TIER.hall + 0.32, z, 0.44, 0.035, 0.13, false);
+    mark.setLocalEulerAngles(0, -(a * 180) / Math.PI, 0);
+  }
+
+  for (const c of CRYSTAL_CEREMONY.candles) {
+    prim(root, "cylinder", candle, cx + c.x, TIER.hall + 0.20, cz + c.z, 0.13, 0.34, 0.13, false);
+    prim(root, "sphere", flame, cx + c.x, TIER.hall + 0.43, cz + c.z, 0.11, 0.18, 0.11, false);
+  }
+
+  for (const b of CRYSTAL_CEREMONY.braziers) {
+    prim(root, "cylinder", darkStone, cx + b.x, TIER.hall + 0.27, cz + b.z, 0.55, 0.54, 0.55, true);
+    prim(root, "cylinder", stone, cx + b.x, TIER.hall + 0.66, cz + b.z, 0.9, 0.22, 0.9, true);
+    prim(root, "sphere", ember, cx + b.x, TIER.hall + 0.9, cz + b.z, 0.42, 0.34, 0.42, false);
+    pointLight(root, PALETTE.plague, 0.45, 4.2, cx + b.x, TIER.hall + 1.0, cz + b.z);
+  }
+
+  for (const s of CRYSTAL_CEREMONY.statues) {
+    const base = prim(root, "cylinder", stone, cx + s.x, TIER.hall + 0.18, cz + s.z, 0.7, 0.36, 0.7, true);
+    base.setLocalEulerAngles(0, s.ry, 0);
+    const body = prim(root, "box", darkStone, cx + s.x, TIER.hall + 0.98, cz + s.z, 0.42, 1.25, 0.34, true);
+    body.setLocalEulerAngles(0, s.ry, 0);
+    prim(root, "sphere", stone, cx + s.x, TIER.hall + 1.72, cz + s.z, 0.46, 0.38, 0.46, true).setLocalEulerAngles(0, s.ry, 0);
+    const runeEye = prim(root, "box", flame, cx + s.x, TIER.hall + 1.72, cz + s.z + 0.2, 0.22, 0.04, 0.04, false);
+    runeEye.setLocalEulerAngles(0, s.ry, 0);
+  }
+}
+
 function buildTiers(root) {
   const stone = mat(0x6f6a58, { gloss: 0.12 });
   const tread = mat(0x7a7460, { gloss: 0.1 });
+  const shadow = mat(0x2f2a24, { gloss: 0.08 });
   const fill = (x0, x1, z0, z1, top) =>
     prim(root, "box", stone, (x0 + x1) / 2, top / 2, (z0 + z1) / 2, x1 - x0, top, z1 - z0, false);
   fill(-18, 18, -14, 6, TIER.hall);    // hall base mass (entry..hall)
@@ -173,9 +213,23 @@ function buildTiers(root) {
   const entryStepH = (TIER.hall - TIER.entry) / 4;
   for (let i = 0; i < 4; i++)    // entrance steps: hall DOWN to threshold, z 6..8
     prim(root, "box", tread, 0, TIER.hall - (i + 1) * entryStepH + entryStepH / 2, 6 + i * 0.55, 30, entryStepH, 0.62, false);
-  const barStepH = (TIER.bar - TIER.hall) / 7;
-  for (let i = 0; i < 7; i++)    // grand staircase: hall UP to bar, centre |x|<=5, z -2..-6
-    prim(root, "box", tread, 0, TIER.hall + (i + 1) * barStepH - barStepH / 2, -2 - i * 0.6, 10, barStepH, 0.62, false);
+  prim(root, "box", shadow, -9.5, TIER.hall + 1.0, -5.94, 11.0, 2.0, 0.22, false);
+  prim(root, "box", shadow, 9.5, TIER.hall + 1.0, -5.94, 11.0, 2.0, 0.22, false);
+  const stairSteps = 5;
+  const barStepH = (TIER.bar - TIER.hall) / stairSteps;
+  const stairW = BARP.stairHalfX * 1.75;
+  const stairDepth = (BARP.zRamp - BARP.zFlat) / stairSteps;
+  for (let i = 0; i < stairSteps; i++) {
+    const yTop = TIER.hall + (i + 1) * barStepH;
+    const z = BARP.zRamp - (i + 0.5) * stairDepth;
+    prim(root, "box", tread, 0, yTop - barStepH / 2, z, stairW, barStepH, stairDepth * 0.92, false);
+    prim(root, "box", shadow, 0, yTop - 0.03, z + stairDepth * 0.43, stairW + 0.18, 0.08, 0.08, false);
+  }
+  const cheekH = 1.1;
+  const cheekZ = (BARP.zRamp + BARP.zFlat) / 2;
+  const cheekD = BARP.zRamp - BARP.zFlat;
+  prim(root, "box", stone, -BARP.stairHalfX - 0.25, TIER.hall + cheekH / 2, cheekZ, 0.32, cheekH, cheekD, false);
+  prim(root, "box", stone, BARP.stairHalfX + 0.25, TIER.hall + cheekH / 2, cheekZ, 0.32, cheekH, cheekD, false);
 }
 
 function buildAlcoves(root) {
@@ -195,6 +249,20 @@ function buildAlcoves(root) {
   };
 
   for (const a of ALCOVES) {
+    if (a.recessed) {
+      if (a.side === "left" || a.side === "right") {
+        const cx = a.side === "left" ? -18.4 : 18.4;
+        const floorX = a.side === "left" ? -19.35 : 19.35;
+        prim(root, "box", floor, floorX, a.y + 0.035, a.z, a.depth, 0.07, a.radius * 2.05, false);
+        if (a.side === "left") addArc(a, cx, a.z, Math.PI / 2, Math.PI * 1.5);
+        else addArc(a, cx, a.z, -Math.PI / 2, Math.PI / 2);
+      } else {
+        prim(root, "box", floor, a.x, a.y + 0.035, 15.0, a.radius * 2.05, 0.07, a.depth, false);
+        addArc(a, a.x, 14.15, 0, Math.PI);
+      }
+      continue;
+    }
+
     const sx = a.side === "front" ? a.radius * 2.1 : a.depth * 2.2;
     const sz = a.side === "front" ? a.depth * 2.2 : a.radius * 2.1;
     prim(root, "cylinder", floor, a.x, a.y + 0.035, a.z, sx, 0.07, sz, false);

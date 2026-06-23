@@ -16,7 +16,7 @@ export const TIER = { entry: 0, hall: 2.5, bar: 7 };
 export const ENTRY = { zFlat: 8, zRamp: 6 };
 // Bar platform: flat 7 for z <= zFlat within |x| <= halfX. The ONLY way up is the central
 // grand staircase (|x| <= stairHalfX), ramping hall -> bar over [zRamp, zFlat].
-export const BARP = { zFlat: -6, zRamp: -2, halfX: 15, stairHalfX: 5 };
+export const BARP = { zFlat: -6, zRamp: -2, halfX: 15, stairHalfX: 4 };
 
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
 const lerp = (a, b, t) => a + (b - a) * clamp01(t);

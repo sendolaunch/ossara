@@ -17,12 +17,14 @@ eq(floorHeightAt(16, 4), TIER.hall, "incinerator side stays hall");
 eq(floorHeightAt(-9, 12), TIER.entry, "bounty on threshold");
 eq(floorHeightAt(0, 7), 1.25, "entrance ramp midpoint");
 eq(floorHeightAt(0, -4), 4.75, "grand staircase midpoint");
+eq(floorHeightAt(4.5, -4), TIER.hall, "outside narrowed stair lane stays hall");
 eq(floorHeightAt(8, -10), TIER.bar, "wide platform reaches |x|<=15");
 eq(floorHeightAt(0, -6), TIER.bar, "platform front edge is bar");
 
 // tierFloorY (flat seating)
 eq(tierFloorY(0, 7), TIER.entry, "step tile snaps to threshold");
 eq(tierFloorY(0, -4), TIER.bar, "stair tile snaps to bar");
+eq(tierFloorY(4.5, -4), TIER.hall, "side floor beside narrowed stair stays hall");
 eq(tierFloorY(0, 0), TIER.hall, "hall tile stays hall");
 
 console.log(`hubFloor: ${pass} passed, ${fail} failed`);

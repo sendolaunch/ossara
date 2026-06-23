@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, CRYSTAL_CEREMONY, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
 
@@ -52,6 +52,34 @@ for (const a of ALCOVES) {
   ok(floorHeightAt(a.x, a.z) === expectedY, `alcove "${a.id}" anchor sits on its tier`);
   ok(TAVERN_STATIONS.some((s) => s.id === a.stationId && s.alcove === a.id && s.x === a.x && s.z === a.z), `station anchor uses alcove "${a.id}"`);
 }
+
+// 5) Stage B pass 2: all alcoves are true recessed pockets, not just in-room markers.
+const recessed = ALCOVES.filter((a) => a.recessed);
+ok(recessed.length === ALCOVES.length, "all Stage B alcoves are recessed");
+for (const a of recessed) {
+  if (a.side === "front") {
+    ok(a.z > 14, `recessed alcove "${a.id}" anchor sits beyond the old front shell`);
+    ok(!overlaps(a.x, 14), `recessed alcove "${a.id}" has an open mouth through the old front shell`);
+    ok(overlaps(a.x, 16.25), `recessed alcove "${a.id}" has a blocking back wall`);
+  } else {
+    const wallX = a.side === "left" ? -18 : 18;
+    const backX = a.side === "left" ? -20.8 : 20.8;
+    ok(Math.abs(a.x) > 18, `recessed alcove "${a.id}" anchor sits beyond the old side shell`);
+    ok(!overlaps(wallX, a.z), `recessed alcove "${a.id}" has an open mouth through the old side shell`);
+    ok(overlaps(backX, a.z), `recessed alcove "${a.id}" has a blocking back wall`);
+  }
+}
+
+// 6) Stage C pass 1: crystal ceremony stays sacred but sightline-safe.
+ok(CRYSTAL_CEREMONY.candles.length === 16, "crystal ceremony has a low candle ring");
+ok(CRYSTAL_CEREMONY.braziers.length === 4, "crystal ceremony has four ward braziers");
+ok(CRYSTAL_CEREMONY.statues.length === 2, "crystal ceremony has two ward statues");
+for (const b of CRYSTAL_CEREMONY.braziers)
+  ok(Math.abs(b.x) >= 3.5 && Math.abs(b.z) >= 3.4, "ward brazier stays off the central sightline");
+for (const s of CRYSTAL_CEREMONY.statues)
+  ok(Math.abs(s.x) >= 3.0 && s.z < 0, "ward statue frames the stair axis without blocking center");
+for (let z = 0; z <= TAVERN_SPAWN.z; z += 1.5)
+  ok(!overlaps(TAVERN_CRYSTAL.x, z), `spawn-to-crystal sightline/walkline clear at z=${z}`);
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);
