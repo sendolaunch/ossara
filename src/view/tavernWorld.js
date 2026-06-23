@@ -13,7 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, BAR_DECOR,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, BAR_DECOR, ATMOSPHERE_DECOR,
 } from "../config/tavern.js";
 import { BARP, floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 import { STATION_PROPS } from "../config/stations.js";
@@ -125,6 +125,7 @@ export function buildTavernWorld(app) {
   buildAlcoves(root);
   buildHallAnchors(root);
   buildStationIdentity(root);
+  buildAtmosphere(root);
   buildPosts(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
@@ -145,7 +146,7 @@ export function buildTavernWorld(app) {
   preloadKit(app, [...new Set([
     ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name),
     ...PROPS.map((p) => p.name), ...BANNERS.map((p) => p.name), ...CRYSTAL_DECOR.map((p) => p.name),
-    ...BAR_DECOR.map((p) => p.name),
+    ...BAR_DECOR.map((p) => p.name), ...ATMOSPHERE_DECOR.map((p) => p.name),
     ...Object.values(HALL_ANCHOR_PROPS).flat().map((p) => p.name),
     "torch_mounted",
     ...(MEZZANINE.stairs ? [MEZZANINE.stairs.name] : []),
@@ -391,6 +392,28 @@ function buildWardrobeIdentity(root, s) {
   pointLight(root, 0xb7d3ff, 0.4, 3.4, s.x - 0.7, y + 1.5, s.z - 0.55);
 }
 
+function buildAtmosphere(root) {
+  const beam = mat(0x342516, { gloss: 0.12 });
+  const iron = mat(0x1b1713, { gloss: 0.18 });
+  for (const z of [-11.2, -3.4, 4.4, 11.2]) {
+    prim(root, "box", beam, -9.2, TIER.hall + 4.25, z, 15.5, 0.35, 0.45, true);
+    prim(root, "box", beam, 9.2, TIER.hall + 4.25, z, 15.5, 0.35, 0.45, true);
+  }
+  for (const x of [-15.8, 15.8]) {
+    for (const z of [-8.8, -1.2, 6.6]) {
+      prim(root, "box", iron, x, TIER.hall + 2.2, z, 0.12, 2.8, 0.12, true);
+    }
+  }
+  for (const wx of [-8, 8]) {
+    prim(root, "box", mat(PALETTE.plague, { emissive: 0.35 }), wx, TIER.hall + 2.6, -13.35, 2.4, 2.5, 0.08, false);
+    pointLight(root, PALETTE.plague, 0.52, 5.8, wx, TIER.hall + 2.65, -12.8);
+  }
+  pointLight(root, 0xffad6a, 0.42, 6.0, -17.0, TIER.hall + 2.0, 6.8);
+  pointLight(root, 0xffad6a, 0.42, 6.0, 17.0, TIER.hall + 2.0, 6.8);
+  pointLight(root, 0xffad6a, 0.34, 5.0, -17.0, TIER.hall + 2.0, -6.2);
+  pointLight(root, 0xffad6a, 0.34, 5.0, 17.0, TIER.hall + 2.0, -6.2);
+}
+
 function buildTiers(root) {
   const stone = mat(0x6f6a58, { gloss: 0.12 });
   const tread = mat(0x7a7460, { gloss: 0.1 });
@@ -501,6 +524,7 @@ function placeAll(app, root) {
   for (const p of PROPS) put(p, { y: (p.y || 0) + tierFloorY(p.x, p.z) });
   for (const b of BANNERS) put(b);
   for (const b of BAR_DECOR) put(b);
+  for (const a of ATMOSPHERE_DECOR) put(a);
   for (const p of Object.values(HALL_ANCHOR_PROPS).flat()) put(p);
   for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: TIER.hall, z: t.z, ry: t.ry });
   for (const d of CRYSTAL_DECOR) put(d, { y: (d.y || 0) + tierFloorY(d.x, d.z) });

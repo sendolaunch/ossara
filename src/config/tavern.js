@@ -248,6 +248,20 @@ export const BAR_DECOR = [
   { name: "dungeon/barrier_half", x: 7.4, y: TIER.bar, z: -5.8, ry: 0 },
   { name: "dungeon/barrier_half", x: 11.2, y: TIER.bar, z: -5.8, ry: 0 },
 ];
+export const ATMOSPHERE_DECOR = [
+  { name: "dungeon/banner_thin_green", x: -17.65, y: TIER.hall + 1.25, z: -10.2, ry: 90 },
+  { name: "dungeon/banner_thin_red", x: -17.65, y: TIER.hall + 1.25, z: 1.8, ry: 90 },
+  { name: "dungeon/banner_thin_yellow", x: -17.65, y: TIER.hall + 1.25, z: 10.0, ry: 90 },
+  { name: "dungeon/banner_thin_green", x: 17.65, y: TIER.hall + 1.25, z: -10.2, ry: -90 },
+  { name: "dungeon/banner_thin_red", x: 17.65, y: TIER.hall + 1.25, z: 1.8, ry: -90 },
+  { name: "dungeon/banner_thin_yellow", x: 17.65, y: TIER.hall + 1.25, z: 10.0, ry: -90 },
+  { name: "dungeon/wall_inset_candles", x: -17.72, y: TIER.hall + 0.65, z: -6.0, ry: 90 },
+  { name: "dungeon/wall_inset_candles", x: -17.72, y: TIER.hall + 0.65, z: 7.2, ry: 90 },
+  { name: "dungeon/wall_inset_candles", x: 17.72, y: TIER.hall + 0.65, z: -6.0, ry: -90 },
+  { name: "dungeon/wall_inset_candles", x: 17.72, y: TIER.hall + 0.65, z: 7.2, ry: -90 },
+  { name: "dungeon/banner_patternC_green", x: -8, y: TIER.hall + 1.2, z: -13.75, ry: 0 },
+  { name: "dungeon/banner_patternC_green", x: 8, y: TIER.hall + 1.2, z: -13.75, ry: 0 },
+];
 export const INTERACT_R = 2.6;
 export const BAR = { cx: 0, cz: -14, radius: 6.5 };
 export const RUNNER = { from: 11, to: 2.5, x: 0, width: 2.4 };

@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, ATMOSPHERE_DECOR, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { STATION_PROPS } from "../src/config/stations.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
@@ -155,6 +155,18 @@ ok(HALL_ANCHOR_PROPS.warTable.some((p) => p.name.includes("map") || p.name.inclu
 ok(HALL_ANCHOR_PROPS.plagueShrine.some((p) => p.name.includes("candle")), "plague shrine includes candles");
 ok(HALL_ANCHOR_PROPS.boneReliquary.some((p) => p.name.includes("shelf") || p.name.includes("sword_shield")), "bone reliquary includes shelves/trophy pieces");
 ok(HALL_ANCHOR_PROPS.seatingNook.some((p) => p.name.includes("plate") || p.name.includes("bottle")), "seating nook includes casual clutter");
+
+// 11) Stage C.5: architectural atmosphere stays on the perimeter.
+ok(ATMOSPHERE_DECOR.length >= 12, "atmosphere layer has perimeter decorations");
+ok(ATMOSPHERE_DECOR.filter((p) => p.name.includes("banner")).length >= 8, "atmosphere includes hanging banners");
+ok(ATMOSPHERE_DECOR.filter((p) => p.name.includes("wall_inset_candles")).length >= 4, "atmosphere includes candle wall details");
+for (const p of ATMOSPHERE_DECOR) {
+  const base = assetPath(p.name);
+  ok(existsSync(base + ".gltf"), `atmosphere decor exists: ${p.name}.gltf`);
+  ok(existsSync(base + ".bin"), `atmosphere decor data exists: ${p.name}.bin`);
+  ok(Math.abs(p.x) >= 7 || Math.abs(p.z) >= 12, `atmosphere decor "${p.name}" stays near the shell`);
+  ok(Math.hypot(p.x - TAVERN_CRYSTAL.x, p.z - TAVERN_CRYSTAL.z) >= 9, `atmosphere decor "${p.name}" stays clear of the center`);
+}
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);
