@@ -13,7 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS,
 } from "../config/tavern.js";
 import { BARP, floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 import { STATION_PROPS } from "../config/stations.js";
@@ -120,6 +120,7 @@ export function buildTavernWorld(app) {
 
   buildTiers(root);
   buildAlcoves(root);
+  buildHallAnchors(root);
   buildPosts(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
@@ -200,6 +201,77 @@ function buildCrystalCeremony(root, cx, cz) {
     const runeEye = prim(root, "box", flame, cx + s.x, TIER.hall + 1.72, cz + s.z + 0.2, 0.22, 0.04, 0.04, false);
     runeEye.setLocalEulerAngles(0, s.ry, 0);
   }
+}
+
+function anchorRoot(root, anchor) {
+  const e = new pc.Entity(anchor.id);
+  e.setLocalPosition(anchor.x, anchor.y, anchor.z);
+  e.setLocalEulerAngles(0, anchor.ry || 0, 0);
+  root.addChild(e);
+  return e;
+}
+
+function buildHallAnchors(root) {
+  const wood = mat(0x4a311d, { gloss: 0.18 });
+  const darkWood = mat(0x2d1f16, { gloss: 0.12 });
+  const parchment = mat(0xc7b47a, { gloss: 0.08 });
+  const ink = mat(0x2b3a2a, { gloss: 0.08 });
+  const stone = mat(0x514b42, { gloss: 0.12 });
+  const darkStone = mat(0x2d2a26, { gloss: 0.08 });
+  const bone = mat(0xd2c8a6, { gloss: 0.15 });
+  const shrineGlow = mat(PALETTE.plague, { emissive: 0.65, gloss: 0.25 });
+  const ember = mat(0x8fff4a, { emissive: 0.85, gloss: 0.25 });
+
+  for (const anchor of HALL_ANCHORS) {
+    const group = anchorRoot(root, anchor);
+    if (anchor.kind === "warTable") buildWarTable(group, { wood, darkWood, parchment, ink });
+    else if (anchor.kind === "plagueShrine") buildPlagueShrine(group, { stone, darkStone, bone, shrineGlow, ember });
+    else if (anchor.kind === "boneReliquary") buildBoneReliquary(group, { stone, darkStone, bone });
+    else if (anchor.kind === "seatingNook") buildSeatingNook(group, { wood, darkWood });
+  }
+}
+
+function buildWarTable(root, m) {
+  prim(root, "box", m.darkWood, 0, 0.28, 0, 2.35, 0.18, 1.35, true);
+  prim(root, "box", m.wood, 0, 0.55, 0, 2.55, 0.18, 1.55, true);
+  prim(root, "box", m.parchment, -0.12, 0.67, 0.02, 1.45, 0.035, 0.82, false);
+  prim(root, "box", m.ink, -0.34, 0.71, -0.18, 0.44, 0.025, 0.04, false);
+  prim(root, "box", m.ink, 0.28, 0.71, 0.13, 0.5, 0.025, 0.04, false);
+  for (const [x, z] of [[-1.55, -0.55], [1.55, -0.45], [-0.95, 1.08]]) {
+    prim(root, "cylinder", m.wood, x, 0.22, z, 0.58, 0.44, 0.58, true);
+  }
+}
+
+function buildPlagueShrine(root, m) {
+  prim(root, "cylinder", m.darkStone, 0, 0.1, 0, 2.05, 0.2, 2.05, true);
+  prim(root, "cylinder", m.stone, 0, 0.29, 0, 1.45, 0.18, 1.45, true);
+  prim(root, "box", m.stone, 0, 0.74, 0, 0.52, 0.78, 0.42, true);
+  prim(root, "sphere", m.shrineGlow, 0, 1.16, 0.24, 0.24, 0.18, 0.24, false);
+  for (const [x, z] of [[-0.72, -0.48], [0.72, -0.48], [-0.58, 0.55], [0.58, 0.55]]) {
+    prim(root, "cylinder", m.bone, x, 0.47, z, 0.12, 0.26, 0.12, false);
+    prim(root, "sphere", m.ember, x, 0.66, z, 0.11, 0.14, 0.11, false);
+  }
+  pointLight(root, PALETTE.plague, 0.28, 3.2, 0, 1.0, 0.1);
+}
+
+function buildBoneReliquary(root, m) {
+  prim(root, "box", m.darkStone, 0, 0.16, 0, 2.35, 0.32, 1.05, true);
+  prim(root, "box", m.stone, 0, 0.39, 0, 2.05, 0.18, 0.8, true);
+  for (const [x, z, r] of [[-0.62, -0.14, 18], [-0.08, 0.14, -8], [0.54, -0.08, 12]]) {
+    const bonePiece = prim(root, "cylinder", m.bone, x, 0.58, z, 0.14, 0.72, 0.14, false);
+    bonePiece.setLocalEulerAngles(0, r, 88);
+  }
+  prim(root, "sphere", m.bone, 0.88, 0.6, 0.18, 0.36, 0.28, 0.32, false);
+  prim(root, "box", m.darkStone, -0.95, 0.68, 0.18, 0.42, 0.08, 0.12, false);
+}
+
+function buildSeatingNook(root, m) {
+  prim(root, "cylinder", m.darkWood, 0, 0.25, 0, 0.32, 0.5, 0.32, true);
+  prim(root, "cylinder", m.wood, 0, 0.58, 0, 1.35, 0.16, 1.35, true);
+  for (const [x, z] of [[-1.08, -0.32], [1.08, -0.32], [-0.52, 1.04], [0.52, 1.04]]) {
+    prim(root, "cylinder", m.wood, x, 0.24, z, 0.52, 0.48, 0.52, true);
+  }
+  prim(root, "sphere", mat(0x6a1f2b, { gloss: 0.25 }), -0.22, 0.75, 0.06, 0.18, 0.16, 0.18, false);
 }
 
 function buildTiers(root) {

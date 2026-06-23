@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, CRYSTAL_CEREMONY, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
 
@@ -80,6 +80,21 @@ for (const s of CRYSTAL_CEREMONY.statues)
   ok(Math.abs(s.x) >= 3.0 && s.z < 0, "ward statue frames the stair axis without blocking center");
 for (let z = 0; z <= TAVERN_SPAWN.z; z += 1.5)
   ok(!overlaps(TAVERN_CRYSTAL.x, z), `spawn-to-crystal sightline/walkline clear at z=${z}`);
+
+// 7) Stage C pass 2: hall anchors break up empty floor without becoming blockers.
+const expectedAnchors = ["warTable", "plagueShrine", "boneReliquary", "seatingNook"];
+ok(HALL_ANCHORS.length === expectedAnchors.length, "four low-profile hall anchors are declared");
+for (const id of expectedAnchors)
+  ok(HALL_ANCHORS.some((a) => a.id === id), `hall anchor declared: ${id}`);
+for (const a of HALL_ANCHORS) {
+  ok(a.y === TIER.hall, `hall anchor "${a.id}" uses the Ward Hall tier`);
+  ok(floorHeightAt(a.x, a.z) === TIER.hall, `hall anchor "${a.id}" sits on hall floor`);
+  ok(Math.abs(a.x) >= 7, `hall anchor "${a.id}" stays off the spawn-crystal-bar sightline`);
+  ok(Math.hypot(a.x - TAVERN_CRYSTAL.x, a.z - TAVERN_CRYSTAL.z) >= 7, `hall anchor "${a.id}" stays outside the crystal walking ring`);
+  ok(a.maxHeight <= 1.35, `hall anchor "${a.id}" remains low profile`);
+  ok(!overlaps(a.x, a.z), `hall anchor "${a.id}" center is not inside a collider`);
+  ok(!("trophy" in a) && !("progression" in a), `hall anchor "${a.id}" has no trophy progression hook`);
+}
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

@@ -142,6 +142,48 @@ export const CRYSTAL_CEREMONY = {
     { x: 3.2, z: -4.25, ry: -18 },
   ],
 };
+export const HALL_ANCHORS = [
+  {
+    id: "warTable",
+    name: "War Table Corner",
+    kind: "warTable",
+    x: -10.6,
+    z: -3.4,
+    y: TIER.hall,
+    ry: -12,
+    maxHeight: 0.95,
+  },
+  {
+    id: "plagueShrine",
+    name: "Plague Shrine Corner",
+    kind: "plagueShrine",
+    x: -12.1,
+    z: 3.1,
+    y: TIER.hall,
+    ry: 28,
+    maxHeight: 1.35,
+  },
+  {
+    id: "boneReliquary",
+    name: "Bone Reliquary Corner",
+    kind: "boneReliquary",
+    x: 12.1,
+    z: 3.1,
+    y: TIER.hall,
+    ry: -28,
+    maxHeight: 1.25,
+  },
+  {
+    id: "seatingNook",
+    name: "Small Seating Nook",
+    kind: "seatingNook",
+    x: 10.6,
+    z: -3.4,
+    y: TIER.hall,
+    ry: 12,
+    maxHeight: 0.9,
+  },
+];
 export const INTERACT_R = 2.6;
 export const BAR = { cx: 0, cz: -14, radius: 6.5 };
 export const RUNNER = { from: 11, to: 2.5, x: 0, width: 2.4 };
