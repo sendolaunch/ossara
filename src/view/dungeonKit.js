@@ -7,6 +7,15 @@ import * as pc from "playcanvas";
 
 const DIR = "models/dungeon/";
 
+// "rpgtools/anvil" -> models/rpgtools/anvil.gltf ; "keg" -> models/dungeon/keg.gltf
+// a ".glb" name (e.g. "npc/OrcRaider.glb") is used verbatim.
+function urlFor(name) {
+  const i = name.indexOf("/");
+  const pack = i >= 0 ? name.slice(0, i) : "dungeon";
+  const file = i >= 0 ? name.slice(i + 1) : name;
+  return `models/${pack}/${file}${file.endsWith(".glb") ? "" : ".gltf"}`;
+}
+
 function loadContainer(app, url) {
   app._kitCache = app._kitCache || new Map();
   if (app._kitCache.has(url)) return Promise.resolve(app._kitCache.get(url));
@@ -28,7 +37,7 @@ function loadContainer(app, url) {
 // Preload every named piece once. Returns a Set of names that actually loaded.
 export async function preloadKit(app, names) {
   const uniq = [...new Set(names)];
-  const results = await Promise.all(uniq.map((n) => loadContainer(app, DIR + n + ".gltf")));
+  const results = await Promise.all(uniq.map((n) => loadContainer(app, urlFor(n))));
   const ok = new Set();
   uniq.forEach((n, i) => { if (results[i]) ok.add(n); });
   console.log(`[dungeonKit] loaded ${ok.size}/${uniq.length} pieces`);
@@ -36,14 +45,14 @@ export async function preloadKit(app, names) {
 }
 
 export function kitReady(app, name) {
-  const a = app._kitCache && app._kitCache.get(DIR + name + ".gltf");
+  const a = app._kitCache && app._kitCache.get(urlFor(name));
   return !!(a && a.resource);
 }
 
 // Instantiate `name` at (x,y,z) with Y-rotation ryDeg (degrees) and uniform scale.
 // Returns the entity (added to `parent`), or null if the piece isn't loaded.
 export function place(app, parent, name, { x = 0, y = 0, z = 0, ry = 0, scale = 1, sx = null } = {}) {
-  const asset = app._kitCache && app._kitCache.get(DIR + name + ".gltf");
+  const asset = app._kitCache && app._kitCache.get(urlFor(name));
   if (!asset || !asset.resource) return null;
   let e;
   try {
