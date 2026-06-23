@@ -17,6 +17,7 @@ import { Inventory } from "./ui/inventory.js";
 import { HeroSelect } from "./ui/heroSelect.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
+import { getDifficulty, getMission } from "./config/missions.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -57,11 +58,12 @@ function ensureHub() {
 function ensureMapSelect() {
   if (!mapSelect) {
     mapSelect = new MapSelect(ui, {
-      onPick: () => startMission(),
+      onPick: (id, selection) => startMission(id, selection),
       onClose: () => {
         mapSelect.hide();
         enterHub();
       },
+      getProgress: () => normalizeProgress(profile.progress, profile),
     });
   }
   return mapSelect;
@@ -84,7 +86,13 @@ function showHeroSelect() {
   heroSelect.show();
 }
 
-function startMission() {
+function startMission(missionId = "first-breach", selection = {}) {
+  if (missionId && typeof missionId === "object") {
+    selection = missionId;
+    missionId = selection.missionId || "first-breach";
+  }
+  const missionCfg = selection.mission || getMission(missionId || selection.missionId || "first-breach");
+  const difficultyCfg = selection.difficulty || getDifficulty(selection.difficultyId || "initiate");
   if (mapSelect) mapSelect.hide();
   if (hub) hub.hide();
   app.style.display = "";
@@ -92,12 +100,18 @@ function startMission() {
     mission = new Mission(app, ui, { onExit: () => enterHub() });
   }
   mission.start(profile.activeClass || "warden", {
+    mission: missionCfg,
+    difficulty: difficultyCfg,
+    level: missionCfg.level,
+    waves: missionCfg.waves,
     bonuses: getBonuses(profile, profile.activeClass),
     onWin: () => {
-      const drops = rollMissionDrops(makeRng(), { ilvl: 1, difficulty: 0 });
+      const drops = rollMissionDrops(makeRng(), difficultyCfg.loot);
       drops.forEach((d) => addItem(profile, d));
-      recordBreachClear(profile, { breachId: "first-breach", bossId: "herald", difficulty: "normal" });
+      const difficultyId = difficultyCfg.id === "initiate" ? "normal" : difficultyCfg.id;
+      recordBreachClear(profile, { breachId: missionCfg.id, bossId: missionCfg.bossId, difficulty: difficultyId });
       persist();
+      return { drops, mission: missionCfg, difficulty: difficultyCfg };
     },
   });
 }

@@ -10,6 +10,7 @@ import { PCRenderer as Renderer } from "../view/pcRenderer.js";
 import { HUD } from "../view/hud.js";
 import { Input } from "../input/Input.js";
 import { CSS } from "../config/palette.js";
+import { resolveMissionStart } from "../config/missions.js";
 
 export class Mission {
   constructor(appEl, uiEl, { onExit }) {
@@ -43,6 +44,20 @@ export class Mission {
       }
     };
 
+    this.exitBtn = document.createElement("button");
+    this.exitBtn.className = "oss-btn ghost";
+    this.exitBtn.textContent = "Return to Tavern";
+    Object.assign(this.exitBtn.style, {
+      position: "absolute",
+      right: "12px",
+      bottom: "16px",
+      zIndex: "3",
+      padding: "9px 14px",
+      fontSize: "12px",
+    });
+    this.exitBtn.onclick = () => this._exit();
+    this.hudRoot.appendChild(this.exitBtn);
+
     this.STEP = 1 / 60;
     this.acc = 0;
     this.last = 0;
@@ -50,17 +65,27 @@ export class Mission {
     this._frame = this._frame.bind(this);
   }
 
-  start(classId, opts = {}) {
-    this.classId = classId || "warden";
+  start(classIdOrOpts = "warden", opts = {}) {
+    if (classIdOrOpts && typeof classIdOrOpts === "object") {
+      opts = classIdOrOpts;
+      classIdOrOpts = opts.classId || "warden";
+    }
+    this.classId = classIdOrOpts || "warden";
     this.mode = opts;
+    const startCfg = resolveMissionStart(opts);
+    this.missionCfg = startCfg.mission;
+    this.difficultyCfg = startCfg.difficulty;
+    this.level = startCfg.level || LEVEL;
+    this.waves = opts.tutorial ? TUTORIAL_WAVES : startCfg.waves || WAVES;
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._bonuses = opts.bonuses || {};
     this.onWin = opts.onWin || null;
     this._wonFired = false;
-    this.world = new World(LEVEL, opts.tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
+    this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
     this.renderer.setHeroClass(this.classId);
     this.renderer.reset();
     this.hud.reset();
+    this.hud.setMission(this.missionCfg, this.difficultyCfg);
     this.hud.setTowers(this.world.availableTowers);
     this._show(true);
     this.last = performance.now();
@@ -73,13 +98,13 @@ export class Mission {
   }
 
   restart() {
-    const tutorial = !!(this.mode && this.mode.tutorial);
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
-    this.world = new World(LEVEL, tutorial ? TUTORIAL_WAVES : WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
+    this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
     this.renderer.setHeroClass(this.classId);
     this.renderer.reset();
     this.hud.reset();
+    this.hud.setMission(this.missionCfg, this.difficultyCfg);
     this.hud.setTowers(this.world.availableTowers);
     this.last = performance.now();
     this.acc = 0;
@@ -122,7 +147,11 @@ export class Mission {
       first = false;
       guard++;
     }
-    if (this.world.status === "won" && !this._wonFired) { this._wonFired = true; if (this.onWin) this.onWin(); }
+    if (this.world.status === "won" && !this._wonFired) {
+      this._wonFired = true;
+      const reward = this.onWin ? this.onWin() : null;
+      if (reward && this.hud.setRewardSummary) this.hud.setRewardSummary(reward);
+    }
 
     this.renderer.update(this.world, Math.min(dt, 0.05));
     this.hud.update(this.world);

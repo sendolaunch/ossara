@@ -62,12 +62,15 @@ export class HUD {
     this.root = root;
     this._lastStatus = "playing";
     this._heroIconId = null;
+    this.rewardSummary = null;
     this._build();
   }
 
   _build() {
     // ---- top-left objective panel ----
     const tl = el("div", { position: "absolute", top: "12px", left: "12px", ...panel(), padding: "10px 14px", minWidth: "200px" });
+    this.elMission = el("div", { font: "700 12px 'Cinzel',serif", letterSpacing: "1px", color: CSS.gold, marginBottom: "6px" }, "THE FIRST SEAL");
+    this.elDifficulty = el("div", { color: CSS.ash, fontSize: "11px", margin: "-4px 0 6px" }, "Initiate");
     const statRow = (iconHtml, label) => {
       const r = el("div", { display: "flex", alignItems: "center", gap: "8px", margin: "3px 0" });
       const ic = el("span", { display: "inline-flex", width: "16px" }, iconHtml);
@@ -86,7 +89,7 @@ export class HUD {
     const w3 = statRow(ICON.marrow(CSS.gold), "marrow");
     this.elMarrow = w3.val;
     this.elMarrow.style.color = CSS.gold;
-    tl.append(w1.row, w2.row, this.wardBarOuter, w3.row);
+    tl.append(this.elMission, this.elDifficulty, w1.row, w2.row, this.wardBarOuter, w3.row);
     this.root.appendChild(tl);
 
     // ---- phase banner (top center) ----
@@ -184,6 +187,23 @@ export class HUD {
     }
   }
 
+  setMission(mission, difficulty) {
+    if (this.elMission) this.elMission.textContent = (mission?.name || "The First Seal").toUpperCase();
+    if (this.elDifficulty) this.elDifficulty.textContent = difficulty?.label || difficulty?.name || "Initiate";
+  }
+
+  setRewardSummary(summary) {
+    this.rewardSummary = summary;
+    if (this.overlay.style.display === "flex" && this.elEndSub) this._writeWinSummary();
+  }
+
+  _writeWinSummary(world = null) {
+    const drops = this.rewardSummary?.drops || [];
+    const dropText = drops.length ? ` Recovered ${drops.length} relic${drops.length === 1 ? "" : "s"}.` : "";
+    const kills = world ? ` ${world.stats.kills} dead put down.` : "";
+    this.elEndSub.textContent = `The seal holds.${kills}${dropText}`;
+  }
+
   toast(msg, color = CSS.plague) {
     this.elToast.textContent = msg;
     this.elToast.style.borderColor = color;
@@ -263,7 +283,7 @@ export class HUD {
         this.overlay.style.display = "flex";
         this.elEndTitle.textContent = "BREACH HELD";
         this.elEndTitle.style.color = CSS.plague;
-        this.elEndSub.textContent = `The seal holds. ${world.stats.kills} dead put down.`;
+        this._writeWinSummary(world);
       } else if (world.status === "lost") {
         this.overlay.style.display = "flex";
         this.elEndTitle.textContent = "THE WARD FALLS";
@@ -275,6 +295,7 @@ export class HUD {
 
   reset() {
     this._lastStatus = "playing";
+    this.rewardSummary = null;
     this.overlay.style.display = "none";
   }
 }
