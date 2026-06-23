@@ -21,6 +21,18 @@ export async function createBartender(app, root) {
   ctl.wrap.setLocalPosition(0, y, ZONE.z);
   root.addChild(ctl.wrap);
 
+  // the OrcRaider.glb ships untextured — bind the KayKit orc skin to its materials
+  app.assets.loadFromUrl("models/npc/orc_texture_A.png", "texture", (err, asset) => {
+    if (err || !asset || !asset.resource) return;
+    const tex = asset.resource;
+    for (const r of ctl.wrap.findComponents("render"))
+      for (const mi of r.meshInstances) {
+        mi.material.diffuseMap = tex;
+        mi.material.diffuse.set(1, 1, 1);
+        mi.material.update();
+      }
+  });
+
   const st = { x: 0, target: 2.4, pause: 1.5, facing: 0 };   // facing 0 = look at patrons (+z)
   const pick = () => { st.target = ZONE.x0 + Math.random() * (ZONE.x1 - ZONE.x0); };
 
