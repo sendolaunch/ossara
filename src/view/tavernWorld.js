@@ -168,20 +168,27 @@ export function buildTavernWorld(app) {
 function buildCrystalCeremony(root, cx, cz) {
   const stone = mat(0x4a4035);
   const darkStone = mat(0x332d27);
-  const rune = mat(PALETTE.plague, { emissive: 0.75, gloss: 0.35 });
+  const rune = mat(PALETTE.plague, { emissive: 0.95, gloss: 0.35 });
+  const runeDim = mat(0x2d8a31, { emissive: 0.38, gloss: 0.25 });
   const candle = mat(0xd8cfaa, { gloss: 0.18 });
   const flame = mat(PALETTE.plague, { emissive: 1.2, gloss: 0.35 });
   const ember = mat(0xb2ff66, { emissive: 0.85, gloss: 0.25 });
 
   prim(root, "cylinder", stone, cx, TIER.hall + 0.08, cz, CRYSTAL_CEREMONY.daisRadius * 2, 0.16, CRYSTAL_CEREMONY.daisRadius * 2, false);
   prim(root, "cylinder", darkStone, cx, TIER.hall + 0.19, cz, 4.9, 0.08, 4.9, false);
-  prim(root, "cylinder", rune, cx, TIER.hall + 0.25, cz, 3.0, 0.035, 3.0, false);
+  prim(root, "cylinder", runeDim, cx, TIER.hall + 0.245, cz, 5.85, 0.025, 5.85, false);
+  prim(root, "cylinder", rune, cx, TIER.hall + 0.28, cz, 3.0, 0.035, 3.0, false);
 
-  for (let i = 0; i < 20; i++) {
-    const a = (i / 20) * Math.PI * 2;
+  for (const s of CRYSTAL_CEREMONY.sigils) {
+    const sigil = prim(root, "box", rune, cx + s.x, TIER.hall + 0.34, cz + s.z, 0.62, 0.04, 0.18, false);
+    sigil.setLocalEulerAngles(0, s.ry, 0);
+  }
+
+  for (let i = 0; i < 32; i++) {
+    const a = (i / 32) * Math.PI * 2;
     const x = cx + Math.cos(a) * CRYSTAL_CEREMONY.innerRuneRadius;
     const z = cz + Math.sin(a) * CRYSTAL_CEREMONY.innerRuneRadius;
-    const mark = prim(root, "box", rune, x, TIER.hall + 0.32, z, 0.44, 0.035, 0.13, false);
+    const mark = prim(root, "box", i % 2 ? runeDim : rune, x, TIER.hall + 0.36, z, 0.4, 0.035, 0.12, false);
     mark.setLocalEulerAngles(0, -(a * 180) / Math.PI, 0);
   }
 
@@ -191,10 +198,11 @@ function buildCrystalCeremony(root, cx, cz) {
   }
 
   for (const b of CRYSTAL_CEREMONY.braziers) {
-    prim(root, "cylinder", darkStone, cx + b.x, TIER.hall + 0.27, cz + b.z, 0.55, 0.54, 0.55, true);
-    prim(root, "cylinder", stone, cx + b.x, TIER.hall + 0.66, cz + b.z, 0.9, 0.22, 0.9, true);
-    prim(root, "sphere", ember, cx + b.x, TIER.hall + 0.9, cz + b.z, 0.42, 0.34, 0.42, false);
-    pointLight(root, PALETTE.plague, 0.45, 4.2, cx + b.x, TIER.hall + 1.0, cz + b.z);
+    prim(root, "cylinder", darkStone, cx + b.x, TIER.hall + 0.25, cz + b.z, 0.52, 0.5, 0.52, true);
+    prim(root, "cylinder", stone, cx + b.x, TIER.hall + 0.62, cz + b.z, 0.95, 0.24, 0.95, true);
+    prim(root, "cylinder", darkStone, cx + b.x, TIER.hall + 0.82, cz + b.z, 0.72, 0.12, 0.72, true);
+    prim(root, "sphere", ember, cx + b.x, TIER.hall + 0.98, cz + b.z, 0.5, 0.38, 0.5, false);
+    pointLight(root, PALETTE.plague, 0.62, 4.8, cx + b.x, TIER.hall + 1.05, cz + b.z);
   }
 
   for (const s of CRYSTAL_CEREMONY.statues) {
@@ -206,6 +214,8 @@ function buildCrystalCeremony(root, cx, cz) {
     const runeEye = prim(root, "box", flame, cx + s.x, TIER.hall + 1.72, cz + s.z + 0.2, 0.22, 0.04, 0.04, false);
     runeEye.setLocalEulerAngles(0, s.ry, 0);
   }
+  prim(root, "sphere", mat(PALETTE.plague, { emissive: 0.5, gloss: 0.35 }), cx, TIER.hall + 0.92, cz, 2.35, 0.14, 2.35, false);
+  pointLight(root, PALETTE.plague, 0.45, 7.5, cx, TIER.hall + 0.75, cz);
 }
 
 function anchorRoot(root, anchor) {

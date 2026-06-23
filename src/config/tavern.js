@@ -128,9 +128,11 @@ const ringPoints = (count, radius, phase = 0) =>
   });
 export const CRYSTAL_CEREMONY = {
   daisRadius: 3.2,
+  outerRuneRadius: 2.92,
   innerRuneRadius: 2.35,
   candleRadius: 3.45,
-  candles: ringPoints(16, 3.45, Math.PI / 16),
+  candles: ringPoints(24, 3.45, Math.PI / 24),
+  sigils: ringPoints(8, 2.92, Math.PI / 8),
   braziers: [
     { x: -3.8, z: -3.6 },
     { x: 3.8, z: -3.6 },

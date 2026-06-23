@@ -77,10 +77,16 @@ for (const a of recessed) {
   }
 }
 
-// 6) Stage C pass 1: crystal ceremony stays sacred but sightline-safe.
-ok(CRYSTAL_CEREMONY.candles.length === 16, "crystal ceremony has a low candle ring");
+// 6) Stage C.3: crystal ceremony stays sacred, richer, and sightline-safe.
+ok(CRYSTAL_CEREMONY.candles.length >= 24, "crystal ceremony has a dense low candle ring");
+ok(CRYSTAL_CEREMONY.sigils.length === 8, "crystal ceremony has an eight-sigil rune ring");
+ok(CRYSTAL_CEREMONY.outerRuneRadius > CRYSTAL_CEREMONY.innerRuneRadius, "crystal ceremony has layered rune rings");
 ok(CRYSTAL_CEREMONY.braziers.length === 4, "crystal ceremony has four ward braziers");
 ok(CRYSTAL_CEREMONY.statues.length === 2, "crystal ceremony has two ward statues");
+for (const c of CRYSTAL_CEREMONY.candles)
+  ok(Math.hypot(c.x, c.z) >= 3.4, "ceremony candles stay outside the clear walking ring");
+for (const g of CRYSTAL_CEREMONY.sigils)
+  ok(Math.hypot(g.x, g.z) >= 2.8, "ceremony sigils stay in the dais ring");
 for (const b of CRYSTAL_CEREMONY.braziers)
   ok(Math.abs(b.x) >= 3.5 && Math.abs(b.z) >= 3.4, "ward brazier stays off the central sightline");
 for (const s of CRYSTAL_CEREMONY.statues)
