@@ -12,6 +12,7 @@ import { mountVersionBadge } from "./ui/versionBadge.js";
 import { loadProfile, saveProfile, addItem, getBonuses, setActive } from "./sim/profile.js";
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
+import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
 import { Inventory } from "./ui/inventory.js";
 import { HeroSelect } from "./ui/heroSelect.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
@@ -47,6 +48,7 @@ function ensureHub() {
       },
       getActiveClass: () => profile.activeClass || "warden",
       getActiveName: () => { const h = profile.heroes && profile.heroes[profile.activeClass]; return (h && h.username) || profile.name || ""; },
+      getProgress: () => normalizeProgress(profile.progress, profile),
     });
   }
   return hub;
@@ -94,6 +96,7 @@ function startMission() {
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), { ilvl: 1, difficulty: 0 });
       drops.forEach((d) => addItem(profile, d));
+      recordBreachClear(profile, { breachId: "first-breach", bossId: "herald", difficulty: "normal" });
       persist();
     },
   });

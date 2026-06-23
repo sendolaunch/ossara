@@ -40,11 +40,12 @@ function prim(type, material) {
 }
 
 export class Hub {
-  constructor(container, { onOpenStation, onOpenMapSelect, getActiveClass, getActiveName }) {
+  constructor(container, { onOpenStation, onOpenMapSelect, getActiveClass, getActiveName, getProgress }) {
     this.onOpenStation = onOpenStation;
     this.onOpenMapSelect = onOpenMapSelect;
     this.getActiveClass = getActiveClass || (() => "warden");
     this.getActiveName = getActiveName || (() => "");
+    this.getProgress = getProgress || (() => null);
     this._loadedClass = null;
 
     const canvas = document.createElement("canvas");
@@ -61,12 +62,13 @@ export class Hub {
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
 
     // Build the world (rooms, courtyard, torches, stations, crystal, scenery, fog).
-    const world = buildTavernWorld(this.app);
+    const world = buildTavernWorld(this.app, { progress: this.getProgress() });
     this.colliders = world.colliders;
     this.stations = world.stations;
     this.crystalPos = world.crystal;
     this.crystal = world.crystalEntity;
     this.spawn = world.spawn;
+    this.refreshTrophies = world.refreshTrophies;
     createBartender(this.app, world.root).then((b) => { this.bartender = b; });
     const C = world.camera;
 
@@ -257,6 +259,7 @@ export class Hub {
     this.hero.x = this.spawn.x;
     this.hero.z = this.spawn.z;
     if (this.crystal) this.crystal.setLocalScale(1.5, 2.6, 1.5);
+    if (this.refreshTrophies) this.refreshTrophies(this.getProgress());
     this.ward.cancel();
     if (this.heroCtl && this._loadedClass !== this.getActiveClass()) {
       if (this.heroEnt) this.heroEnt.destroy();

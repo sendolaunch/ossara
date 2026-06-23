@@ -16,6 +16,8 @@ import {
   RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, BAR_DECOR, ATMOSPHERE_DECOR,
 } from "../config/tavern.js";
 import { BARP, floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
+import { normalizeProgress } from "../sim/progress.js";
+import { TROPHY_DISPLAYS, isTrophyEarned } from "../config/trophies.js";
 import { STATION_PROPS } from "../config/stations.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
@@ -46,9 +48,10 @@ function pointLight(parent, hex, intensity, range, x, y, z) {
   return e;
 }
 
-export function buildTavernWorld(app) {
+export function buildTavernWorld(app, { progress = null } = {}) {
   const root = new pc.Entity("tavern");
   app.root.addChild(root);
+  let trophyRoot = null;
 
   // ---- warm tavern atmosphere ----------------------------------------------
   app.scene.ambientLight = col(0x3a3026);
@@ -126,6 +129,7 @@ export function buildTavernWorld(app) {
   buildHallAnchors(root);
   buildStationIdentity(root);
   buildAtmosphere(root);
+  trophyRoot = buildTrophyDisplays(root, progress);
   buildPosts(root);
 
   // ---- station markers (floor rune + small warm accent so nooks read) ----
@@ -164,6 +168,10 @@ export function buildTavernWorld(app) {
     spawn: { x: TAVERN_SPAWN.x, z: TAVERN_SPAWN.z },
     camera: TAVERN_CAMERA,
     root,
+    refreshTrophies(nextProgress) {
+      if (trophyRoot) trophyRoot.destroy();
+      trophyRoot = buildTrophyDisplays(root, nextProgress);
+    },
   };
 }
 
@@ -412,6 +420,51 @@ function buildAtmosphere(root) {
   pointLight(root, 0xffad6a, 0.42, 6.0, 17.0, TIER.hall + 2.0, 6.8);
   pointLight(root, 0xffad6a, 0.34, 5.0, -17.0, TIER.hall + 2.0, -6.2);
   pointLight(root, 0xffad6a, 0.34, 5.0, 17.0, TIER.hall + 2.0, -6.2);
+}
+
+function buildTrophyDisplays(root, rawProgress) {
+  const progress = normalizeProgress(rawProgress);
+  const group = new pc.Entity("tavernMemoryTrophies");
+  root.addChild(group);
+  for (const trophy of TROPHY_DISPLAYS) {
+    const earned = isTrophyEarned(trophy, progress);
+    buildTrophy(group, trophy, earned);
+  }
+  return group;
+}
+
+function buildTrophy(root, trophy, earned) {
+  const base = earned ? mat(0x514331, { gloss: 0.2 }) : mat(0x24211d, { gloss: 0.08 });
+  const shadow = mat(0x14110f, { gloss: 0.05 });
+  const bone = mat(0xd6ceb1, { gloss: 0.18 });
+  const gold = mat(PALETTE.gold, { emissive: earned ? 0.24 : 0, gloss: 0.45 });
+  const plague = mat(PALETTE.plague, { emissive: earned ? 0.45 : 0.08, gloss: 0.25 });
+  const blood = mat(PALETTE.blood, { emissive: earned ? 0.22 : 0, gloss: 0.2 });
+  const x = trophy.x, y = trophy.y, z = trophy.z;
+  prim(root, "box", base, x, y + 0.12, z, 1.45, 0.24, 0.42, true);
+  if (trophy.kind === "breachSkull") {
+    prim(root, "box", shadow, x, y + 0.75, z + 0.08, 1.6, 0.12, 0.36, true);
+    prim(root, "sphere", earned ? bone : shadow, x, y + 1.02, z + 0.1, 0.56, 0.42, 0.48, true);
+    prim(root, "box", earned ? bone : shadow, x, y + 0.72, z + 0.13, 0.34, 0.22, 0.28, true);
+    prim(root, "box", earned ? plague : shadow, x - 0.12, y + 1.03, z - 0.15, 0.06, 0.04, 0.04, false);
+    prim(root, "box", earned ? plague : shadow, x + 0.12, y + 1.03, z - 0.15, 0.06, 0.04, 0.04, false);
+  } else if (trophy.kind === "boss") {
+    prim(root, "box", earned ? blood : shadow, x, y + 1.75, z + 0.05, 2.2, 1.25, 0.16, true);
+    prim(root, "sphere", earned ? gold : shadow, x, y + 1.82, z - 0.08, 0.62, 0.5, 0.2, true);
+    prim(root, "box", earned ? bone : shadow, x - 0.55, y + 1.9, z - 0.08, 0.52, 0.08, 0.08, true).setLocalEulerAngles(0, 0, 26);
+    prim(root, "box", earned ? bone : shadow, x + 0.55, y + 1.9, z - 0.08, 0.52, 0.08, 0.08, true).setLocalEulerAngles(0, 0, -26);
+  } else if (trophy.kind === "stashWealth") {
+    for (const [dx, dz] of [[-0.35, -0.12], [0.1, 0.02], [0.48, 0.18]])
+      prim(root, "box", earned ? gold : shadow, x + dx, y + 0.42, z + dz, 0.46, 0.16, 0.24, true);
+    prim(root, "sphere", earned ? gold : shadow, x - 0.55, y + 0.58, z + 0.2, 0.38, 0.18, 0.38, true);
+  } else if (trophy.kind === "unlockBanner") {
+    prim(root, "box", earned ? plague : shadow, x, y + 1.65, z + 0.05, 0.95, 2.1, 0.08, true);
+    prim(root, "box", earned ? gold : shadow, x, y + 2.75, z, 1.2, 0.12, 0.12, true);
+  } else if (trophy.kind === "difficulty") {
+    prim(root, "box", earned ? gold : shadow, x, y + 1.36, z + 0.08, 1.1, 1.1, 0.16, true);
+    prim(root, "sphere", earned ? plague : shadow, x, y + 1.4, z - 0.08, 0.46, 0.36, 0.14, false);
+  }
+  if (earned) pointLight(root, PALETTE.gold, 0.22, 2.4, x, y + 1.2, z);
 }
 
 function buildTiers(root) {

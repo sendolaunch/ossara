@@ -7,6 +7,7 @@ import {
   ALCOVES, ATMOSPHERE_DECOR, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
 } from "../src/config/tavern.js";
 import { STATION_PROPS } from "../src/config/stations.js";
+import { TROPHY_DISPLAYS } from "../src/config/trophies.js";
 import { TIER, floorHeightAt } from "../src/sim/hubFloor.js";
 
 let pass = 0, fail = 0;
@@ -166,6 +167,17 @@ for (const p of ATMOSPHERE_DECOR) {
   ok(existsSync(base + ".bin"), `atmosphere decor data exists: ${p.name}.bin`);
   ok(Math.abs(p.x) >= 7 || Math.abs(p.z) >= 12, `atmosphere decor "${p.name}" stays near the shell`);
   ok(Math.hypot(p.x - TAVERN_CRYSTAL.x, p.z - TAVERN_CRYSTAL.z) >= 9, `atmosphere decor "${p.name}" stays clear of the center`);
+}
+
+// 12) Stage C.6: trophy placeholders/earned records have physical perimeter homes.
+ok(TROPHY_DISPLAYS.length >= 5, "tavern memory declares initial trophy displays");
+for (const kind of ["breachSkull", "boss", "stashWealth", "unlockBanner", "difficulty"])
+  ok(TROPHY_DISPLAYS.some((t) => t.kind === kind), `tavern memory includes ${kind}`);
+for (const t of TROPHY_DISPLAYS) {
+  ok(t.req && Object.keys(t.req).length > 0, `trophy "${t.id}" has an earning requirement`);
+  ok(t.y === TIER.hall || t.y === TIER.bar, `trophy "${t.id}" is anchored to a locked tier`);
+  ok(Math.abs(t.x) >= 5 || Math.abs(t.z) >= 12, `trophy "${t.id}" lives on the perimeter`);
+  ok(Math.hypot(t.x - TAVERN_CRYSTAL.x, t.z - TAVERN_CRYSTAL.z) >= 9, `trophy "${t.id}" stays clear of the crystal approach`);
 }
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
