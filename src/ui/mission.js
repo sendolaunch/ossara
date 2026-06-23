@@ -71,10 +71,14 @@ export class Mission {
     this.acc = 0;
     this.last = 0;
     this.running = false;
+    this._startToken = 0;
     this._frame = this._frame.bind(this);
   }
 
-  start(classIdOrOpts = "warden", opts = {}) {
+  async start(classIdOrOpts = "warden", opts = {}) {
+    const token = ++this._startToken;
+    this.running = false;
+    this._show(false);
     if (classIdOrOpts && typeof classIdOrOpts === "object") {
       opts = classIdOrOpts;
       classIdOrOpts = opts.classId || "warden";
@@ -91,7 +95,8 @@ export class Mission {
     this.onWin = opts.onWin || null;
     this._wonFired = false;
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
-    this.renderer.setHeroClass(this.classId);
+    await this.renderer.setHeroClass(this.classId);
+    if (token !== this._startToken) return;
     this.renderer.reset();
     this.hud.reset();
     this.hud.setMission(this.missionCfg, this.difficultyCfg);
@@ -106,20 +111,29 @@ export class Mission {
     }
   }
 
-  restart() {
+  async restart() {
+    const token = ++this._startToken;
+    this.running = false;
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
     this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
-    this.renderer.setHeroClass(this.classId);
+    await this.renderer.setHeroClass(this.classId);
+    if (token !== this._startToken) return;
     this.renderer.reset();
     this.hud.reset();
     this.hud.setMission(this.missionCfg, this.difficultyCfg);
     this.hud.setTowers(this.world.availableTowers);
     this.last = performance.now();
     this.acc = 0;
+    this._show(true);
+    if (!this.running) {
+      this.running = true;
+      requestAnimationFrame(this._frame);
+    }
   }
 
   _exit() {
+    this._startToken++;
     this.running = false;
     this._show(false);
     if (this.onExit) this.onExit();

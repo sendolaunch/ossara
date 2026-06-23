@@ -82,7 +82,9 @@ export class PCRenderer {
     this.projEntities = new Map();
     this.towerEntities = new Map();
     this.heroEntity = null;
+    this.heroCtl = null;
     this._heroFoot = 0;
+    this._heroLoadToken = 0;
 
     this.app.start();
   }
@@ -236,15 +238,17 @@ export class PCRenderer {
     this.rangeRing.enabled = false;
     this.app.root.addChild(this.rangeRing);
 
-    this._loadHero();
+    // Hero creation is intentionally owned by setHeroClass(). Mission startup
+    // awaits that path so the gameplay loop cannot race model/animation setup.
   }
 
-  async _loadHero() {
+  async _loadFallbackHero(classId = "unknown") {
     const cfg = MODELS.hero || {};
     let e = null;
     try {
       e = await loadGlb(this.app, cfg.file || "models/hero.glb");
-    } catch (_) {
+    } catch (err) {
+      console.warn("[pcRenderer] fallback hero model failed; using capsule", err);
       e = null;
     }
     if (!e) {
@@ -257,6 +261,7 @@ export class PCRenderer {
       this._heroFoot = 0;
       this.app.root.addChild(e);
       this.heroEntity = e;
+      console.warn(`[pcRenderer] using primitive mission hero fallback for ${classId}`);
       return;
     }
     // auto-fit the loaded model to a sensible height + plant feet
@@ -284,14 +289,39 @@ export class PCRenderer {
       console.warn("[pcRenderer] hero auto-fit skipped", err);
     }
     this.heroEntity = wrap;
+    console.warn(`[pcRenderer] using static mission hero fallback for ${classId}`);
   }
 
   async setHeroClass(classId) {
+    const token = ++this._heroLoadToken;
     if (this.heroEntity) { this.heroEntity.destroy(); this.heroEntity = null; }
+    this.heroCtl = null;
+    this._heroFoot = 0;
+    this._prevHero = null;
+    this._prevAtkCd = null;
     let ctl = null;
-    try { ctl = await loadCharacter(this.app, classId); } catch (_) { ctl = null; }
-    if (ctl) { this.heroCtl = ctl; this._heroFoot = ctl.foot || 0; this.heroEntity = ctl.wrap; this.app.root.addChild(ctl.wrap); this._prevHero = null; return; }
-    this.heroCtl = null; this._loadHero(); // primitive/MODELS fallback (unchanged)
+    try {
+      ctl = await loadCharacter(this.app, classId);
+    } catch (err) {
+      console.warn("[pcRenderer] animated hero load threw", classId, err);
+      ctl = null;
+    }
+    if (token !== this._heroLoadToken) {
+      if (ctl?.wrap) ctl.wrap.destroy();
+      return false;
+    }
+    if (ctl) {
+      this.heroCtl = ctl;
+      this._heroFoot = ctl.foot || 0;
+      this.heroEntity = ctl.wrap;
+      this.heroCtl.setMoving(false);
+      this.heroCtl.setDead(false);
+      this.app.root.addChild(ctl.wrap);
+      return true;
+    }
+    console.warn("[pcRenderer] animated mission hero unavailable; falling back", classId);
+    await this._loadFallbackHero(classId);
+    return false;
   }
 
   // ---- camera --------------------------------------------------------------
@@ -474,5 +504,11 @@ export class PCRenderer {
     this.projEntities.clear();
     for (const [, ent] of this.towerEntities) ent.destroy();
     this.towerEntities.clear();
+    this._prevHero = null;
+    this._prevAtkCd = null;
+    if (this.heroCtl) {
+      this.heroCtl.setMoving(false);
+      this.heroCtl.setDead(false);
+    }
   }
 }
