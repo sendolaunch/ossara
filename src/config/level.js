@@ -1,46 +1,38 @@
-// Level 1 — "The First Seal": a ruined courtyard. The lane is the path the dead
-// march from the breach (west) to the ward (east). `obstacles` are impassable
-// ruins (rubble, broken walls) that carve the open ground into lanes and
-// chokepoints — neither hero nor enemies cross them, and you can't build on them.
+// First Breach tutorial greybox.
 //
-// Data-driven: a new breach = a new LEVEL object (grid size, lane waypoints,
-// obstacle rects). Obstacle rects that happen to overlap the lane are ignored
-// automatically, so authoring is forgiving (see World: blockedSet).
+// The map is intentionally plain: one west enemy breach, one straight lane, one
+// mid-map choke framed by low curbs, and one Ward-Crystal defense apron. The
+// renderer treats obstacles as low boundary markers; the sim treats them as
+// blocked cells for hero movement and tower placement.
 
 export const LEVEL = {
   name: "The First Seal",
-  cols: 27,
-  rows: 19,
+  cols: 23,
+  rows: 15,
   tile: 1,
 
-  breach: { col: 0, row: 9 },
-  core: { col: 26, row: 9 },
+  breach: { col: 0, row: 7 },
+  core: { col: 22, row: 7 },
 
-  // Long winding march through the courtyard — turns create chokepoints.
+  // One readable lane: breach -> choke -> Ward-Crystal.
   waypoints: [
-    { col: 0, row: 9 },
-    { col: 5, row: 9 },
-    { col: 5, row: 4 },
-    { col: 12, row: 4 },
-    { col: 12, row: 14 },
-    { col: 19, row: 14 },
-    { col: 19, row: 6 },
-    { col: 23, row: 6 },
-    { col: 23, row: 9 },
-    { col: 26, row: 9 },
+    { col: 0, row: 7 },
+    { col: 22, row: 7 },
   ],
 
-  // Impassable ruins. {col,row,w,h} rectangles in grid cells.
+  // Low curbs/ruins that frame the lane without creating a maze.
   obstacles: [
-    { col: 1, row: 1, w: 3, h: 3 }, // NW ruin
-    { col: 8, row: 1, w: 7, h: 2 }, // north wall
-    { col: 20, row: 1, w: 5, h: 3 }, // NE ruin
-    { col: 7, row: 6, w: 3, h: 5 }, // left hall wall
-    { col: 14, row: 7, w: 4, h: 5 }, // central collapsed hall
-    { col: 21, row: 10, w: 4, h: 4 }, // east rubble
-    { col: 1, row: 14, w: 5, h: 4 }, // SW ruin
-    { col: 9, row: 16, w: 7, h: 2 }, // south wall
-    { col: 20, row: 16, w: 5, h: 2 }, // SE rubble
+    // outer boundary hints
+    { col: 2, row: 2, w: 19, h: 1 },
+    { col: 2, row: 12, w: 19, h: 1 },
+
+    // mid-map choke shoulders; rows 6 and 8 remain open for tower teaching
+    { col: 9, row: 5, w: 5, h: 1 },
+    { col: 9, row: 9, w: 5, h: 1 },
+
+    // low Ward approach rails, leaving the core apron readable and open
+    { col: 17, row: 4, w: 3, h: 1 },
+    { col: 17, row: 10, w: 3, h: 1 },
   ],
 
   coreHp: 24,

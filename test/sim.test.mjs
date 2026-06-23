@@ -8,7 +8,7 @@ import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
 import { TOWERS } from "../src/config/towers.js";
 import { CLASS_KITS } from "../src/config/kits.js";
-import { buildLanePath, pointAtDistance, pathCellSet, cellKey, worldToGrid } from "../src/sim/pathing.js";
+import { buildLanePath, pointAtDistance, pathCellSet, cellKey, worldToGrid, expandWaypoints } from "../src/sim/pathing.js";
 
 let pass = 0;
 let fail = 0;
@@ -31,6 +31,21 @@ function run(world, steps, dt, input = {}) {
 // ---------------------------------------------------------------------------
 section("pathing");
 {
+  ok(LEVEL.breach && !Array.isArray(LEVEL.breach), "first breach has exactly one enemy spawn");
+  ok(LEVEL.core && !Array.isArray(LEVEL.core), "first breach has exactly one core");
+  ok(LEVEL.waypoints[0].col === LEVEL.breach.col && LEVEL.waypoints[0].row === LEVEL.breach.row, "path starts at the enemy spawn");
+  const lastWp = LEVEL.waypoints[LEVEL.waypoints.length - 1];
+  ok(lastWp.col === LEVEL.core.col && lastWp.row === LEVEL.core.row, "path ends at the core");
+
+  const cells = expandWaypoints(LEVEL.waypoints);
+  ok(cells.length >= 2, "path expands into readable cells");
+  ok(cells.length <= 30, "tutorial path stays short enough to read at a glance");
+  ok(new Set(cells.map((c) => c.row)).size === 1, "tutorial path is a single clear lane");
+  for (let i = 1; i < cells.length; i++) {
+    const d = Math.abs(cells[i].col - cells[i - 1].col) + Math.abs(cells[i].row - cells[i - 1].row);
+    ok(d === 1, `path cell ${i} continues from the previous cell`);
+  }
+
   const lane = buildLanePath(LEVEL);
   ok(lane.total > 0, "lane has positive length");
   const start = pointAtDistance(lane, 0);
@@ -39,9 +54,9 @@ section("pathing");
   ok(end.done, "past end of lane reports done");
 
   const set = pathCellSet(LEVEL);
-  ok(set.has(cellKey(0, 9)), "breach cell is on the lane");
-  ok(set.has(cellKey(26, 9)), "core cell is on the lane");
-  ok(set.has(cellKey(5, 4)), "a corner cell is on the lane");
+  ok(set.has(cellKey(LEVEL.breach.col, LEVEL.breach.row)), "breach cell is on the lane");
+  ok(set.has(cellKey(LEVEL.core.col, LEVEL.core.row)), "core cell is on the lane");
+  ok(set.has(cellKey(11, 7)), "mid-map choke is on the lane");
 }
 
 // ---------------------------------------------------------------------------
@@ -65,11 +80,15 @@ section("first breach pacing");
 section("building rules");
 {
   const w = new World(LEVEL);
-  ok(!w.buildableAt(0, 9), "cannot build on the lane");
-  ok(!w.buildableAt(1, 1), "cannot build on a ruin (obstacle)");
+  ok(!w.buildableAt(10, 7), "cannot build on the lane");
+  ok(!w.buildableAt(9, 5), "cannot build on a low curb (obstacle)");
   ok(!w.buildableAt(LEVEL.core.col, LEVEL.core.row), "cannot build on the core");
   const heroSpawn = worldToGrid(w.hero._spawn.x, w.hero._spawn.z, LEVEL);
   ok(!w.buildableAt(heroSpawn.col, heroSpawn.row), "cannot build on the hero spawn");
+  ok(w.buildableAt(11, 6), "can build on the upper choke shoulder");
+  ok(w.buildableAt(11, 8), "can build on the lower choke shoulder");
+  ok(w.buildableAt(20, 6), "can build near the upper Ward approach");
+  ok(w.buildableAt(20, 8), "can build near the lower Ward approach");
   ok(w.buildableAt(0, 0), "can build on an empty off-lane tile");
 
   const before = w.marrow;
@@ -81,8 +100,11 @@ section("building rules");
   const r2 = w.tryPlaceTower("ballista", 0, 0);
   ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
 
-  const r3 = w.tryPlaceTower("ballista", 5, 9);
+  const r3 = w.tryPlaceTower("ballista", 10, 7);
   ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
+
+  const rBreach = w.tryPlaceTower("ballista", LEVEL.breach.col, LEVEL.breach.row);
+  ok(!rBreach.ok && rBreach.reason === "reserved", "cannot place on the enemy spawn");
 
   const rCore = w.tryPlaceTower("ballista", LEVEL.core.col, LEVEL.core.row);
   ok(!rCore.ok && rCore.reason === "reserved", "cannot place on the core");
@@ -117,8 +139,7 @@ section("a tower kills enemies and grants marrow");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  // Ballista beside an early lane cell (lane runs along row 5, cols 0..3).
-  const place = w.tryPlaceTower("ballista", 2, 4);
+  const place = w.tryPlaceTower("ballista", 10, 6);
   ok(place.ok, "tower placed next to the lane");
   const marrowBefore = w.marrow;
   w.startWave();
@@ -152,8 +173,8 @@ section("object pooling reuses dead enemies");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  w.tryPlaceTower("ballista", 2, 4);
-  w.tryPlaceTower("spire", 2, 6);
+  w.tryPlaceTower("ballista", 10, 6);
+  w.tryPlaceTower("spire", 12, 8);
   w.startWave();
   run(w, 4000, 0.05, {});
   ok(w.enemyPool.pooledCount > 0, "dead enemies were returned to the pool");

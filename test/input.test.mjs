@@ -75,6 +75,42 @@ const oldWindow = globalThis.window;
   ok(calls.at(-1)?.[0] === null, "combat-phase selection clears renderer preview");
 }
 
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const hoverCalls = [];
+  let placed = null;
+  const renderer = {
+    domElement: canvas,
+    setHover: (...args) => hoverCalls.push(args),
+    pointerToCell: () => ({ col: 4, row: 5, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+  };
+  const world = {
+    phase: "prep",
+    marrow: 100,
+    level: {},
+    availableTowers: ["barricade"],
+    placementStatus: () => ({ ok: true, reason: "ok" }),
+    tryPlaceTower: (id, col, row, opts) => {
+      placed = { id, col, row, opts };
+      return { ok: true };
+    },
+  };
+  const input = new Input(renderer, () => world);
+  input.select("barricade");
+  canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
+  fakeWindow.dispatch("keydown", { key: "r", preventDefault() {} });
+  input.refreshHover();
+  const opts = hoverCalls.at(-1)?.[4] || {};
+  ok(Math.abs(opts.rotation - Math.PI / 2) < 1e-9, "rotate updates build ghost facing");
+  canvas.dispatch("click");
+  ok(placed?.id === "barricade" && placed.col === 4 && placed.row === 5, "click places selected tower at hover cell");
+  ok(Math.abs(placed?.opts?.facing - Math.PI / 2) < 1e-9, "placement sends rotated facing to sim");
+}
+
 globalThis.window = oldWindow;
 
 console.log(`input: ${pass}/${pass + fail} checks passed`);

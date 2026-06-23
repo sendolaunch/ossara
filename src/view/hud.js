@@ -121,17 +121,56 @@ export class HUD {
     this.root.appendChild(hr);
 
     // ---- build bar (bottom) ----
-    const bottom = el("div", { position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" });
+    const bottom = el("div", {
+      position: "absolute",
+      bottom: "14px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "min(720px, calc(100vw - 320px))",
+      minWidth: "520px",
+      ...panel(),
+      padding: "10px 12px",
+      display: "flex",
+      gap: "14px",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: "3",
+    });
+    this.towerRow = el("div", { display: "flex", gap: "8px", alignItems: "stretch", flexShrink: "0" });
     this.elBuildInfo = el("div", {
-      ...panel(), padding: "7px 12px", minWidth: "360px", textAlign: "center",
-      color: CSS.ash, font: "700 11px ui-monospace, monospace", letterSpacing: ".4px",
-    }, "Select a defense with 1/2/3 or click a card.");
-    this.towerRow = el("div", { display: "flex", gap: "10px", alignItems: "flex-end" });
-    bottom.append(this.elBuildInfo, this.towerRow);
+      flex: "1",
+      minWidth: "280px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "4px",
+      overflow: "hidden",
+    });
+    this.elBuildTitle = el("div", {
+      color: CSS.plague,
+      font: "800 13px 'Cinzel', ui-monospace, monospace",
+      letterSpacing: "1.5px",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    }, "BUILD PHASE");
+    this.elBuildMeta = el("div", {
+      color: CSS.gold,
+      font: "800 13px ui-monospace, monospace",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    }, "180 Marrow");
+    this.elBuildControls = el("div", {
+      color: CSS.ash,
+      font: "700 11px ui-monospace, monospace",
+      lineHeight: "1.35",
+    }, "Select defense [1]/[2] or click a card. Enter starts wave.");
+    this.elBuildInfo.append(this.elBuildTitle, this.elBuildMeta, this.elBuildControls);
+    bottom.append(this.towerRow, this.elBuildInfo);
     this.root.appendChild(bottom);
 
     // ---- hint ----
-    this.elHint = el("div", { position: "absolute", bottom: "120px", left: "50%", transform: "translateX(-50%)", color: CSS.ash, font: "11px ui-monospace, monospace", textShadow: "0 1px 3px #000", textAlign: "center" }, "WASD move · pick a defence then click a tile · Q ability · arrows/wheel camera · right-click cancels");
+    this.elHint = el("div", { display: "none" }, "");
     this.root.appendChild(this.elHint);
 
     // ---- toast ----
@@ -165,9 +204,10 @@ export class HUD {
       const card = el("button", {
         position: "relative",
         cursor: "pointer",
-        width: "98px",
+        width: "92px",
+        minHeight: "86px",
         ...panel(),
-        padding: "8px 6px 6px",
+        padding: "8px 6px 7px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -176,10 +216,10 @@ export class HUD {
       });
       card.innerHTML =
         `<div style="position:absolute;top:4px;left:6px;font:700 11px ui-monospace,monospace;color:${CSS.ash}">[${i + 1}]</div>` +
-        `<div style="margin-top:6px">${towerIcon(id, c)}</div>` +
-        `<div style="font:700 11px ui-monospace,monospace;color:${CSS.bone};text-align:center;line-height:1.1">${def.name}</div>` +
-        `<div style="font-size:11px;color:${CSS.gold}">${def.cost}</div>` +
-        `<div class="lock" style="display:none;position:absolute;inset:0;background:rgba(7,8,6,0.55);border-radius:12px;align-items:center;justify-content:center;font-size:16px">🔒</div>`;
+        `<div style="margin-top:4px;height:34px">${towerIcon(id, c)}</div>` +
+        `<div style="font:800 10px ui-monospace,monospace;color:${CSS.bone};text-align:center;line-height:1.1;min-height:22px;display:flex;align-items:center;justify-content:center">${def.name}</div>` +
+        `<div style="font:800 11px ui-monospace,monospace;color:${CSS.gold}">${def.cost}</div>` +
+        `<div class="lock" style="display:none;position:absolute;inset:0;background:rgba(7,8,6,0.62);border-radius:12px;align-items:center;justify-content:center;font:800 11px ui-monospace,monospace;color:${CSS.blood}">LOCK</div>`;
       card.onclick = () => this.cb.onSelect(id);
       this.towerBtns[id] = card;
       this.towerRow.appendChild(card);
@@ -232,21 +272,31 @@ export class HUD {
     this.wardBar.style.width = `${wardRatio * 100}%`;
     this.wardBar.style.background = wardRatio <= 0.34 ? CSS.blood : CSS.plague;
     this.elMarrow.textContent = `${Math.floor(world.marrow)}`;
-    if (this.elBuildInfo) {
+    if (this.elBuildTitle) {
       if (world.phase !== "prep") {
-        this.elBuildInfo.textContent = "Combat phase: building locked. Hold the lane and protect the Ward.";
-        this.elBuildInfo.style.color = CSS.gold;
+        this.elBuildTitle.textContent = "COMBAT PHASE";
+        this.elBuildTitle.style.color = CSS.gold;
+        this.elBuildMeta.textContent = "Building locked";
+        this.elBuildMeta.style.color = CSS.gold;
+        this.elBuildControls.textContent = "Hold the lane and protect the Ward. Building returns after combat.";
       } else if (this.selectedTowerId && TOWERS[this.selectedTowerId]) {
         const t = TOWERS[this.selectedTowerId];
         const afford = world.marrow >= t.cost;
-        this.elBuildInfo.textContent = `${t.name} · Cost ${t.cost} Marrow · Click place · R rotate · Right-click/Esc cancel`;
-        this.elBuildInfo.style.color = afford ? CSS.plague : CSS.blood;
+        this.elBuildTitle.textContent = t.name.toUpperCase();
+        this.elBuildTitle.style.color = afford ? CSS.plague : CSS.blood;
+        this.elBuildMeta.textContent = `Cost ${t.cost} Marrow  |  You have ${Math.floor(world.marrow)}`;
+        this.elBuildMeta.style.color = afford ? CSS.gold : CSS.blood;
+        this.elBuildControls.textContent = afford
+          ? "Click to build. R rotates. Right-click or Esc cancels."
+          : "Not enough Marrow. Choose a cheaper defense or clear the wave.";
       } else {
-        this.elBuildInfo.textContent = `Build phase: ${Math.floor(world.marrow)} Marrow available · Select a defense with 1/2/3 or click a card.`;
-        this.elBuildInfo.style.color = CSS.ash;
+        this.elBuildTitle.textContent = "BUILD PHASE";
+        this.elBuildTitle.style.color = CSS.plague;
+        this.elBuildMeta.textContent = `${Math.floor(world.marrow)} Marrow available`;
+        this.elBuildMeta.style.color = CSS.gold;
+        this.elBuildControls.textContent = "Select defense [1]/[2] or click a card. Enter starts wave.";
       }
     }
-
     // phase banner
     if (world.phase === "prep") {
       const t = Math.max(0, Math.ceil(world.prepTimer));

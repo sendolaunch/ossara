@@ -41,6 +41,20 @@ const ENEMY_LOOK = {
   herald: { type: "sphere", color: "blood", s: 1.5, em: 0.5 },
 };
 
+const MISSION_CAMERA = {
+  yaw: Math.PI / 2,
+  pitch: 0.86,
+  dist: 15.5,
+  minDist: 11,
+  maxDist: 22,
+  targetY: 0.65,
+  laneLead: 2.0,
+  followSharpness: 0.01,
+  fov: 50,
+};
+
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
 export class PCRenderer {
   constructor(container) {
     this.container = container;
@@ -56,17 +70,19 @@ export class PCRenderer {
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
     this.app.scene.ambientLight = col(0x2a3326);
 
-    // camera (third-person follow)
-    this.camYaw = 0.6;
-    this.camPitch = 0.36; // lower angle — over-the-shoulder, not god's-eye
-    this.camDist = 8.5; // closer to the Warden
-    this.camMinDist = 3.5;
-    this.camMaxDist = 34;
-    this.camTarget = new pc.Vec3(0, 1.2, 0); // look at the hero's torso
+    // camera (high tactical chase/orbit)
+    this.camYaw = MISSION_CAMERA.yaw;
+    this.camPitch = MISSION_CAMERA.pitch;
+    this.camDist = MISSION_CAMERA.dist;
+    this.camMinDist = MISSION_CAMERA.minDist;
+    this.camMaxDist = MISSION_CAMERA.maxDist;
+    this.camTarget = new pc.Vec3(0, MISSION_CAMERA.targetY, 0);
+    this._cameraPrimed = false;
+    this._cameraBounds = null;
 
     this.cameraEntity = new pc.Entity("camera");
     this.cameraEntity.addComponent("camera", {
-      fov: 56,
+      fov: MISSION_CAMERA.fov,
       farClip: 200,
       nearClip: 0.1,
       clearColor: col(PALETTE.void),
@@ -92,6 +108,14 @@ export class PCRenderer {
   // ---- static scene --------------------------------------------------------
   buildStatic(world) {
     const level = world.level;
+    const minWorld = gridToWorld(0, 0, level);
+    const maxWorld = gridToWorld(level.cols - 1, level.rows - 1, level);
+    this._cameraBounds = {
+      minX: minWorld.x - 0.5 * level.tile,
+      maxX: maxWorld.x + 0.5 * level.tile,
+      minZ: minWorld.z - 0.5 * level.tile,
+      maxZ: maxWorld.z + 0.5 * level.tile,
+    };
 
     // plague-green atmospheric fog over the ruin
     try {
@@ -108,13 +132,30 @@ export class PCRenderer {
     this.app.root.addChild(ground);
 
     // the lane the dead march — worn stone path with a faint green seam
-    const laneMat = mat("rot", 0.12);
+    const laneMat = mat("rot", 0.28);
     for (const key of world.pathSet) {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
       const tile = prim("box", laneMat);
-      tile.setLocalScale(0.98, 0.06, 0.98);
+      tile.setLocalScale(0.98, 0.06, 0.84);
       tile.setPosition(w.x, 0.03, w.z);
+      this.app.root.addChild(tile);
+    }
+
+    const buildHintMat = mat("ash", 0.04);
+    const buildHints = [
+      [9, 6], [10, 6], [11, 6], [12, 6], [13, 6],
+      [9, 8], [10, 8], [11, 8], [12, 8], [13, 8],
+      [18, 6], [19, 6], [20, 6], [21, 6],
+      [18, 8], [19, 8], [20, 8], [21, 8],
+    ];
+    for (const [c, r] of buildHints) {
+      const key = `${c},${r}`;
+      if (world.pathSet.has(key) || world.blockedSet.has(key) || world.reservedSet.has(key)) continue;
+      const w = gridToWorld(c, r, level);
+      const tile = prim("box", buildHintMat);
+      tile.setLocalScale(0.82, 0.035, 0.82);
+      tile.setPosition(w.x, 0.012, w.z);
       this.app.root.addChild(tile);
     }
 
@@ -155,8 +196,8 @@ export class PCRenderer {
     const wallMat = mat("ash");
     const wall = (x, z, sx, sz) => {
       const e = prim("box", wallMat);
-      e.setLocalScale(sx, 2.6, sz);
-      e.setPosition(x, 1.3, z);
+      e.setLocalScale(sx, 0.55, sz);
+      e.setPosition(x, 0.275, z);
       this.app.root.addChild(e);
     };
     wall(0, -halfH, level.cols * level.tile + 2, 0.7);
@@ -170,13 +211,9 @@ export class PCRenderer {
     const pillarSpots = [[-px, -pz], [px, -pz], [-px, pz], [px, pz], [0, -pz], [0, pz], [-px, 0], [px, 0]];
     for (const [x, z] of pillarSpots) {
       const pil = prim("cylinder", wallMat);
-      pil.setLocalScale(0.7, 3.4, 0.7);
-      pil.setPosition(x, 1.7, z);
+      pil.setLocalScale(0.42, 0.7, 0.42);
+      pil.setPosition(x, 0.35, z);
       this.app.root.addChild(pil);
-      const cap = prim("box", wallMat);
-      cap.setLocalScale(1.0, 0.4, 1.0);
-      cap.setPosition(x, 3.5, z);
-      this.app.root.addChild(cap);
     }
 
     // impassable ruins — a stone block at each blocked cell, varied height
@@ -184,7 +221,7 @@ export class PCRenderer {
     for (const key of world.blockedSet) {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
-      const bh = 1.3 + ((c * 7 + r * 5) % 4) * 0.45;
+      const bh = 0.45 + ((c * 7 + r * 5) % 2) * 0.12;
       const block = prim("box", ruinMat);
       block.setLocalScale(0.98, bh, 0.98);
       block.setPosition(w.x, bh / 2, w.z);
@@ -336,11 +373,26 @@ export class PCRenderer {
     return { fwd: { x: -Math.sin(y), z: -Math.cos(y) }, right: { x: Math.cos(y), z: -Math.sin(y) } };
   }
 
+  _desiredCameraTarget(hero) {
+    const laneX = hero.x - MISSION_CAMERA.laneLead;
+    const b = this._cameraBounds;
+    return {
+      x: b ? clamp(laneX, b.minX, b.maxX) : laneX,
+      y: MISSION_CAMERA.targetY,
+      z: b ? clamp(hero.z, b.minZ, b.maxZ) : hero.z,
+    };
+  }
+
   _followCamera(hero, dt) {
-    const k = 1 - Math.pow(0.001, Math.min(dt, 0.05));
-    this.camTarget.x += (hero.x - this.camTarget.x) * k;
-    this.camTarget.y += (1.1 - this.camTarget.y) * k;
-    this.camTarget.z += (hero.z - this.camTarget.z) * k;
+    const want = this._desiredCameraTarget(hero);
+    if (!this._cameraPrimed) {
+      this.camTarget.set(want.x, want.y, want.z);
+      this._cameraPrimed = true;
+    }
+    const k = 1 - Math.pow(MISSION_CAMERA.followSharpness, Math.min(dt, 0.05));
+    this.camTarget.x += (want.x - this.camTarget.x) * k;
+    this.camTarget.y += (want.y - this.camTarget.y) * k;
+    this.camTarget.z += (want.z - this.camTarget.z) * k;
     const cp = Math.cos(this.camPitch);
     const sp = Math.sin(this.camPitch);
     this.cameraEntity.setPosition(
@@ -506,6 +558,7 @@ export class PCRenderer {
     this.towerEntities.clear();
     this._prevHero = null;
     this._prevAtkCd = null;
+    this._cameraPrimed = false;
     if (this.heroCtl) {
       this.heroCtl.setMoving(false);
       this.heroCtl.setDead(false);
