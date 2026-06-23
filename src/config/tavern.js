@@ -263,6 +263,51 @@ export const ATMOSPHERE_DECOR = [
   { name: "dungeon/banner_patternC_green", x: -8, y: TIER.hall + 1.2, z: -13.75, ry: 0 },
   { name: "dungeon/banner_patternC_green", x: 8, y: TIER.hall + 1.2, z: -13.75, ry: 0 },
 ];
+export const VERTICAL_DECOR = [
+  { name: "dungeon/banner_triple_green", x: -13.4, y: TIER.hall + 3.3, z: -8.6, ry: 90 },
+  { name: "dungeon/banner_triple_red", x: -13.4, y: TIER.hall + 3.3, z: 7.6, ry: 90 },
+  { name: "dungeon/banner_triple_green", x: 13.4, y: TIER.hall + 3.3, z: -8.6, ry: -90 },
+  { name: "dungeon/banner_triple_red", x: 13.4, y: TIER.hall + 3.3, z: 7.6, ry: -90 },
+  { name: "rpgtools/lantern", x: -6.6, y: TIER.hall + 3.95, z: 5.3, ry: 0 },
+  { name: "rpgtools/lantern", x: 6.6, y: TIER.hall + 3.95, z: 5.3, ry: 0 },
+  { name: "rpgtools/lantern", x: -6.8, y: TIER.hall + 4.2, z: -8.6, ry: 0 },
+  { name: "rpgtools/lantern", x: 6.8, y: TIER.hall + 4.2, z: -8.6, ry: 0 },
+  { name: "dungeon/sword_shield_gold", x: -14.8, y: TIER.hall + 3.05, z: -0.4, ry: 90 },
+  { name: "dungeon/sword_shield_gold", x: 14.8, y: TIER.hall + 3.05, z: -0.4, ry: -90 },
+  { name: "dungeon/scaffold_beams_connected", x: -9.6, y: TIER.hall + 4.6, z: 1.6, ry: 90 },
+  { name: "dungeon/scaffold_beams_connected", x: 9.6, y: TIER.hall + 4.6, z: 1.6, ry: -90 },
+];
+export const WALL_IDENTITY_DECOR = [
+  { name: "dungeon/wall_inset_shelves_decoratedA", x: -17.74, y: TIER.hall + 0.2, z: -10.6, ry: 90 },
+  { name: "dungeon/wall_inset_shelves_decoratedB", x: -17.74, y: TIER.hall + 0.2, z: 10.6, ry: 90 },
+  { name: "dungeon/wall_inset_shelves_decoratedA", x: 17.74, y: TIER.hall + 0.2, z: -10.6, ry: -90 },
+  { name: "dungeon/wall_inset_shelves_decoratedB", x: 17.74, y: TIER.hall + 0.2, z: 10.6, ry: -90 },
+  { name: "dungeon/shelf_small_books", x: -16.9, y: TIER.hall, z: -1.4, ry: 90 },
+  { name: "dungeon/shelf_small_candles", x: -16.9, y: TIER.hall, z: 2.4, ry: 90 },
+  { name: "dungeon/shelf_small_books", x: 16.9, y: TIER.hall, z: -1.4, ry: -90 },
+  { name: "dungeon/shelf_small_candles", x: 16.9, y: TIER.hall, z: 2.4, ry: -90 },
+  { name: "dungeon/sword_shield", x: -17.25, y: TIER.hall + 1.7, z: -6.2, ry: 90 },
+  { name: "dungeon/sword_shield_broken", x: -17.25, y: TIER.hall + 1.7, z: 6.0, ry: 90 },
+  { name: "dungeon/sword_shield", x: 17.25, y: TIER.hall + 1.7, z: -6.2, ry: -90 },
+  { name: "dungeon/sword_shield_broken", x: 17.25, y: TIER.hall + 1.7, z: 6.0, ry: -90 },
+  { name: "dungeon/banner_shield_green", x: -13.1, y: TIER.hall + 1.2, z: -13.72, ry: 0 },
+  { name: "dungeon/banner_shield_red", x: 13.1, y: TIER.hall + 1.2, z: -13.72, ry: 0 },
+  { name: "dungeon/wall_window_open_scaffold", x: -4.2, y: TIER.hall, z: -13.85, ry: 0 },
+  { name: "dungeon/wall_window_open_scaffold", x: 4.2, y: TIER.hall, z: -13.85, ry: 0 },
+  { name: "dungeon/wall_inset_candles", x: -13.0, y: TIER.entry + 0.4, z: 13.72, ry: 180 },
+  { name: "dungeon/wall_inset_candles", x: 13.0, y: TIER.entry + 0.4, z: 13.72, ry: 180 },
+];
+export const ENTRANCE_DECOR = [
+  { name: "dungeon/sword_shield_gold", x: 0, y: TIER.entry + 3.85, z: 13.62, ry: 180, scale: 1.15 },
+  { name: "dungeon/banner_shield_green", x: -4.6, y: TIER.entry + 2.0, z: 13.78, ry: 180 },
+  { name: "dungeon/banner_shield_red", x: 4.6, y: TIER.entry + 2.0, z: 13.78, ry: 180 },
+  { name: "dungeon/banner_triple_brown", x: -8.4, y: TIER.entry + 1.4, z: 13.82, ry: 180 },
+  { name: "dungeon/banner_triple_brown", x: 8.4, y: TIER.entry + 1.4, z: 13.82, ry: 180 },
+  { name: "rpgtools/lantern", x: -2.6, y: TIER.entry + 3.15, z: 13.35, ry: 180 },
+  { name: "rpgtools/lantern", x: 2.6, y: TIER.entry + 3.15, z: 13.35, ry: 180 },
+  { name: "dungeon/wall_inset_candles", x: -1.8, y: TIER.entry + 0.35, z: 13.72, ry: 180 },
+  { name: "dungeon/wall_inset_candles", x: 1.8, y: TIER.entry + 0.35, z: 13.72, ry: 180 },
+];
 export const INTERACT_R = 2.6;
 export const BAR = { cx: 0, cz: -14, radius: 6.5 };
 export const RUNNER = { from: 11, to: 2.5, x: 0, width: 2.4 };

@@ -13,7 +13,7 @@ import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import {
   TILE, TAVERN_CAMERA, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, TAVERN_COLLIDERS,
   FLOORS, WALLS, COLUMNS, PROPS, BANNERS, TORCHES, MEZZANINE, CRYSTAL_DECOR, WINDOW,
-  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, BAR_DECOR, ATMOSPHERE_DECOR,
+  RUNNER, ENTRANCE_STEPS, MIRROR, BAR, ALCOVES, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, BAR_DECOR, ATMOSPHERE_DECOR, VERTICAL_DECOR, WALL_IDENTITY_DECOR, ENTRANCE_DECOR,
 } from "../config/tavern.js";
 import { BARP, floorHeightAt, tierFloorY, TIER } from "../sim/hubFloor.js";
 import { normalizeProgress } from "../sim/progress.js";
@@ -129,6 +129,9 @@ export function buildTavernWorld(app, { progress = null } = {}) {
   buildHallAnchors(root);
   buildStationIdentity(root);
   buildAtmosphere(root);
+  buildVerticality(root);
+  buildWallIdentity(root);
+  buildEntranceIdentity(root);
   trophyRoot = buildTrophyDisplays(root, progress);
   buildPosts(root);
 
@@ -150,7 +153,7 @@ export function buildTavernWorld(app, { progress = null } = {}) {
   preloadKit(app, [...new Set([
     ...FLOORS.map((p) => p.name), ...WALLS.map((p) => p.name), ...COLUMNS.map((p) => p.name),
     ...PROPS.map((p) => p.name), ...BANNERS.map((p) => p.name), ...CRYSTAL_DECOR.map((p) => p.name),
-    ...BAR_DECOR.map((p) => p.name), ...ATMOSPHERE_DECOR.map((p) => p.name),
+    ...BAR_DECOR.map((p) => p.name), ...ATMOSPHERE_DECOR.map((p) => p.name), ...VERTICAL_DECOR.map((p) => p.name), ...WALL_IDENTITY_DECOR.map((p) => p.name), ...ENTRANCE_DECOR.map((p) => p.name),
     ...Object.values(HALL_ANCHOR_PROPS).flat().map((p) => p.name),
     "torch_mounted",
     ...(MEZZANINE.stairs ? [MEZZANINE.stairs.name] : []),
@@ -422,6 +425,72 @@ function buildAtmosphere(root) {
   pointLight(root, 0xffad6a, 0.34, 5.0, 17.0, TIER.hall + 2.0, -6.2);
 }
 
+function buildVerticality(root) {
+  const iron = mat(0x171411, { gloss: 0.22 });
+  const wood = mat(0x2f2115, { gloss: 0.14 });
+  const warm = 0xffc46e;
+  const chainDrops = [
+    { x: -6.6, z: 5.3, h: 2.2 }, { x: -6.15, z: 5.0, h: 1.6 }, { x: -7.05, z: 5.0, h: 1.6 },
+    { x: 6.6, z: 5.3, h: 2.2 }, { x: 6.15, z: 5.0, h: 1.6 }, { x: 7.05, z: 5.0, h: 1.6 },
+    { x: -6.8, z: -8.6, h: 2.0 }, { x: 6.8, z: -8.6, h: 2.0 },
+  ];
+  for (const c of chainDrops) {
+    prim(root, "cylinder", iron, c.x, TIER.hall + 4.7 - c.h / 2, c.z, 0.07, c.h, 0.07, true);
+  }
+  for (const [x, z] of [[-6.6, 5.3], [6.6, 5.3], [-6.8, -8.6], [6.8, -8.6]])
+    pointLight(root, warm, 0.46, 5.2, x, TIER.hall + 3.6, z);
+
+  const arches = [
+    { x: -15.3, z: -4.8, ry: 0 }, { x: 15.3, z: -4.8, ry: 0 },
+    { x: -15.3, z: 4.8, ry: 0 }, { x: 15.3, z: 4.8, ry: 0 },
+  ];
+  for (const a of arches) {
+    const postA = prim(root, "box", wood, a.x, TIER.hall + 2.0, a.z - 1.5, 0.34, 4.0, 0.34, true);
+    const postB = prim(root, "box", wood, a.x, TIER.hall + 2.0, a.z + 1.5, 0.34, 4.0, 0.34, true);
+    const cap = prim(root, "box", wood, a.x, TIER.hall + 4.05, a.z, 0.42, 0.34, 3.35, true);
+    postA.setLocalEulerAngles(0, a.ry, 0); postB.setLocalEulerAngles(0, a.ry, 0); cap.setLocalEulerAngles(0, a.ry, 0);
+  }
+}
+
+function buildWallIdentity(root) {
+  const trim = mat(0x2d2118, { gloss: 0.14 });
+  const metal = mat(0x171411, { gloss: 0.2 });
+  for (const a of ALCOVES) {
+    if (a.side === "left" || a.side === "right") {
+      const mouthX = a.side === "left" ? -17.55 : 17.55;
+      const capX = a.side === "left" ? -17.72 : 17.72;
+      for (const dz of [-a.radius, a.radius]) {
+        prim(root, "box", trim, mouthX, a.y + 1.35, a.z + dz, 0.38, 2.7, 0.26, true);
+      }
+      prim(root, "box", trim, capX, a.y + 2.78, a.z, 0.32, 0.32, a.radius * 2.1, true);
+      for (const dz of [-a.radius * 0.55, a.radius * 0.55])
+        prim(root, "box", metal, mouthX, a.y + 2.12, a.z + dz, 0.1, 0.16, 0.65, true);
+    } else {
+      for (const dx of [-a.radius, a.radius]) {
+        prim(root, "box", trim, a.x + dx, a.y + 1.35, 13.55, 0.26, 2.7, 0.38, true);
+      }
+      prim(root, "box", trim, a.x, a.y + 2.78, 13.72, a.radius * 2.1, 0.32, 0.32, true);
+      for (const dx of [-a.radius * 0.55, a.radius * 0.55])
+        prim(root, "box", metal, a.x + dx, a.y + 2.12, 13.55, 0.65, 0.16, 0.1, true);
+    }
+  }
+}
+
+function buildEntranceIdentity(root) {
+  const frame = mat(0x2f2419, { gloss: 0.16 });
+  const ward = mat(PALETTE.plague, { emissive: 0.58, gloss: 0.28 });
+  const gold = mat(PALETTE.gold, { emissive: 0.18, gloss: 0.42 });
+  prim(root, "box", frame, 0, TIER.entry + 3.55, 13.56, 3.1, 0.22, 0.18, true);
+  prim(root, "box", frame, -1.65, TIER.entry + 2.65, 13.56, 0.2, 1.9, 0.18, true);
+  prim(root, "box", frame, 1.65, TIER.entry + 2.65, 13.56, 0.2, 1.9, 0.18, true);
+  prim(root, "sphere", ward, 0, TIER.entry + 3.18, 13.48, 0.78, 0.78, 0.12, false);
+  prim(root, "box", gold, 0, TIER.entry + 3.18, 13.38, 1.05, 0.12, 0.08, false);
+  prim(root, "box", gold, 0, TIER.entry + 3.18, 13.38, 0.12, 1.05, 0.08, false);
+  pointLight(root, PALETTE.plague, 0.45, 4.5, 0, TIER.entry + 3.2, 13.0);
+  pointLight(root, 0xffc46e, 0.35, 4.0, -2.6, TIER.entry + 3.1, 13.2);
+  pointLight(root, 0xffc46e, 0.35, 4.0, 2.6, TIER.entry + 3.1, 13.2);
+}
+
 function buildTrophyDisplays(root, rawProgress) {
   const progress = normalizeProgress(rawProgress);
   const group = new pc.Entity("tavernMemoryTrophies");
@@ -581,6 +650,9 @@ function placeAll(app, root) {
   for (const b of BANNERS) put(b);
   for (const b of BAR_DECOR) put(b);
   for (const a of ATMOSPHERE_DECOR) put(a);
+  for (const v of VERTICAL_DECOR) put(v);
+  for (const w of WALL_IDENTITY_DECOR) put(w);
+  for (const e of ENTRANCE_DECOR) put(e);
   for (const p of Object.values(HALL_ANCHOR_PROPS).flat()) put(p);
   for (const t of TORCHES) place(app, root, "torch_mounted", { x: t.x, y: TIER.hall, z: t.z, ry: t.ry });
   for (const d of CRYSTAL_DECOR) put(d, { y: (d.y || 0) + tierFloorY(d.x, d.z) });

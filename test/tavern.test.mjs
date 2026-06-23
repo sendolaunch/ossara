@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolveCircle } from "../src/sim/hubCollide.js";
 import {
-  ALCOVES, ATMOSPHERE_DECOR, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_CAMERA, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS,
+  ALCOVES, ATMOSPHERE_DECOR, BAR_DECOR, CRYSTAL_CEREMONY, HALL_ANCHORS, HALL_ANCHOR_PROPS, TAVERN_CAMERA, TAVERN_PIECES, TAVERN_COLLIDERS, TAVERN_SPAWN, TAVERN_STATIONS, TAVERN_CRYSTAL, HERO_RADIUS, VERTICAL_DECOR, WALL_IDENTITY_DECOR, ENTRANCE_DECOR,
 } from "../src/config/tavern.js";
 import { STATION_PROPS } from "../src/config/stations.js";
 import { TROPHY_DISPLAYS } from "../src/config/trophies.js";
@@ -191,6 +191,51 @@ for (const z of [-2.2, -3.2, -4.2, -5.2, -6.4, -7.4])
   ok(!overlaps(0, z), `central staircase path clear at z=${z}`);
 ok(TAVERN_CAMERA.bounds.maxZ >= TAVERN_SPAWN.z + 10, "spawn camera has room to sit behind the hero");
 ok(TAVERN_CAMERA.bounds.minZ <= -20, "bar camera has room to frame the high platform");
+
+// 14) Architectural Character Stage 1: vertical dressing adds height without center clutter.
+ok(VERTICAL_DECOR.length >= 12, "vertical character layer has hanging/support pieces");
+ok(VERTICAL_DECOR.filter((p) => p.name.includes("banner")).length >= 4, "vertical layer includes hanging banners");
+ok(VERTICAL_DECOR.filter((p) => p.name.includes("lantern")).length >= 4, "vertical layer includes lantern clusters");
+ok(VERTICAL_DECOR.some((p) => p.name.includes("sword_shield")), "vertical layer includes high trophy mounts");
+ok(VERTICAL_DECOR.some((p) => p.name.includes("scaffold_beams")), "vertical layer includes support beam assets");
+for (const p of VERTICAL_DECOR) {
+  const base = assetPath(p.name);
+  ok(existsSync(base + ".gltf"), `vertical decor exists: ${p.name}.gltf`);
+  ok(existsSync(base + ".bin"), `vertical decor data exists: ${p.name}.bin`);
+  ok(p.y >= TIER.hall + 3, `vertical decor "${p.name}" lives high in the room`);
+  ok(Math.abs(p.x) >= 5.5 || Math.abs(p.z) >= 7.5, `vertical decor "${p.name}" avoids the center sightline`);
+  ok(Math.hypot(p.x - TAVERN_CRYSTAL.x, p.z - TAVERN_CRYSTAL.z) >= 7.5, `vertical decor "${p.name}" stays off the crystal view cone`);
+}
+
+// 15) Architectural Character Stage 2: walls gain identity without center clutter.
+ok(WALL_IDENTITY_DECOR.length >= 18, "wall identity layer has perimeter wall dressing");
+ok(WALL_IDENTITY_DECOR.filter((p) => p.name.includes("shelf") || p.name.includes("shelves")).length >= 6, "wall identity includes shelves");
+ok(WALL_IDENTITY_DECOR.filter((p) => p.name.includes("sword_shield")).length >= 4, "wall identity includes mounted trophies");
+ok(WALL_IDENTITY_DECOR.filter((p) => p.name.includes("window")).length >= 2, "wall identity includes window dressing");
+ok(WALL_IDENTITY_DECOR.filter((p) => p.name.includes("candle")).length >= 2, "wall identity includes candle framing");
+for (const p of WALL_IDENTITY_DECOR) {
+  const base = assetPath(p.name);
+  ok(existsSync(base + ".gltf"), `wall identity decor exists: ${p.name}.gltf`);
+  ok(existsSync(base + ".bin"), `wall identity decor data exists: ${p.name}.bin`);
+  ok(Math.abs(p.x) >= 4 || Math.abs(p.z) >= 13, `wall identity decor "${p.name}" stays on the shell`);
+  ok(Math.hypot(p.x - TAVERN_CRYSTAL.x, p.z - TAVERN_CRYSTAL.z) >= 8.0, `wall identity decor "${p.name}" stays clear of crystal prominence`);
+}
+
+// 16) Architectural Character Stage 3: entrance gets a memorable arrival frame.
+ok(ENTRANCE_DECOR.length >= 9, "entrance identity layer has a full arrival landmark kit");
+ok(ENTRANCE_DECOR.some((p) => p.name.includes("sword_shield")), "entrance identity includes a ward crest trophy");
+ok(ENTRANCE_DECOR.filter((p) => p.name.includes("banner")).length >= 4, "entrance identity includes flanking banners");
+ok(ENTRANCE_DECOR.filter((p) => p.name.includes("lantern")).length >= 2, "entrance identity includes lanterns");
+ok(ENTRANCE_DECOR.filter((p) => p.name.includes("candle")).length >= 2, "entrance identity includes candle insets");
+ok(ENTRANCE_DECOR.some((p) => Math.abs(p.x) < 0.1 && p.y >= TIER.entry + 3.0), "entrance ward crest reads high over the doors");
+for (const p of ENTRANCE_DECOR) {
+  const base = assetPath(p.name);
+  ok(existsSync(base + ".gltf"), `entrance decor exists: ${p.name}.gltf`);
+  ok(existsSync(base + ".bin"), `entrance decor data exists: ${p.name}.bin`);
+  ok(p.y >= TIER.entry, `entrance decor "${p.name}" sits at or above the threshold tier`);
+  ok(p.z >= 13, `entrance decor "${p.name}" stays on the front shell`);
+  ok(Math.hypot(p.x - TAVERN_CRYSTAL.x, p.z - TAVERN_CRYSTAL.z) >= 13, `entrance decor "${p.name}" stays far from the crystal sightline`);
+}
 
 console.log(`tavern: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);
