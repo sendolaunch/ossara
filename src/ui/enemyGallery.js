@@ -172,8 +172,11 @@ fallback: ${state.fallbackUsed ? "yes" : "no"}
 anim: ${state.animationLoaded ? "yes" : "no"}
 desired: ${state.desiredState || "pending"}
 clip: ${state.currentClip || "pending"}
+time: ${Number(state.currentTime || 0).toFixed(2)} animEnt: ${state.animEntityName || "-"}
 moving: ${state.isMoving ? "yes" : "no"} d:${Number(state.movementDelta || 0).toFixed(3)} lane:${Number(state.laneProgressDelta || 0).toFixed(3)}
+bone: ${state.boneProbeName || "-"} delta:${Number(state.boneDelta || 0).toFixed(4)} bound:${state.animBound === null ? "?" : state.animBound ? "yes" : "no"}
 blocker: ${state.attackingBlocker ? "yes" : "no"}
+fallbackReason: ${state.fallbackReason || "-"}
 clips: ${(state.availableClips || []).join(", ") || "pending"}`;
       try {
         const out = new pc.Vec3();
