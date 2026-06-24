@@ -1,4 +1,5 @@
-import { ENEMIES } from "../config/enemies.js";
+import { ACTIVE_ENEMY_VISUAL_THEME, ENEMY_VISUAL_THEMES } from "../config/enemyVisualThemes.js";
+export { ACTIVE_ENEMY_VISUAL_THEME } from "../config/enemyVisualThemes.js";
 
 export const FALLBACK_ENEMY_LOOK = {
   husk: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
@@ -8,18 +9,20 @@ export const FALLBACK_ENEMY_LOOK = {
 };
 
 export function resolveEnemyVisual(type) {
-  const def = ENEMIES[type] || ENEMIES.husk;
+  const theme = ENEMY_VISUAL_THEMES[ACTIVE_ENEMY_VISUAL_THEME];
+  const def = theme?.enemies?.[type] || theme?.enemies?.husk;
   const fallback = FALLBACK_ENEMY_LOOK[type] || FALLBACK_ENEMY_LOOK.husk;
   return {
     fallbackShape: fallback.shape,
     fallbackColor: fallback.color,
     fallbackScale: fallback.scale,
     fallbackEmissive: fallback.emissive,
-    ...(def?.visual || {}),
+    ...(def || {}),
   };
 }
 
 export function enemyModelUrl(visual) {
-  if (!visual?.model || !visual?.modelPack) return null;
-  return `models/${visual.modelPack}/${visual.model}`;
+  const pack = visual?.pack || visual?.modelPack;
+  if (!visual?.model || !pack) return null;
+  return `models/${pack}/${visual.model}`;
 }

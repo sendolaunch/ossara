@@ -1,6 +1,8 @@
-// Enemy archetypes - the dead pouring through the breach. Data only; the look
-// lives in the view layer, keyed by `id`.
+// Enemy archetypes. Data only; visual themes live in enemyVisualThemes.js and
+// are resolved by the view layer so the game can swap art direction without
+// rewriting combat mechanics.
 //
+// role                theme-neutral visual/gameplay role
 // hp                  health
 // speed               world units / second along the lane
 // leak                ward damage if it reaches the core
@@ -13,6 +15,7 @@ export const ENEMIES = {
   husk: {
     id: "husk",
     name: "Husk",
+    role: "enemy-basic",
     hp: 30,
     speed: 1.6,
     leak: 1,
@@ -22,21 +25,11 @@ export const ENEMIES = {
     attackRate: 1.0,
     attackRange: 0.65,
     color: "ash",
-    visual: {
-      modelPack: "skeletons",
-      model: "Skeleton_Minion.glb",
-      scale: 1,
-      targetHeight: 1.45,
-      heightOffset: 0,
-      rotationOffset: 0,
-      animationSet: "skeleton-medium",
-      fallbackShape: "box",
-      fallbackColor: "ash",
-    },
   },
   sprinter: {
     id: "sprinter",
     name: "Carrion-sprinter",
+    role: "enemy-runner",
     hp: 18,
     speed: 3.2,
     leak: 1,
@@ -46,21 +39,11 @@ export const ENEMIES = {
     attackRate: 1.25,
     attackRange: 0.55,
     color: "plague",
-    visual: {
-      modelPack: "skeletons",
-      model: "Skeleton_Rogue.glb",
-      scale: 1,
-      targetHeight: 1.35,
-      heightOffset: 0,
-      rotationOffset: 0,
-      animationSet: "skeleton-medium",
-      fallbackShape: "cone",
-      fallbackColor: "plague",
-    },
   },
   brute: {
     id: "brute",
     name: "Plague-brute",
+    role: "enemy-brute",
     hp: 120,
     speed: 1.1,
     leak: 3,
@@ -70,21 +53,11 @@ export const ENEMIES = {
     attackRate: 0.75,
     attackRange: 0.8,
     color: "rot",
-    visual: {
-      modelPack: "skeletons",
-      model: "Skeleton_Golem.glb",
-      scale: 1,
-      targetHeight: 2.05,
-      heightOffset: 0,
-      rotationOffset: 0,
-      animationSet: "skeleton-large",
-      fallbackShape: "sphere",
-      fallbackColor: "rot",
-    },
   },
   herald: {
     id: "herald",
     name: "Herald of the Hollow King",
+    role: "enemy-caster",
     hp: 600,
     speed: 0.9,
     leak: 10,
@@ -95,16 +68,5 @@ export const ENEMIES = {
     attackRange: 0.95,
     color: "blood",
     boss: true,
-    visual: {
-      modelPack: "skeletons",
-      model: "Necromancer.glb",
-      scale: 1,
-      targetHeight: 2.2,
-      heightOffset: 0,
-      rotationOffset: 0,
-      animationSet: "skeleton-medium",
-      fallbackShape: "sphere",
-      fallbackColor: "blood",
-    },
   },
 };

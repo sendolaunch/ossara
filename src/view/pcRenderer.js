@@ -15,25 +15,20 @@ import { enemyModelUrl, resolveEnemyVisual } from "./enemyVisuals.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
+function colorValue(value) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    if (value.startsWith("#")) return Number.parseInt(value.slice(1), 16);
+    return PALETTE[value] ?? 0xffffff;
+  }
+  return 0xffffff;
+}
+
 function mat(colorKey, emissiveAmt = 0) {
-  const c = col(PALETTE[colorKey] ?? 0xffffff);
+  const c = col(colorValue(colorKey));
   const m = new pc.StandardMaterial();
   m.diffuse = c;
   m.gloss = 0.3;
-  m.useMetalness = false;
-  if (emissiveAmt > 0) {
-    m.emissive = c;
-    m.emissiveIntensity = emissiveAmt;
-  }
-  m.update();
-  return m;
-}
-
-function matHex(hex, emissiveAmt = 0) {
-  const c = col(hex);
-  const m = new pc.StandardMaterial();
-  m.diffuse = c;
-  m.gloss = 0.2;
   m.useMetalness = false;
   if (emissiveAmt > 0) {
     m.emissive = c;
@@ -892,7 +887,7 @@ export class PCRenderer {
         const hpGroup = new pc.Entity("hp-bar");
         hpGroup.setLocalPosition(0, visual.hpY || 1.65, 0);
         ent.addChild(hpGroup);
-        const hpBg = prim("box", matHex(0x171915, 0));
+        const hpBg = prim("box", mat(0x171915, 0));
         hpBg.name = "hp-bg";
         hpBg.setLocalScale(1.28, 0.12, 0.07);
         hpBg.setLocalPosition(0, 0, 0);
