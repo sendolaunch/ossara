@@ -205,6 +205,10 @@ section("building rules");
   const rBlockadePath = laneBlocker.tryPlaceTower("barricade", 24, 11);
   ok(rBlockadePath.ok, "blockades can be placed on lane path cells");
 
+  const laneTrap = new World(LEVEL);
+  const rTrapPath = laneTrap.tryPlaceTower("trapstake", 24, 11);
+  ok(rTrapPath.ok, "traps can be placed on valid lane path cells without blocking them");
+
   const rBlocked = w.tryPlaceTower("ballista", 16, 17);
   ok(!rBlocked.ok && rBlocked.reason === "blocked", "cannot place on blocked ruins");
 
@@ -449,6 +453,86 @@ section("turret behavior cleanup");
     ok(defense.targetId === 0, `${towerId} does not use turret target acquisition`);
     ok(enemy.hp === hpBefore, `${towerId} does not deal turret damage in A3`);
   }
+}
+
+// ---------------------------------------------------------------------------
+section("trap behavior");
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  ok(placed.ok, "trap can be placed on a valid lane path cell");
+  const trap = placed.tower;
+  trap.damage = 0;
+  trap.charges = 2;
+  trap.resetTime = 1;
+  trap.triggerRadius = 1.1;
+  w._spawnEnemy("husk", w.defaultLaneId);
+  const enemy = w.enemies[0];
+  enemy.dist = 10.4;
+  const p = pointAtDistance(w.lane, enemy.dist);
+  enemy.x = p.x;
+  enemy.z = p.z;
+  const distBefore = enemy.dist;
+  w.update(0.2, {});
+  ok(enemy.dist > distBefore, "trap does not block enemy movement");
+  ok(enemy.blockingTargetId !== trap.id, "trap is not targeted by enemies");
+  ok(trap.targetId === 0, "trap does not use turret targeting");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  ok(placed.ok, "trap damage test can place trapstake");
+  const trap = placed.tower;
+  trap.damage = 5;
+  trap.charges = 2;
+  trap.maxCharges = 2;
+  trap.resetTime = 1;
+  trap.triggerRadius = 1.1;
+  trap.resetCd = 0;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const hpBefore = enemy.hp;
+  w.update(0.1, {});
+  ok(enemy.hp === hpBefore - trap.damage, "enemy entering trigger radius triggers trap damage");
+  ok(trap.charges === 1, "trap consumes one charge when triggered");
+  ok(trap.resetCd > 0, "trap enters reset cooldown after triggering");
+
+  const hpAfterTrigger = enemy.hp;
+  w.update(0.2, {});
+  ok(enemy.hp === hpAfterTrigger && trap.charges === 1, "trap reset time prevents immediate retrigger");
+
+  w.update(0.9, {});
+  ok(enemy.hp === hpAfterTrigger - trap.damage, "trap can trigger again after reset time if charges remain");
+  ok(trap.charges === 0, "trap consumes its final charge");
+  ok(!trap.alive, "trap expires when charges reach zero");
+  ok(w.placementStatus("trapstake", trap.col, trap.row, { ignoreCost: true }).ok, "expired trap releases its occupied cell");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  ok(placed.ok, "trap area damage test can place trapstake");
+  const trap = placed.tower;
+  trap.damage = 4;
+  trap.charges = 1;
+  trap.resetTime = 1;
+  trap.triggerRadius = 1.1;
+  const first = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const second = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.8);
+  const far = spawnEnemyAt(w, "husk", w.defaultLaneId, 2);
+  const firstHp = first.hp;
+  const secondHp = second.hp;
+  const farHp = far.hp;
+  w.update(0.1, {});
+  ok(first.hp === firstHp - trap.damage, "trap damages the triggering enemy");
+  ok(second.hp === secondHp - trap.damage, "trap damages other enemies inside trigger radius");
+  ok(far.hp === farHp, "trap does not damage enemies outside trigger radius");
 }
 
 // ---------------------------------------------------------------------------

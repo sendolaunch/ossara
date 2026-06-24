@@ -120,7 +120,7 @@ export class World {
     if (typeId && !def) return { ok: false, reason: "unknown" };
     if (col < 0 || row < 0 || col >= this.level.cols || row >= this.level.rows) return { ok: false, reason: "bounds" };
     if (this.reservedSet.has(k)) return { ok: false, reason: "reserved" };
-    if (this.pathSet.has(k) && !(def && def.blocksEnemies)) return { ok: false, reason: "path" };
+    if (this.pathSet.has(k) && !(def && (def.blocksEnemies || def.defenseType === "trap"))) return { ok: false, reason: "path" };
     if (this.blockedSet.has(k)) return { ok: false, reason: "blocked" };
     if (this.buildableSet && !this.buildableSet.has(k)) return { ok: false, reason: "buildable" };
     if (this.occupied.has(k)) return { ok: false, reason: "occupied" };
@@ -201,6 +201,7 @@ export class World {
     }
 
     this._updateEnemies(dt);
+    this._updateTraps(dt);
     this._updateHero(dt, input);
     this._updateTowers(dt);
     this._updateProjectiles(dt);
@@ -263,11 +264,7 @@ export class World {
     t.hp -= dmg;
     this.events.push({ kind: "towerHit", id: t.id, x: t.x, z: t.z, amount: dmg, sourceId: source?.id || 0 });
     if (t.hp <= 0) {
-      t.hp = 0;
-      t.alive = false;
-      t.targetId = 0;
-      this.occupied.delete(cellKey(t.col, t.row));
-      this.events.push({ kind: "towerDown", id: t.id, x: t.x, z: t.z });
+      this._disableDefense(t, "towerDown");
     }
   }
 
@@ -304,6 +301,47 @@ export class World {
       }
     }
     return best;
+  }
+
+  _updateTraps(dt) {
+    for (const t of this.towers) {
+      if (!t.alive || t.defenseType !== "trap") continue;
+      if (t.charges !== null && t.charges <= 0) {
+        this._disableDefense(t, "trapExpired");
+        continue;
+      }
+      t.resetCd = Math.max(0, (t.resetCd || 0) - dt);
+      if (t.resetCd > 0) continue;
+
+      const radius = t.triggerRadius || t.range || 0;
+      if (radius <= 0) continue;
+      const r2 = radius * radius;
+      let triggered = false;
+      for (const e of this.enemies) {
+        if (e.alive && dist2(t.x, t.z, e.x, e.z) <= r2) {
+          triggered = true;
+          break;
+        }
+      }
+      if (!triggered) continue;
+
+      for (const e of this.enemies) {
+        if (e.alive && dist2(t.x, t.z, e.x, e.z) <= r2) this._damageEnemy(e, t.damage);
+      }
+      if (t.charges !== null) t.charges--;
+      t.resetCd = t.resetTime || 0;
+      this.events.push({ kind: "trapTrigger", id: t.id, x: t.x, z: t.z, range: radius, charges: t.charges });
+      if (t.charges !== null && t.charges <= 0) this._disableDefense(t, "trapExpired");
+    }
+  }
+
+  _disableDefense(t, eventKind = "towerDown") {
+    if (!t || !t.alive) return;
+    t.hp = 0;
+    t.alive = false;
+    t.targetId = 0;
+    this.occupied.delete(cellKey(t.col, t.row));
+    this.events.push({ kind: eventKind, id: t.id, x: t.x, z: t.z });
   }
 
   _enemyInHeroAttackArc(h, aimX, aimZ) {
