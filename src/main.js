@@ -18,6 +18,7 @@ import { HeroSelect } from "./ui/heroSelect.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
 import { getDifficulty, getMission } from "./config/missions.js";
+import { devMissionIdFromLocation } from "./dev/missionSmoke.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -37,6 +38,7 @@ let mission = null;
 let mapSelect = null;
 let heroSelect = null;
 let username = "The Warded";
+const devMissionId = devMissionIdFromLocation(window.location, import.meta.env);
 
 function ensureHub() {
   if (!hub) {
@@ -116,6 +118,13 @@ function startMission(missionId = "first-breach", selection = {}) {
   });
 }
 
+function seedDevMissionProfile() {
+  const existing = profile.activeClass && profile.heroes?.[profile.activeClass];
+  const hero = existing || setActive(profile, "warden");
+  if (hero && !hero.username) hero.username = "DevSmokeWarden";
+  if (!profile.name) profile.name = "Dev Smoke";
+}
+
 // ---- station placeholder modal -------------------------------------------
 let stationModal = null;
 function showStation(id) {
@@ -186,7 +195,6 @@ heroSelect = new HeroSelect(screensRoot, {
 screensRoot.appendChild(heroSelect.el);
 heroSelect.hide();
 
-flow.showLogin();
 mountVersionBadge();
 
 window.OSSARA = {
@@ -200,3 +208,10 @@ window.OSSARA = {
   enterHub,
   startMission,
 };
+
+if (devMissionId) {
+  seedDevMissionProfile();
+  startMission(devMissionId);
+} else {
+  flow.showLogin();
+}
