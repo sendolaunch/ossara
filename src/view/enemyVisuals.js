@@ -1,4 +1,4 @@
-import { ACTIVE_ENEMY_VISUAL_THEME, ENEMY_VISUAL_THEMES } from "../config/enemyVisualThemes.js";
+import { ACTIVE_ENEMY_VISUAL_THEME, ENEMY_ANIMATION_SETS, ENEMY_VISUAL_THEMES } from "../config/enemyVisualThemes.js";
 export { ACTIVE_ENEMY_VISUAL_THEME } from "../config/enemyVisualThemes.js";
 
 export const FALLBACK_ENEMY_LOOK = {
@@ -25,4 +25,9 @@ export function enemyModelUrl(visual) {
   const pack = visual?.pack || visual?.modelPack;
   if (!visual?.model || !pack) return null;
   return `models/${pack}/${visual.model}`;
+}
+
+export function enemyAnimationSet(visual) {
+  if (!visual?.animationSet) return null;
+  return ENEMY_ANIMATION_SETS[visual.animationSet] || null;
 }

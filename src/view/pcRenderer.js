@@ -11,7 +11,7 @@ import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
-import { enemyModelUrl, resolveEnemyVisual } from "./enemyVisuals.js";
+import { enemyAnimationSet, enemyModelUrl, resolveEnemyVisual } from "./enemyVisuals.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -75,6 +75,25 @@ function fitRenderEntityToHeight(entity, targetHeight = 1, scaleMul = 1, yOffset
   } catch (err) {
     entity.setLocalScale(scaleMul, scaleMul, scaleMul);
     entity.setLocalPosition(0, yOffset, 0);
+  }
+}
+
+function collectAnimTracks(asset, into) {
+  const anims = asset?.resource?.animations;
+  if (!anims) return;
+  for (const anim of anims) {
+    const track = anim?.resource || anim;
+    if (track?.name) into[track.name] = track;
+  }
+}
+
+function gotoAnim(layer, state, blend = 0.12) {
+  if (!layer || !state) return;
+  try {
+    if (typeof layer.transition === "function") layer.transition(state, blend);
+    else if (typeof layer.play === "function") layer.play(state);
+  } catch (_) {
+    /* keep the current enemy animation/fallback state */
   }
 }
 
@@ -608,11 +627,74 @@ export class PCRenderer {
     return promise;
   }
 
+  async _setupEnemyAnimation(model, visual, type) {
+    const animSet = enemyAnimationSet(visual);
+    if (!animSet) return null;
+    const tracks = {};
+    try {
+      for (const lib of animSet.libs || []) collectAnimTracks(await this._loadEnemyContainer(`${type}:${visual.animationSet}`, lib), tracks);
+      const clips = animSet.clips || {};
+      const idle = tracks[clips.idle];
+      const walk = tracks[clips.walk] || tracks[clips.run];
+      if (!idle || !walk) return null;
+
+      model.addComponent("anim", { activate: true });
+      const assign = (state, clipName, loop = true) => {
+        const track = tracks[clipName];
+        if (!track) return false;
+        try {
+          model.anim.assignAnimation(state, track, undefined, 1, loop);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      };
+      assign("Idle", clips.idle, true);
+      assign("Move", clips.walk || clips.run, true);
+      const hasAttack = assign("Attack", clips.attack, false);
+      assign("Death", clips.death, false);
+      const layer = model.anim.baseLayer || null;
+      gotoAnim(layer, "Idle", 0);
+      const st = { layer, moving: false, attacking: false, hasAttack, attackTimer: 0 };
+      return {
+        setMoving(moving) {
+          moving = !!moving;
+          if (st.attacking || st.moving === moving) return;
+          st.moving = moving;
+          gotoAnim(layer, moving ? "Move" : "Idle", 0.14);
+        },
+        setAttacking(attacking) {
+          attacking = !!attacking;
+          if (!hasAttack) return;
+          if (attacking && !st.attacking) {
+            st.attacking = true;
+            st.attackTimer = 0.45;
+            gotoAnim(layer, "Attack", 0.08);
+          } else if (!attacking && st.attacking) {
+            st.attacking = false;
+            st.attackTimer = 0;
+            gotoAnim(layer, st.moving ? "Move" : "Idle", 0.12);
+          }
+        },
+        update(dt) {
+          if (!st.attacking) return;
+          st.attackTimer -= dt;
+          if (st.attackTimer <= 0) {
+            st.attacking = false;
+            gotoAnim(layer, st.moving ? "Move" : "Idle", 0.12);
+          }
+        },
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
   _attachEnemyModel(ent, type, visual) {
     const url = enemyModelUrl(visual);
     if (!url || ent._ossaraModelRequested) return;
     ent._ossaraModelRequested = true;
-    this._loadEnemyContainer(type, url).then((asset) => {
+    this._loadEnemyContainer(type, url).then(async (asset) => {
       if (!asset || !this.enemyEntities.has(ent._ossaraEnemyId)) return;
       let model = null;
       try {
@@ -626,8 +708,18 @@ export class PCRenderer {
       }
       fitRenderEntityToHeight(model, visual.targetHeight || 1.5, visual.scale || 1, visual.heightOffset || 0);
       model.setLocalEulerAngles(0, ((visual.rotationOffset || 0) * 180) / Math.PI, 0);
+      const animCtl = await this._setupEnemyAnimation(model, visual, type);
+      if (visual.animationSet && !animCtl) {
+        if (!this.enemyModelWarned.has(`${type}:anim`)) {
+          this.enemyModelWarned.add(`${type}:anim`);
+          console.warn(`[pcRenderer] enemy animation unavailable for ${type}; keeping primitive fallback`);
+        }
+        model.destroy();
+        return;
+      }
       ent._ossaraVisualWrap.addChild(model);
       ent._ossaraModel = model;
+      ent._ossaraAnim = animCtl;
       if (ent._ossaraFallbackBody) ent._ossaraFallbackBody.enabled = false;
     });
   }
@@ -747,7 +839,7 @@ export class PCRenderer {
   update(world, dt, heroAnim = {}) {
     this._syncSpawnIndicators(world, dt);
     this._followCamera(world.hero, dt);
-    this._syncEnemies(world);
+    this._syncEnemies(world, dt);
     this._syncProjectiles(world);
     this._syncTowers(world);
     this._syncHero(world, heroAnim);
@@ -866,7 +958,7 @@ export class PCRenderer {
     }
   }
 
-  _syncEnemies(world) {
+  _syncEnemies(world, dt = 0) {
     const seen = new Set();
     for (const e of world.enemies) {
       if (!e.alive) continue;
@@ -915,6 +1007,14 @@ export class PCRenderer {
         this.enemyEntities.set(e.id, ent);
         this._attachEnemyModel(ent, e.type, visual);
       }
+      const prev = ent._ossaraPrevPos || { x: e.x, z: e.z };
+      const movedDist = Math.hypot(e.x - prev.x, e.z - prev.z);
+      const moving = movedDist > 0.002 && !e.blockingTargetId;
+      if (movedDist > 0.001) ent.setLocalEulerAngles(0, (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI, 0);
+      ent._ossaraAnim?.setMoving(moving);
+      ent._ossaraAnim?.setAttacking(!!e.blockingTargetId);
+      ent._ossaraAnim?.update(dt);
+      ent._ossaraPrevPos = { x: e.x, z: e.z };
       ent.setPosition(e.x, e.radius, e.z);
       const flash = Math.max(0, e.hitFlash || 0);
       const showHp = e.alive && (e.hp < e.maxHp || (e.hpBarTimer || 0) > 0 || flash > 0);

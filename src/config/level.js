@@ -9,6 +9,8 @@ export const LANES = [
     name: "Main Gate",
     silhouette: "gate",
     spawn: { col: 60, row: 0 },
+    spawnWidth: 3.9,
+    spawnSpreadFade: 22,
     waypoints: [
       { col: 60, row: 0 },
       { col: 60, row: 20 },
@@ -34,6 +36,8 @@ export const LANES = [
     name: "Broken Stair",
     silhouette: "stairs",
     spawn: { col: 12, row: 12 },
+    spawnWidth: 3.4,
+    spawnSpreadFade: 20,
     waypoints: [
       { col: 12, row: 12 },
       { col: 12, row: 26 },
@@ -63,6 +67,8 @@ export const LANES = [
     name: "Ruined Market",
     silhouette: "market",
     spawn: { col: 108, row: 12 },
+    spawnWidth: 3.4,
+    spawnSpreadFade: 20,
     waypoints: [
       { col: 108, row: 12 },
       { col: 108, row: 26 },
@@ -92,6 +98,8 @@ export const LANES = [
     name: "Crypt Breach",
     silhouette: "crypt",
     spawn: { col: 12, row: 78 },
+    spawnWidth: 3.6,
+    spawnSpreadFade: 21,
     waypoints: [
       { col: 12, row: 78 },
       { col: 28, row: 78 },
@@ -121,6 +129,8 @@ export const LANES = [
     name: "Plague Garden",
     silhouette: "garden",
     spawn: { col: 108, row: 78 },
+    spawnWidth: 3.6,
+    spawnSpreadFade: 21,
     waypoints: [
       { col: 108, row: 78 },
       { col: 92, row: 78 },
@@ -188,8 +198,8 @@ export const LEVEL = {
   rows: 91,
   tile: 1,
   openBuildable: true,
-  spawnWidth: 3.2,
-  spawnSpreadFade: 18,
+  spawnWidth: 3.6,
+  spawnSpreadFade: 21,
 
   core: { col: 60, row: 45 },
   heroSpawn: { col: 60, row: 51 },

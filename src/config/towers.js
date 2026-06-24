@@ -21,6 +21,9 @@ export const TOWERS = {
     hp: 320,
     maxHp: 320,
     blockRadius: 0.55,
+    contactRadius: 0.55,
+    contactDamage: 0,
+    contactTickRate: 0,
     range: 1.4,
     damage: 10,
     fireRate: 1.2,
@@ -31,8 +34,8 @@ export const TOWERS = {
     blurb: "Cheap, durable, short-range bite.",
   },
 
-  // Spike-gate is a blockade variant: a physical gate for lane control that will
-  // later trade raw HP for teeth. In A1 it still uses legacy tower damage logic.
+  // Spike-gate is a blockade variant: a physical gate for lane control that
+  // trades raw HP for teeth when enemies press against it.
   spikegate: {
     id: "spikegate",
     name: "Spike-gate",
@@ -45,6 +48,9 @@ export const TOWERS = {
     hp: 240,
     maxHp: 240,
     blockRadius: 0.6,
+    contactRadius: 0.72,
+    contactDamage: 4,
+    contactTickRate: 1.25,
     range: 1.9,
     damage: 20,
     fireRate: 1.6,

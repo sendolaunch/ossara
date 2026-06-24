@@ -162,6 +162,11 @@ section("defense type data model");
     } else {
       ok(!def.blocksEnemies && !def.targetableByEnemies, `${id} non-physical defense is not a blocker/target`);
     }
+    if (def.defenseType === "blockade") {
+      ok(Number.isFinite(def.contactRadius), `${id} blockade has contactRadius`);
+      ok(Number.isFinite(def.contactDamage), `${id} blockade has contactDamage`);
+      ok(Number.isFinite(def.contactTickRate), `${id} blockade has contactTickRate`);
+    }
     if (def.defenseType === "trap") {
       ok(Number.isFinite(def.charges) && def.charges > 0, `${id} trap has charges`);
       ok(Number.isFinite(def.resetTime) && def.resetTime > 0, `${id} trap has resetTime`);
@@ -406,10 +411,11 @@ section("multi-lane spawning");
     const path = w.lanePaths[laneDef.id];
     const start = pointAtDistance(path, 0);
     ok(e && e.laneId === laneDef.id, `${laneDef.id} enemy records its lane id`);
-    ok(dist(e.x, e.z, start.x, start.z) > 0.05 && dist(e.x, e.z, start.x, start.z) <= 1.8, `${laneDef.id} enemy starts with wider lane-mouth spread`);
+    const maxSpread = (laneDef.spawnWidth || LEVEL.spawnWidth || 1.8) * 0.9;
+    ok(dist(e.x, e.z, start.x, start.z) > 0.05 && dist(e.x, e.z, start.x, start.z) <= maxSpread, `${laneDef.id} enemy starts with wider lane-mouth spread`);
     w._updateEnemies(1);
     const progressed = pointAtDistance(path, e.speed);
-    ok(dist(e.x, e.z, progressed.x, progressed.z) <= 2.4, `${laneDef.id} enemy follows near its lane path`);
+    ok(dist(e.x, e.z, progressed.x, progressed.z) <= maxSpread, `${laneDef.id} enemy follows near its lane path`);
   }
 
   const spreadWorld = new World(LEVEL);
@@ -492,6 +498,97 @@ section("enemy vs blockade interaction");
   const coreBefore = w.core.hp;
   run(w, 800, 0.05, {});
   ok(w.stats.leaked > 0 && w.core.hp < coreBefore, "core still takes damage if no blockade survives");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("barricade", 60, 32);
+  ok(placed.ok, "contact-range test can place a barricade");
+  const barricade = placed.tower;
+  barricade.hp = 100;
+  barricade.maxHp = 100;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST - 2.0);
+  enemy.speed = 1.6;
+  const hpBefore = barricade.hp;
+  const distBefore = enemy.dist;
+  w.update(0.1, {});
+  ok(enemy.blockingTargetId !== barricade.id, "enemy does not attack blockade outside contact range");
+  ok(enemy.dist > distBefore, "enemy keeps walking closer before attacking blockade");
+  ok(barricade.hp === hpBefore, "distant blockade does not take invisible far-away attack damage");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("barricade", 55, 31);
+  ok(placed.ok, "off-lane blockade test can place a side barricade");
+  const barricade = placed.tower;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  enemy.speed = 1.6;
+  const hpBefore = barricade.hp;
+  const distBefore = enemy.dist;
+  w.update(0.5, {});
+  ok(enemy.blockingTargetId !== barricade.id, "enemy ignores an off-lane blockade too far to the side");
+  ok(enemy.dist > distBefore, "enemy keeps moving past off-lane blockade");
+  ok(barricade.hp === hpBefore, "off-lane blockade is not damaged by lane enemy");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("barricade", 60, 32);
+  ok(placed.ok, "spread contact test can place lane barricade");
+  const barricade = placed.tower;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  enemy.x = barricade.x + barricade.blockRadius + enemy.radius - 0.08;
+  enemy.z = barricade.z;
+  const hpBefore = barricade.hp;
+  w.update(0.1, {});
+  ok(enemy.blockingTargetId === barricade.id, "spread enemy still attacks blockade when physically contacting its lane span");
+  ok(barricade.hp < hpBefore, "contacting spread enemy damages the blockade");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("spikegate", 60, 32);
+  ok(placed.ok, "spike-gate can be placed for contact damage test");
+  const spike = placed.tower;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  enemy.x = spike.x + spike.contactRadius + enemy.radius - 0.05;
+  enemy.z = spike.z;
+  const enemyHpBefore = enemy.hp;
+  const spikeHpBefore = spike.hp;
+  w.update(0.1, {});
+  ok(enemy.blockingTargetId === spike.id, "spike-gate is still attacked as a blockade");
+  ok(spike.hp < spikeHpBefore, "spike-gate takes enemy blockade damage");
+  ok(enemy.hp < enemyHpBefore, "spike-gate deals contact damage to touching enemy");
+  ok(enemy.hitFlash > 0 && enemy.hpBarTimer > 0, "spike-gate contact damage triggers enemy hit feedback");
+  const hpAfterTick = enemy.hp;
+  w.update(0.1, {});
+  ok(enemy.hp === hpAfterTick, "spike-gate contact damage respects tick cooldown");
+  w.update(0.8, {});
+  ok(enemy.hp < hpAfterTick, "spike-gate contact damage ticks again after cooldown");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("barricade", 60, 32);
+  ok(placed.ok, "normal barricade can be placed for contact damage comparison");
+  const barricade = placed.tower;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  enemy.x = barricade.x + barricade.contactRadius + enemy.radius - 0.05;
+  enemy.z = barricade.z;
+  const hpBefore = enemy.hp;
+  w.update(0.1, {});
+  ok(enemy.hp === hpBefore, "normal barricade does not deal contact damage");
 }
 
 {
@@ -862,8 +959,11 @@ section("manual hero attack and slam damages");
   w._spawnEnemy("husk", w.defaultLaneId);
   const en = w.enemies[0];
   en.speed = 0;
+  en.laneOffset = 0;
   en.hp = 40;
   const laneStart = pointAtDistance(w.lane, 0);
+  en.x = laneStart.x;
+  en.z = laneStart.z + 0.15;
   w.hero.x = laneStart.x;
   w.hero.z = laneStart.z - 0.8;
   const hpBefore = en.hp;

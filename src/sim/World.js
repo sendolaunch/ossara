@@ -29,7 +29,14 @@ const REPAIR_COST = (baseCost, hp, maxHp) => {
   if (!maxHp || hp >= maxHp) return 0;
   return Math.max(1, Math.ceil(baseCost * 0.35 * ((maxHp - hp) / maxHp)));
 };
-const SPAWN_SPREAD_PATTERN = [-0.5, 0.5, -0.25, 0.25, 0, -0.4, 0.4];
+const SPAWN_SPREAD_PATTERN = [-0.62, 0.62, -0.28, 0.28, 0, -0.46, 0.46, -0.78, 0.78];
+
+function spawnSpreadOffset(id, width) {
+  const base = SPAWN_SPREAD_PATTERN[id % SPAWN_SPREAD_PATTERN.length] * width;
+  const n = Math.sin(id * 12.9898 + width * 78.233) * 43758.5453;
+  const jitter = (n - Math.floor(n) - 0.5) * width * 0.16;
+  return Math.max(-width * 0.85, Math.min(width * 0.85, base + jitter));
+}
 
 function lanePerpAtDistance(lane, dist) {
   if (!lane?.pts?.length || lane.pts.length < 2) return { x: 1, z: 0 };
@@ -249,6 +256,7 @@ export class World {
     t.baseMaxHp = t.maxHp || 0;
     t.baseDamage = t.damage || 0;
     t.baseRange = t.range || 0;
+    t.baseContactDamage = t.contactDamage || 0;
     t.baseAttackRate = t.attackRate || t.fireRate || 1;
     t.baseFireRate = t.fireRate || t.attackRate || 1;
     t.baseTriggerRadius = t.triggerRadius ?? null;
@@ -263,6 +271,7 @@ export class World {
     if (t.defenseType === "blockade") {
       t.maxHp = Math.round(t.baseMaxHp * (1 + tier * 0.35));
       t.hp = Math.min(t.maxHp, hpBefore + Math.max(0, t.maxHp - maxBefore));
+      t.contactDamage = t.baseContactDamage * (1 + tier * 0.2);
     } else if (t.defenseType === "turret") {
       t.damage = t.baseDamage * (1 + tier * 0.25);
       t.range = t.baseRange * (1 + tier * 0.1);
@@ -319,7 +328,7 @@ export class World {
     const id = this._nextId++;
     const lane = path.lane || {};
     const width = lane.spawnWidth ?? this.level.spawnWidth ?? 1.8;
-    const offset = SPAWN_SPREAD_PATTERN[id % SPAWN_SPREAD_PATTERN.length] * width;
+    const offset = spawnSpreadOffset(id, width);
     const fade = lane.spawnSpreadFade ?? this.level.spawnSpreadFade ?? 14;
     const start = pointAtDistanceWithOffset(path, 0, offset, fade);
     this.enemyPool.acquire(def, id, start, path.id || laneId || this.defaultLaneId, { laneOffset: offset, laneOffsetFade: fade });
@@ -367,8 +376,9 @@ export class World {
       e.hpBarTimer = Math.max(0, (e.hpBarTimer || 0) - dt);
       e.attackCd -= dt;
       const blocker = this._findBlockingDefense(e);
-      if (blocker) {
+      if (blocker && this._enemyInBlockerContact(e, blocker)) {
         e.blockingTargetId = blocker.id;
+        this._applyBlockadeContactDamage(blocker, e, dt);
         if (e.attackCd <= 0) {
           this._damageTower(blocker, e.attackDamage, e);
           e.attackCd = 1 / e.attackRate;
@@ -395,9 +405,13 @@ export class World {
   _findBlockingDefense(e) {
     let best = null;
     let bestD = Infinity;
+    const lane = this.lanePaths[e.laneId] || this.lane;
+    const lanePoint = pointAtDistance(lane, e.dist);
     for (const t of this.towers) {
       if (!t.alive || t.defenseType !== "blockade" || !t.blocksEnemies || !t.targetableByEnemies || t.hp <= 0) continue;
-      const reach = e.attackRange + e.radius + (t.blockRadius || 0.55);
+      const laneCatch = (t.contactRadius || t.blockRadius || 0.55) + e.radius + 0.8;
+      if (dist2(t.x, t.z, lanePoint.x, lanePoint.z) > laneCatch * laneCatch) continue;
+      const reach = e.attackRange + e.radius + (t.blockRadius || 0.55) + 0.7;
       const d = dist2(e.x, e.z, t.x, t.z);
       if (d <= reach * reach && d < bestD) {
         bestD = d;
@@ -405,6 +419,23 @@ export class World {
       }
     }
     return best;
+  }
+
+  _enemyInBlockerContact(e, t) {
+    const contact = e.attackRange + (t.contactRadius || t.blockRadius || 0.55);
+    return dist2(e.x, e.z, t.x, t.z) <= contact * contact;
+  }
+
+  _applyBlockadeContactDamage(t, e, dt) {
+    if (!t.contactDamage || t.contactDamage <= 0 || !e.alive) return;
+    const radius = t.contactRadius || t.blockRadius || 0.55;
+    const contact = e.radius + radius;
+    if (dist2(e.x, e.z, t.x, t.z) > contact * contact) return;
+    t.contactCd = Math.max(0, (t.contactCd || 0) - dt);
+    if (t.contactCd > 0) return;
+    this._damageEnemy(e, t.contactDamage);
+    t.contactCd = 1 / Math.max(0.01, t.contactTickRate || 1);
+    this.events.push({ kind: "contactDamage", id: t.id, x: e.x, z: e.z, targetId: e.id, amount: t.contactDamage });
   }
 
   _damageTower(t, dmg, source = null) {

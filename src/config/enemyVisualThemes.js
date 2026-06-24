@@ -1,5 +1,34 @@
 export const ACTIVE_ENEMY_VISUAL_THEME = "ruined_kingdom_plague_v1";
 
+export const ENEMY_ANIMATION_SETS = {
+  "skeleton-medium": {
+    libs: [
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_General.glb",
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_MovementBasic.glb",
+    ],
+    clips: {
+      idle: "Idle_A",
+      walk: "Walking_A",
+      run: "Running_A",
+      attack: "Hit_A",
+      death: "Death_A",
+    },
+  },
+  "skeleton-large": {
+    libs: [
+      "models/skeletons/anim/Rig_Large/Rig_Large_General.glb",
+      "models/skeletons/anim/Rig_Large/Rig_Large_MovementBasic.glb",
+    ],
+    clips: {
+      idle: "Idle_A",
+      walk: "Walking_A",
+      run: "Running_A",
+      attack: "Hit_A",
+      death: "Death_A",
+    },
+  },
+};
+
 export const ENEMY_VISUAL_THEMES = {
   ruined_kingdom_plague_v1: {
     id: "ruined_kingdom_plague_v1",
@@ -60,4 +89,3 @@ export const ENEMY_VISUAL_THEMES = {
     },
   },
 };
-
