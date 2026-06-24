@@ -662,7 +662,9 @@ export class PCRenderer {
       const clips = animSet.clips || {};
       const idle = tracks[clips.idle];
       const walk = tracks[clips.walk] || tracks[clips.run];
+      const run = tracks[clips.run] || tracks[clips.walk];
       if (!idle || !walk) return null;
+      const availableClips = Object.keys(tracks).sort();
 
       model.addComponent("anim", { activate: true });
       const assign = (state, clipName, loop = true) => {
@@ -676,7 +678,8 @@ export class PCRenderer {
         }
       };
       assign("Idle", clips.idle, true);
-      assign("Move", clips.walk || clips.run, true);
+      assign("Walk", clips.walk || clips.run, true);
+      assign("Run", clips.run || clips.walk, true);
       const hasAttack = assign("Attack", clips.attack, false);
       const hasDeath = assign("Death", clips.death, false);
       const layer = model.anim.baseLayer || null;
@@ -684,19 +687,22 @@ export class PCRenderer {
       const probe = animationChangesPose(model);
       if (probe === false) return null;
       gotoAnim(layer, "Idle", 0);
-      const st = { layer, moving: false, attacking: false, hasAttack, hasDeath, attackTimer: 0, current: "Idle", preview: false };
+      const st = { layer, moving: false, running: false, attacking: false, hasAttack, hasDeath, attackTimer: 0, current: "Idle", currentClip: clips.idle, preview: false };
       const play = (state, blend = 0.12) => {
         if (!state) return;
         gotoAnim(layer, state, blend);
         st.current = state;
+        st.currentClip = state === "Idle" ? clips.idle : state === "Walk" ? (clips.walk || clips.run) : state === "Run" ? (clips.run || clips.walk) : state === "Attack" ? clips.attack : state === "Death" ? clips.death : state;
       };
       return {
-        setMoving(moving) {
+        setMoving(moving, running = false) {
           moving = !!moving;
+          running = !!running;
           st.preview = false;
-          if (st.attacking || st.moving === moving) return;
+          if (st.attacking || (st.moving === moving && st.running === running)) return;
           st.moving = moving;
-          play(moving ? "Move" : "Idle", 0.14);
+          st.running = running;
+          play(moving ? (running ? "Run" : "Walk") : "Idle", 0.14);
         },
         setAttacking(attacking) {
           attacking = !!attacking;
@@ -709,15 +715,28 @@ export class PCRenderer {
           } else if (!attacking && st.attacking) {
             st.attacking = false;
             st.attackTimer = 0;
-            play(st.moving ? "Move" : "Idle", 0.12);
+            play(st.moving ? (st.running ? "Run" : "Walk") : "Idle", 0.12);
           }
         },
         setPreviewState(state) {
-          const normalized = state === "walk" ? "Move" : state === "attack" ? (hasAttack ? "Attack" : "Idle") : state === "death" ? (hasDeath ? "Death" : "Idle") : "Idle";
+          const normalized = state === "walk" ? "Walk" : state === "run" ? "Run" : state === "attack" ? (hasAttack ? "Attack" : "Idle") : state === "death" ? (hasDeath ? "Death" : "Idle") : "Idle";
           st.preview = true;
           st.attacking = normalized === "Attack";
-          st.moving = normalized === "Move";
+          st.moving = normalized === "Walk" || normalized === "Run";
+          st.running = normalized === "Run";
           play(normalized, 0.1);
+        },
+        playClip(clipName, loop = true) {
+          if (!tracks[clipName]) return false;
+          const state = `Clip:${clipName}`;
+          assign(state, clipName, loop);
+          st.preview = true;
+          st.attacking = false;
+          st.moving = false;
+          gotoAnim(layer, state, 0.08);
+          st.current = state;
+          st.currentClip = clipName;
+          return true;
         },
         update(dt) {
           if (st.preview) return;
@@ -725,11 +744,11 @@ export class PCRenderer {
           st.attackTimer -= dt;
           if (st.attackTimer <= 0) {
             st.attacking = false;
-            play(st.moving ? "Move" : "Idle", 0.12);
+            play(st.moving ? (st.running ? "Run" : "Walk") : "Idle", 0.12);
           }
         },
         state() {
-          return { loaded: true, currentClip: st.current, hasAttack, hasDeath };
+          return { loaded: true, currentState: st.current, currentClip: st.currentClip || st.current, hasAttack, hasDeath, availableClips };
         },
       };
     } catch (_) {
@@ -763,9 +782,12 @@ export class PCRenderer {
         }
         ent._ossaraDebug = {
           type,
+          modelName: visual.model || "",
+          animationSet: visual.animationSet || "",
           modelLoaded: false,
           fallbackUsed: true,
           animationLoaded: false,
+          availableClips: [],
           currentClip: "fallback",
         };
         model.destroy();
@@ -777,9 +799,12 @@ export class PCRenderer {
       if (ent._ossaraFallbackBody) ent._ossaraFallbackBody.enabled = false;
       ent._ossaraDebug = {
         type,
+        modelName: visual.model || "",
+        animationSet: visual.animationSet || "",
         modelLoaded: true,
         fallbackUsed: false,
         animationLoaded: !!animCtl,
+        availableClips: animCtl?.state?.().availableClips || [],
         currentClip: animCtl?.state?.().currentClip || "static",
       };
     });
@@ -1077,10 +1102,13 @@ export class PCRenderer {
         ent._ossaraHpFill = hpFill;
         ent._ossaraHitRing = hitRing;
         ent._ossaraDebug = {
-          type: e.type,
+        type: e.type,
+          modelName: visual.model || "",
+          animationSet: visual.animationSet || "",
           modelLoaded: false,
           fallbackUsed: true,
           animationLoaded: false,
+          availableClips: [],
           currentClip: "fallback",
         };
         this.app.root.addChild(ent);
@@ -1090,11 +1118,13 @@ export class PCRenderer {
       const prev = ent._ossaraPrevPos || { x: e.x, z: e.z };
       const movedDist = Math.hypot(e.x - prev.x, e.z - prev.z);
       const forcedState = e.previewAnimState || "";
-      const moving = forcedState ? forcedState === "walk" : movedDist > 0.002 && !e.attackingBlocker;
+      const forcedClip = e.previewAnimClip || "";
+      const moving = forcedState ? (forcedState === "walk" || forcedState === "run") : movedDist > 0.002 && !e.attackingBlocker;
       if (movedDist > 0.001) ent.setLocalEulerAngles(0, (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI, 0);
-      if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
+      if (forcedClip) ent._ossaraAnim?.playClip?.(forcedClip, true);
+      else if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
       else {
-        ent._ossaraAnim?.setMoving(moving);
+        ent._ossaraAnim?.setMoving(moving, e.speed >= 2.25);
         ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
       }
       ent._ossaraAnim?.update(dt);

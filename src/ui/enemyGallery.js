@@ -5,7 +5,7 @@ import { CSS } from "../config/palette.js";
 import { World } from "../sim/World.js";
 import { PCRenderer } from "../view/pcRenderer.js";
 
-const MODES = ["idle", "walk", "attack", "death"];
+const MODES = ["idle", "walk", "run", "attack", "death"];
 const TYPES = ["husk", "sprinter", "brute", "herald"];
 
 export class EnemyGallery {
@@ -18,6 +18,9 @@ export class EnemyGallery {
     this.renderer.resetCamera();
     this.modeIndex = 0;
     this.mode = MODES[this.modeIndex];
+    this.clipIndex = 0;
+    this.clipName = "";
+    this.availableClips = [];
     this.labels = new Map();
     this.running = false;
     this.last = 0;
@@ -36,7 +39,10 @@ export class EnemyGallery {
     this.root.innerHTML = `<div style="position:absolute;left:16px;top:14px;padding:12px 14px;border:1px solid ${CSS.plague};background:rgba(8,12,8,.82);color:${CSS.bone};font:12px ui-monospace,Consolas,monospace;line-height:1.45;box-shadow:0 0 22px rgba(91,255,112,.18)">
       <div style="color:${CSS.gold};font-weight:800;letter-spacing:.08em">ENEMY VISUAL GALLERY</div>
       <div id="enemyGalleryMode">Mode: idle</div>
-      <div>1 idle · 2 walk · 3 attack · 4 death · Space cycle</div>
+      <div id="enemyGalleryClip">Clip: candidate</div>
+      <div>1 idle | 2 walk | 3 run | 4 attack | 5 death</div>
+      <div>Left/Right browse exact clips | Space cycle</div>
+      <div id="enemyGalleryClipList" style="max-width:560px;color:${CSS.ash}">Clips: loading...</div>
       <div style="color:${CSS.ash}">Dev-only route: ?devEnemyGallery=1</div>
     </div>`;
     this.uiEl.appendChild(this.root);
@@ -53,6 +59,7 @@ export class EnemyGallery {
       e.baseX = x;
       e.baseZ = z;
       e.previewAnimState = this.mode;
+      e.previewAnimClip = "";
       e.hp = e.maxHp;
       e.alive = true;
     });
@@ -71,19 +78,49 @@ export class EnemyGallery {
     requestAnimationFrame(this._frame);
   }
 
+  _syncOverlayText() {
+    const mode = this.root.querySelector("#enemyGalleryMode");
+    if (mode) mode.textContent = `Mode: ${this.clipName ? "clip-browser" : this.mode}`;
+    const clip = this.root.querySelector("#enemyGalleryClip");
+    if (clip) clip.textContent = `Clip: ${this.clipName || "candidate"}`;
+    const list = this.root.querySelector("#enemyGalleryClipList");
+    if (list) list.textContent = `Clips: ${this.availableClips.length ? this.availableClips.join(", ") : "loading..."}`;
+  }
+
   _setMode(mode) {
     this.mode = mode;
     this.modeIndex = MODES.indexOf(mode);
-    for (const e of this.world.enemies) e.previewAnimState = mode;
-    const el = this.root.querySelector("#enemyGalleryMode");
-    if (el) el.textContent = `Mode: ${mode}`;
+    this.clipName = "";
+    for (const e of this.world.enemies) {
+      e.previewAnimState = mode;
+      e.previewAnimClip = "";
+    }
+    this._syncOverlayText();
+  }
+
+  _setClipIndex(index) {
+    if (!this.availableClips.length) return;
+    this.clipIndex = (index + this.availableClips.length) % this.availableClips.length;
+    this.clipName = this.availableClips[this.clipIndex];
+    for (const e of this.world.enemies) {
+      e.previewAnimState = "";
+      e.previewAnimClip = this.clipName;
+    }
+    this._syncOverlayText();
   }
 
   _onKey(ev) {
     if (ev.key === " ") {
       ev.preventDefault();
-      this._setMode(MODES[(this.modeIndex + 1) % MODES.length]);
-    } else if (["1", "2", "3", "4"].includes(ev.key)) {
+      if (this.clipName) this._setClipIndex(this.clipIndex + 1);
+      else this._setMode(MODES[(this.modeIndex + 1) % MODES.length]);
+    } else if (ev.key === "ArrowRight") {
+      ev.preventDefault();
+      this._setClipIndex(this.clipIndex + 1);
+    } else if (ev.key === "ArrowLeft") {
+      ev.preventDefault();
+      this._setClipIndex(this.clipIndex - 1);
+    } else if (["1", "2", "3", "4", "5"].includes(ev.key)) {
       ev.preventDefault();
       this._setMode(MODES[Number(ev.key) - 1]);
     }
@@ -96,11 +133,12 @@ export class EnemyGallery {
     label.style.position = "absolute";
     label.style.transform = "translate(-50%, -100%)";
     label.style.padding = "5px 7px";
-    label.style.minWidth = "145px";
+    label.style.minWidth = "190px";
+    label.style.maxWidth = "260px";
     label.style.border = `1px solid ${CSS.gold}`;
     label.style.background = "rgba(6,8,6,.78)";
     label.style.color = CSS.bone;
-    label.style.font = "11px ui-monospace,Consolas,monospace";
+    label.style.font = "10px ui-monospace,Consolas,monospace";
     label.style.lineHeight = "1.25";
     label.style.textAlign = "center";
     label.style.whiteSpace = "pre-line";
@@ -111,6 +149,15 @@ export class EnemyGallery {
 
   _syncLabels() {
     const states = new Map(this.renderer.enemyDebugStates().map((s) => [s.id, s]));
+    const clips = new Set(this.availableClips);
+    for (const state of states.values()) for (const clip of state.availableClips || []) clips.add(clip);
+    const clipList = Array.from(clips).sort();
+    if (clipList.join("|") !== this.availableClips.join("|")) {
+      this.availableClips = clipList;
+      if (!this.clipName && this.availableClips.length) this.clipIndex = 0;
+      this._syncOverlayText();
+    }
+
     const canvas = this.renderer.domElement;
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
@@ -118,10 +165,13 @@ export class EnemyGallery {
       const label = this._labelFor(e);
       const state = states.get(e.id) || {};
       label.textContent = `${e.type}
-model: ${state.modelLoaded ? "loaded" : "no"}
+model: ${state.modelName || "pending"}
+rig: ${state.animationSet || "none"}
+loaded: ${state.modelLoaded ? "yes" : "no"}
 fallback: ${state.fallbackUsed ? "yes" : "no"}
-anim: ${state.animationLoaded ? "loaded" : "no"}
-clip: ${state.currentClip || "pending"}`;
+anim: ${state.animationLoaded ? "yes" : "no"}
+clip: ${state.currentClip || "pending"}
+clips: ${(state.availableClips || []).join(", ") || "pending"}`;
       try {
         const out = new pc.Vec3();
         this.renderer.cameraEntity.camera.worldToScreen(new pc.Vec3(e.x, 2.35, e.z), w, h, out);
@@ -140,12 +190,15 @@ clip: ${state.currentClip || "pending"}`;
     this.last = now;
     this.t += dt;
     for (const e of this.world.enemies) {
-      e.previewAnimState = this.mode;
-      e.blockingTargetId = this.mode === "attack" ? 999 : 0;
-      e.attackingBlocker = this.mode === "attack";
-      const sway = this.mode === "walk" ? Math.sin(this.t * 2.2 + e.id) * 0.45 : 0;
+      e.previewAnimState = this.clipName ? "" : this.mode;
+      e.previewAnimClip = this.clipName;
+      e.blockingTargetId = !this.clipName && this.mode === "attack" ? 999 : 0;
+      e.attackingBlocker = !this.clipName && this.mode === "attack";
+      const isMoving = this.mode === "walk" || this.mode === "run" || !!this.clipName;
+      const speed = this.mode === "run" ? 3.2 : 2.2;
+      const sway = isMoving ? Math.sin(this.t * speed + e.id) * 0.45 : 0;
       e.x = e.baseX + sway;
-      e.z = e.baseZ + (this.mode === "walk" ? Math.cos(this.t * 2.2 + e.id) * 0.18 : 0);
+      e.z = e.baseZ + (isMoving ? Math.cos(this.t * speed + e.id) * 0.18 : 0);
       e.hp = this.mode === "death" ? Math.max(1, e.maxHp * 0.1) : e.maxHp;
       e.hitFlash = this.mode === "attack" ? 0.18 : 0;
     }

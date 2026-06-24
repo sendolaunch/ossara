@@ -8,9 +8,9 @@ export const ENEMY_ANIMATION_SETS = {
     ],
     clips: {
       idle: "Idle_A",
-      walk: "Walking_A",
-      run: "Running_A",
-      attack: "Hit_A",
+      walk: "Walking_B",
+      run: "Running_B",
+      attack: "Hit_B",
       death: "Death_A",
     },
   },

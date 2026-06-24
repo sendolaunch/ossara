@@ -36,6 +36,8 @@ export function createEnemy() {
     alive: false,
     counted: false, // bounty/leak resolved exactly once
     reachedCore: false,
+    previewAnimState: "",
+    previewAnimClip: "",
   };
 }
 
@@ -72,4 +74,6 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.alive = true;
   e.counted = false;
   e.reachedCore = false;
+  e.previewAnimState = "";
+  e.previewAnimClip = "";
 }

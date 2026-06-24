@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ENEMIES } from "../src/config/enemies.js";
 import { ENEMY_ANIMATION_SETS, ENEMY_VISUAL_THEMES } from "../src/config/enemyVisualThemes.js";
@@ -7,6 +7,13 @@ import { ACTIVE_ENEMY_VISUAL_THEME, enemyAnimationSet, enemyModelUrl, resolveEne
 let pass = 0;
 let fail = 0;
 const ok = (cond, msg) => (cond ? pass++ : (fail++, console.error("  FAIL:", msg)));
+
+function glbClipNames(path) {
+  const buf = readFileSync(path);
+  const jsonLen = buf.readUInt32LE(12);
+  const json = JSON.parse(buf.toString("utf8", 20, 20 + jsonLen));
+  return new Set((json.animations || []).map((anim) => anim.name));
+}
 
 ok(ACTIVE_ENEMY_VISUAL_THEME === "ruined_kingdom_plague_v1", "active enemy visual theme is explicit");
 ok(!!ENEMY_VISUAL_THEMES[ACTIVE_ENEMY_VISUAL_THEME], "active enemy visual theme exists");
@@ -22,8 +29,16 @@ for (const id of Object.keys(ENEMIES)) {
   const anim = enemyAnimationSet(visual);
   ok(!!anim, `${id} resolves an animation set`);
   ok(Array.isArray(anim.libs) && anim.libs.length > 0, `${id} animation set has libraries`);
-  ok(!!anim.clips?.idle && !!anim.clips?.walk, `${id} animation set defines idle and walk clips`);
-  for (const lib of anim.libs) ok(existsSync(join("public", lib)), `${id} animation library ${lib} exists locally`);
+  ok(!!anim.clips?.idle && !!anim.clips?.walk && !!anim.clips?.run, `${id} animation set defines idle/walk/run clips`);
+  const clipBank = new Set();
+  for (const lib of anim.libs) {
+    const path = join("public", lib);
+    ok(existsSync(path), `${id} animation library ${lib} exists locally`);
+    for (const clip of glbClipNames(path)) clipBank.add(clip);
+  }
+  for (const [role, clip] of Object.entries(anim.clips || {})) {
+    ok(clipBank.has(clip), `${id} configured ${role} clip "${clip}" exists`);
+  }
   const url = enemyModelUrl(visual);
   ok(url.startsWith("models/skeletons/"), `${id} resolves to skeleton model URL`);
   ok(existsSync(join("public", url)), `${id} model file exists locally`);
