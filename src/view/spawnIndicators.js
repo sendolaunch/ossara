@@ -17,17 +17,17 @@ export function spawnIndicatorSpecs(level) {
       ? { col: 0, row: 1 }
       : { col: 1, row: 0 };
     const base = {
-      col: spawn.col + forward.col * 2,
-      row: spawn.row + forward.row * 2,
+      col: spawn.col + forward.col * 3,
+      row: spawn.row + forward.row * 3,
     };
     let marker = {
-      col: base.col + side.col * 1.15,
-      row: base.row + side.row * 1.15,
+      col: base.col + side.col * 1.35,
+      row: base.row + side.row * 1.35,
     };
     if (!inBounds(marker, level)) {
       marker = {
-        col: base.col - side.col * 1.15,
-        row: base.row - side.row * 1.15,
+        col: base.col - side.col * 1.35,
+        row: base.row - side.row * 1.35,
       };
     }
     const w = gridToWorld(marker.col, marker.row, level);
@@ -38,7 +38,7 @@ export function spawnIndicatorSpecs(level) {
       silhouette: lane.silhouette || "gate",
       col: marker.col,
       row: marker.row,
-      y: 0.72,
+      y: 0.95,
       x: w.x,
       z: w.z,
       facing: Math.atan2(forward.col, forward.row || 0.0001),

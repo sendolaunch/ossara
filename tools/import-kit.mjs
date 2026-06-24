@@ -27,6 +27,22 @@ function copyExts(srcDir, dstDir, exts) {
   return n;
 }
 
+function copyExtsRecursive(srcDir, dstDir, exts) {
+  if (!existsSync(srcDir)) { console.warn("  MISSING:", srcDir); return 0; }
+  mkdirSync(dstDir, { recursive: true });
+  let n = 0;
+  for (const f of readdirSync(srcDir, { withFileTypes: true })) {
+    const src = join(srcDir, f.name);
+    const dst = join(dstDir, f.name);
+    if (f.isDirectory()) n += copyExtsRecursive(src, dst, exts);
+    else if (exts.some((e) => f.name.toLowerCase().endsWith(e))) {
+      cpSync(src, dst);
+      n++;
+    }
+  }
+  return n;
+}
+
 // pack folder (relative to SRC)  ->  public/models/<dest>
 const packs = [
   ["KayKit Dungeon Remastered 1.1/Assets/gltf", "dungeon"],   // full set (upgrades the free subset)
@@ -56,4 +72,12 @@ function walk(d) {
 }
 walk(orcDir);
 console.log(`  npc (orc bartender): ${orcN} files`);
+
+// Skeleton enemy pack: imports only character GLBs/textures + animation libs.
+const skelDir = join(SRC, "KayKit Skeletons 1.1");
+const skelDst = join(DST, "skeletons");
+let skelN = 0;
+skelN += copyExts(join(skelDir, "characters", "gltf"), skelDst, [".glb", ".png"]);
+skelN += copyExtsRecursive(join(skelDir, "Animations", "gltf"), join(skelDst, "anim"), [".glb"]);
+console.log(`  skeletons: ${skelN} files`);
 console.log("Import complete.");

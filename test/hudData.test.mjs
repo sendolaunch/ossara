@@ -35,7 +35,7 @@ ok(commandData.controls.includes("Left-click") && commandData.controls.includes(
 const castData = commandCastPanelData({ action: "repair", remaining: 0.3 }, hoveredBlockade);
 ok(castData.title === "REPAIRING", "command cast panel names active cast");
 ok(castData.meta.includes("BARRICADE") && castData.meta.includes("0.3s"), "command cast panel includes target and remaining time");
-ok(castData.controls.includes("Movement allowed"), "command cast panel documents movement behavior");
+ok(castData.controls.includes("Movement cancels"), "command cast panel documents movement behavior");
 
 const trapData = defensePanelData({
   id: 2,

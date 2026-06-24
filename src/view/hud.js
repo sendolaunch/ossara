@@ -142,7 +142,7 @@ export function commandCastPanelData(cast, tower) {
   return {
     title: label,
     meta: `${data.title}  |  ${remaining.toFixed(1)}s`,
-    controls: "Casting command. Movement allowed. Esc or right-click cancels.",
+    controls: "Casting command. Movement cancels. Esc or right-click cancels.",
   };
 }
 

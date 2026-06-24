@@ -188,6 +188,8 @@ export const LEVEL = {
   rows: 91,
   tile: 1,
   openBuildable: true,
+  spawnWidth: 3.2,
+  spawnSpreadFade: 18,
 
   core: { col: 60, row: 45 },
   heroSpawn: { col: 60, row: 51 },

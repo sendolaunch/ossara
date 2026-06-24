@@ -6,18 +6,15 @@
 
 import { TOWERS } from "../config/towers.js";
 import { DASH_KEY } from "../config/moves.js";
+import { COMMANDS } from "../config/commands.js";
 
 const ROTATE_RATE = 1.9; // rad/sec (arrow left/right)
 const ZOOM_RATE = 12; // units/sec (arrow up/down)
 const WHEEL_ZOOM_STEP = 2.25;
 const MOUSE_ORBIT_RATE = 0.008;
 const MOUSE_PITCH_RATE = 0.004;
-const COMMAND_TARGET_RANGE = 7.5;
-const COMMAND_CAST_TIME = {
-  upgrade: 0.45,
-  repair: 0.45,
-  sell: 0.25,
-};
+const COMMAND_TARGET_RANGE = COMMANDS.targetRange;
+const COMMAND_CAST_TIME = COMMANDS.castTime;
 
 const dist2 = (ax, az, bx, bz) => {
   const dx = ax - bx;
@@ -279,6 +276,7 @@ export class Input {
       if (this.onManageResult) this.onManageResult({ ok: false, action, reason: "range" });
       return;
     }
+    if (world?.hero) world.hero.facing = Math.atan2(tower.x - world.hero.x, tower.z - world.hero.z);
     this.commandCast.remaining -= dt;
     if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(world.hero, tower, this.commandCast.action, 1 - this.commandCast.remaining / this.commandCast.duration);
     if (this.onCommandCastChange) this.onCommandCastChange(this.commandCast, tower);
@@ -429,6 +427,12 @@ export class Input {
   // Arrow keys orbit/zoom the camera. Called each frame with dt.
   update(dt) {
     this.updateCamera(dt);
+    if (this.commandCast && this.movementIntent().moving) {
+      const action = this.commandCast.action;
+      this.cancelCommandCast();
+      if (this.onManageResult) this.onManageResult({ ok: false, action, reason: "moved" });
+      return;
+    }
     this.updateCommandCast(dt);
   }
 

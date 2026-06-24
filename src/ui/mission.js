@@ -31,6 +31,7 @@ const MANAGEMENT_MESSAGES = {
   marrow: "Not enough Marrow.",
   full: "Defense already repaired.",
   unsupported: "Repair is for physical defenses.",
+  moved: "Command interrupted.",
 };
 
 export class Mission {

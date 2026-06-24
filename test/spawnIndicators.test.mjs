@@ -24,7 +24,7 @@ for (const lane of LEVEL.lanes) {
   const laneRow = lane.spawn.row + dr * 2;
   const forwardDistance = (spec.col - lane.spawn.col) * dc + (spec.row - lane.spawn.row) * dr;
   const sideDistance = Math.hypot(spec.col - laneCol, spec.row - laneRow);
-  ok(forwardDistance >= 1.8, `${lane.id} marker sits in front of its gate`);
+  ok(forwardDistance >= 2.8, `${lane.id} marker sits farther in front of its gate`);
   ok(sideDistance >= 0.9, `${lane.id} marker is offset from the lane path`);
   ok(Number.isFinite(spec.facing), `${lane.id} carries lane-facing rotation`);
 }

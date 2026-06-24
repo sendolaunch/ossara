@@ -406,10 +406,10 @@ section("multi-lane spawning");
     const path = w.lanePaths[laneDef.id];
     const start = pointAtDistance(path, 0);
     ok(e && e.laneId === laneDef.id, `${laneDef.id} enemy records its lane id`);
-    ok(dist(e.x, e.z, start.x, start.z) > 0.05 && dist(e.x, e.z, start.x, start.z) <= 1.2, `${laneDef.id} enemy starts with slight lane-mouth spread`);
+    ok(dist(e.x, e.z, start.x, start.z) > 0.05 && dist(e.x, e.z, start.x, start.z) <= 1.8, `${laneDef.id} enemy starts with wider lane-mouth spread`);
     w._updateEnemies(1);
     const progressed = pointAtDistance(path, e.speed);
-    ok(dist(e.x, e.z, progressed.x, progressed.z) <= 1.8, `${laneDef.id} enemy follows near its lane path`);
+    ok(dist(e.x, e.z, progressed.x, progressed.z) <= 2.4, `${laneDef.id} enemy follows near its lane path`);
   }
 
   const spreadWorld = new World(LEVEL);

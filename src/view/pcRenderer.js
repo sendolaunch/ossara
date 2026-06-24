@@ -11,6 +11,7 @@ import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
+import { enemyModelUrl, resolveEnemyVisual } from "./enemyVisuals.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -19,6 +20,20 @@ function mat(colorKey, emissiveAmt = 0) {
   const m = new pc.StandardMaterial();
   m.diffuse = c;
   m.gloss = 0.3;
+  m.useMetalness = false;
+  if (emissiveAmt > 0) {
+    m.emissive = c;
+    m.emissiveIntensity = emissiveAmt;
+  }
+  m.update();
+  return m;
+}
+
+function matHex(hex, emissiveAmt = 0) {
+  const c = col(hex);
+  const m = new pc.StandardMaterial();
+  m.diffuse = c;
+  m.gloss = 0.2;
   m.useMetalness = false;
   if (emissiveAmt > 0) {
     m.emissive = c;
@@ -43,12 +58,30 @@ function addBox(root, material, x, z, sx, sy, sz, y = sy / 2) {
   return e;
 }
 
-const ENEMY_LOOK = {
-  husk: { type: "box", color: "ash", s: 0.6, em: 0 },
-  sprinter: { type: "cone", color: "plague", s: 0.55, em: 0.3 },
-  brute: { type: "sphere", color: "rot", s: 0.95, em: 0 },
-  herald: { type: "sphere", color: "blood", s: 1.5, em: 0.5 },
-};
+function fitRenderEntityToHeight(entity, targetHeight = 1, scaleMul = 1, yOffset = 0) {
+  try {
+    let aabb = null;
+    for (const r of entity.findComponents("render")) {
+      for (const mi of r.meshInstances) {
+        if (!aabb) aabb = mi.aabb.clone();
+        else aabb.add(mi.aabb);
+      }
+    }
+    if (!aabb) {
+      entity.setLocalScale(scaleMul, scaleMul, scaleMul);
+      entity.setLocalPosition(0, yOffset, 0);
+      return;
+    }
+    const h = aabb.halfExtents.y * 2;
+    const s = (h > 0.001 ? targetHeight / h : 1) * scaleMul;
+    entity.setLocalScale(s, s, s);
+    const foot = -(aabb.center.y - aabb.halfExtents.y) * s;
+    entity.setLocalPosition(-aabb.center.x * s, foot + yOffset, -aabb.center.z * s);
+  } catch (err) {
+    entity.setLocalScale(scaleMul, scaleMul, scaleMul);
+    entity.setLocalPosition(0, yOffset, 0);
+  }
+}
 
 const MISSION_CAMERA = {
   yaw: Math.PI / 2,
@@ -106,6 +139,8 @@ export class PCRenderer {
     this.app.root.addChild(sun);
 
     this.enemyEntities = new Map();
+    this.enemyModelCache = new Map();
+    this.enemyModelWarned = new Set();
     this.projEntities = new Map();
     this.towerEntities = new Map();
     this.spawnIndicatorEntities = [];
@@ -356,21 +391,21 @@ export class PCRenderer {
     for (const spec of spawnIndicatorSpecs(level)) {
       const group = new pc.Entity(`spawn-indicator-${spec.id}`);
       const aura = prim("torus", auraMat);
-      aura.setLocalScale(1.0 + spec.threatRating * 0.12, 1.0 + spec.threatRating * 0.12, 1.0 + spec.threatRating * 0.12);
+      aura.setLocalScale(1.15 + spec.threatRating * 0.12, 1.15 + spec.threatRating * 0.12, 1.15 + spec.threatRating * 0.12);
       aura.setLocalEulerAngles(90, 0, 0);
-      aura.setLocalPosition(0, spec.y, 0);
+      aura.setLocalPosition(0, 0.24, 0);
       group.addChild(aura);
       const crystal = prim("cone", crystalMat);
-      crystal.setLocalScale(0.34, 0.92, 0.34);
-      crystal.setLocalPosition(0, spec.y + 1.05, 0);
+      crystal.setLocalScale(0.32, 0.78, 0.32);
+      crystal.setLocalPosition(0, spec.y + 0.82, 0);
       group.addChild(crystal);
       const threatBar = prim("box", barMat);
       threatBar.setLocalScale(0.55 + spec.threatRating * 0.35, 0.08, 0.22);
-      threatBar.setLocalPosition(0, spec.y + 1.88, 0);
+      threatBar.setLocalPosition(0, spec.y + 1.58, 0);
       group.addChild(threatBar);
       const stem = prim("box", barMat);
-      stem.setLocalScale(0.05, 0.58, 0.05);
-      stem.setLocalPosition(0, spec.y + 0.58, 0);
+      stem.setLocalScale(0.045, 0.42, 0.045);
+      stem.setLocalPosition(0, spec.y + 0.42, 0);
       group.addChild(stem);
       group.setPosition(spec.x, 0, spec.z);
       group.setLocalEulerAngles(0, (spec.facing * 180) / Math.PI, 0);
@@ -405,7 +440,7 @@ export class PCRenderer {
   }
 
   setCommandTarget(tower, action = null, hero = null) {
-    this.commandTarget = tower && tower.alive ? { id: tower.id, x: tower.x, z: tower.z, action } : null;
+    this.commandTarget = tower && tower.alive ? { id: tower.id, x: tower.x, z: tower.z, action, radius: tower.blockRadius || 0.55 } : null;
     if (!this.commandTargetRing) return;
     this.commandTargetRing.enabled = !!this.commandTarget;
     if (this.commandTargetHalo) this.commandTargetHalo.enabled = !!this.commandTarget;
@@ -433,11 +468,16 @@ export class PCRenderer {
       return;
     }
     this._setCommandBeam(hero, tower, 0.45 + progress * 0.45);
+    const radius = Math.max(0.5, tower.blockRadius || 0.55);
+    const base = Math.max(0.72, radius * 1.55);
+    const pulse = 1.0 + progress * 0.18;
     this.commandTargetRing.enabled = true;
     this.commandTargetRing.setPosition(tower.x, 0.1, tower.z);
+    this.commandTargetRing.setLocalScale(base * pulse, base * pulse, base * pulse);
     if (this.commandTargetHalo) {
       this.commandTargetHalo.enabled = true;
       this.commandTargetHalo.setPosition(tower.x, 1.15, tower.z);
+      this.commandTargetHalo.setLocalScale(base * 0.58 * pulse, base * 0.58 * pulse, base * 0.58 * pulse);
     }
     if (this.commandTargetIcon) {
       this.commandTargetIcon.enabled = true;
@@ -546,6 +586,55 @@ export class PCRenderer {
     console.warn("[pcRenderer] animated mission hero unavailable; falling back", classId);
     await this._loadFallbackHero(classId);
     return false;
+  }
+
+  _loadEnemyContainer(type, url) {
+    if (!url) return Promise.resolve(null);
+    if (this.enemyModelCache.has(url)) return this.enemyModelCache.get(url);
+    const promise = new Promise((resolve) => {
+      try {
+        this.app.assets.loadFromUrl(url, "container", (err, asset) => {
+          const out = err || !asset || !asset.resource ? null : asset;
+          if (!out && !this.enemyModelWarned.has(type)) {
+            this.enemyModelWarned.add(type);
+            console.warn(`[pcRenderer] enemy model unavailable for ${type}: ${url}`);
+          }
+          resolve(out);
+        });
+      } catch (_) {
+        if (!this.enemyModelWarned.has(type)) {
+          this.enemyModelWarned.add(type);
+          console.warn(`[pcRenderer] enemy model load failed for ${type}: ${url}`);
+        }
+        resolve(null);
+      }
+    });
+    this.enemyModelCache.set(url, promise);
+    return promise;
+  }
+
+  _attachEnemyModel(ent, type, visual) {
+    const url = enemyModelUrl(visual);
+    if (!url || ent._ossaraModelRequested) return;
+    ent._ossaraModelRequested = true;
+    this._loadEnemyContainer(type, url).then((asset) => {
+      if (!asset || !this.enemyEntities.has(ent._ossaraEnemyId)) return;
+      let model = null;
+      try {
+        model = asset.resource.instantiateRenderEntity();
+      } catch (_) {
+        if (!this.enemyModelWarned.has(type)) {
+          this.enemyModelWarned.add(type);
+          console.warn(`[pcRenderer] enemy model instantiate failed for ${type}: ${url}`);
+        }
+        return;
+      }
+      fitRenderEntityToHeight(model, visual.targetHeight || 1.5, visual.scale || 1, visual.heightOffset || 0);
+      model.setLocalEulerAngles(0, ((visual.rotationOffset || 0) * 180) / Math.PI, 0);
+      ent._ossaraVisualWrap.addChild(model);
+      ent._ossaraModel = model;
+      if (ent._ossaraFallbackBody) ent._ossaraFallbackBody.enabled = false;
+    });
   }
 
   // ---- camera --------------------------------------------------------------
@@ -741,13 +830,15 @@ export class PCRenderer {
     if (!this.commandTargetRing || !this.commandTarget) return;
     const t = performance.now() * 0.001;
     const pulse = 1.05 + Math.sin(t * 7) * 0.12;
+    const radius = Math.max(0.5, this.commandTarget.radius || 0.55);
+    const base = Math.max(0.72, radius * 1.55);
     this.commandTargetRing.enabled = true;
     this.commandTargetRing.setPosition(this.commandTarget.x, 0.1, this.commandTarget.z);
-    this.commandTargetRing.setLocalScale(1.25 * pulse, 1.25 * pulse, 1.25 * pulse);
+    this.commandTargetRing.setLocalScale(base * pulse, base * pulse, base * pulse);
     if (this.commandTargetHalo) {
       this.commandTargetHalo.enabled = true;
       this.commandTargetHalo.setPosition(this.commandTarget.x, 1.16, this.commandTarget.z);
-      this.commandTargetHalo.setLocalScale(0.72 * pulse, 0.72 * pulse, 0.72 * pulse);
+      this.commandTargetHalo.setLocalScale(base * 0.58 * pulse, base * 0.58 * pulse, base * 0.58 * pulse);
     }
     if (this.commandTargetIcon) {
       this.commandTargetIcon.enabled = true;
@@ -770,7 +861,7 @@ export class PCRenderer {
       ent.setLocalScale(pulse, pulse, pulse);
       ent.setPosition(ent._ossaraSpec.x, Math.sin(t * 2.2) * 0.06, ent._ossaraSpec.z);
       const crystal = ent.children?.[1];
-      if (crystal) crystal.setLocalEulerAngles(0, t * 55, 18);
+      if (crystal) crystal.setLocalEulerAngles(18, t * 55, 24);
     }
     for (const ent of this.laneTelegraphEntities || []) {
       ent.enabled = show;
@@ -787,40 +878,55 @@ export class PCRenderer {
       seen.add(e.id);
       let ent = this.enemyEntities.get(e.id);
       if (!ent) {
-        const look = ENEMY_LOOK[e.type] || ENEMY_LOOK.husk;
+        const visual = resolveEnemyVisual(e.type);
         ent = new pc.Entity(`enemy-${e.id}`);
-        const bodyMat = mat(look.color, look.em);
-        const body = prim(look.type, bodyMat);
+        ent._ossaraEnemyId = e.id;
+        const visualWrap = new pc.Entity("visual");
+        ent.addChild(visualWrap);
+        const bodyMat = mat(visual.fallbackColor, visual.fallbackEmissive || 0);
+        const body = prim(visual.fallbackShape, bodyMat);
         body.name = "body";
-        body.setLocalScale(look.s, look.s, look.s);
-        ent.addChild(body);
-        const hpBg = prim("box", mat("void", 0));
+        const fallbackScale = visual.fallbackScale || 0.65;
+        body.setLocalScale(fallbackScale, fallbackScale, fallbackScale);
+        visualWrap.addChild(body);
+        const hpGroup = new pc.Entity("hp-bar");
+        hpGroup.setLocalPosition(0, visual.hpY || 1.65, 0);
+        ent.addChild(hpGroup);
+        const hpBg = prim("box", matHex(0x171915, 0));
         hpBg.name = "hp-bg";
-        hpBg.setLocalScale(0.92, 0.08, 0.06);
-        hpBg.setLocalPosition(0, 1.16, 0);
-        ent.addChild(hpBg);
+        hpBg.setLocalScale(1.28, 0.12, 0.07);
+        hpBg.setLocalPosition(0, 0, 0);
+        hpGroup.addChild(hpBg);
         const hpFill = prim("box", mat("blood", 0.45));
         hpFill.name = "hp-fill";
-        hpFill.setLocalScale(0.86, 0.09, 0.07);
-        hpFill.setLocalPosition(0, 1.18, 0);
-        ent.addChild(hpFill);
+        hpFill.setLocalScale(1.18, 0.13, 0.08);
+        hpFill.setLocalPosition(0, 0.012, 0.01);
+        hpGroup.addChild(hpFill);
         const hitRing = prim("torus", mat("blood", 1.2));
         hitRing.name = "hit-ring";
         hitRing.setLocalEulerAngles(90, 0, 0);
         hitRing.enabled = false;
         ent.addChild(hitRing);
+        ent._ossaraVisualWrap = visualWrap;
+        ent._ossaraFallbackBody = body;
         ent._ossaraBody = body;
         ent._ossaraBodyMat = bodyMat;
         ent._ossaraHitMat = mat("blood", 1.1);
+        ent._ossaraHpGroup = hpGroup;
         ent._ossaraHpBg = hpBg;
         ent._ossaraHpFill = hpFill;
         ent._ossaraHitRing = hitRing;
         this.app.root.addChild(ent);
         this.enemyEntities.set(e.id, ent);
+        this._attachEnemyModel(ent, e.type, visual);
       }
       ent.setPosition(e.x, e.radius, e.z);
       const flash = Math.max(0, e.hitFlash || 0);
       const showHp = e.alive && (e.hp < e.maxHp || (e.hpBarTimer || 0) > 0 || flash > 0);
+      if (ent._ossaraHpGroup) {
+        ent._ossaraHpGroup.enabled = showHp;
+        ent._ossaraHpGroup.setEulerAngles(this.cameraEntity.getEulerAngles());
+      }
       if (ent._ossaraBody?.render?.meshInstances?.[0]) {
         ent._ossaraBody.render.meshInstances[0].material = flash > 0 ? ent._ossaraHitMat : ent._ossaraBodyMat;
       }
@@ -828,8 +934,8 @@ export class PCRenderer {
       if (ent._ossaraHpFill) {
         const ratio = Math.max(0, Math.min(1, e.hp / e.maxHp));
         ent._ossaraHpFill.enabled = showHp;
-        ent._ossaraHpFill.setLocalScale(0.86 * ratio, 0.09, 0.07);
-        ent._ossaraHpFill.setLocalPosition(-0.43 * (1 - ratio), 1.18, 0);
+        ent._ossaraHpFill.setLocalScale(1.18 * ratio, 0.13, 0.08);
+        ent._ossaraHpFill.setLocalPosition(-0.59 * (1 - ratio), 0.012, 0.01);
       }
       if (ent._ossaraHitRing) {
         ent._ossaraHitRing.enabled = flash > 0;
