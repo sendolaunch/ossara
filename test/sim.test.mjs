@@ -28,6 +28,18 @@ function run(world, steps, dt, input = {}) {
   for (let i = 0; i < steps; i++) world.update(dt, input);
 }
 
+function spawnEnemyAt(world, typeId, laneId, dist) {
+  world._spawnEnemy(typeId, laneId);
+  const enemy = world.enemies[world.enemies.length - 1];
+  const lane = world.lanePaths[laneId] || world.lane;
+  const p = pointAtDistance(lane, dist);
+  enemy.dist = dist;
+  enemy.x = p.x;
+  enemy.z = p.z;
+  enemy.speed = 0;
+  return enemy;
+}
+
 // ---------------------------------------------------------------------------
 section("pathing");
 {
@@ -312,6 +324,130 @@ section("enemy vs blockade interaction");
     ok(enemy.blockingTargetId !== tower.id, `${towerId} is not treated as a blockade target`);
     ok(enemy.dist > distBefore, `${towerId} does not pause enemy movement`);
     ok(tower.hp === hpBefore, `${towerId} is not damaged by enemies in A2`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+section("turret behavior cleanup");
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "turret can be placed on a build shoulder");
+  const turret = placed.tower;
+  turret.projSpeed = Infinity;
+  turret.damage = 5;
+  turret.range = 20;
+  turret.attackRate = 1;
+  turret.fireRate = 1;
+  turret.cooldown = 0;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const hpBefore = enemy.hp;
+  w.update(0.1, {});
+  ok(enemy.hp === hpBefore - turret.damage, "turret damages an enemy in range");
+  const hpAfterShot = enemy.hp;
+  w.update(0.2, {});
+  ok(enemy.hp === hpAfterShot, "turret respects attack cooldown before firing again");
+  w.update(0.8, {});
+  ok(enemy.hp === hpAfterShot - turret.damage, "turret fires again after cooldown expires");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "out-of-range turret test can place ballista");
+  const turret = placed.tower;
+  turret.projSpeed = Infinity;
+  turret.damage = 20;
+  turret.range = 0.25;
+  turret.cooldown = 0;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const hpBefore = enemy.hp;
+  w.update(0.5, {});
+  ok(enemy.hp === hpBefore && turret.targetId === 0, "turret ignores enemies outside range");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "dead-target turret test can place ballista");
+  const turret = placed.tower;
+  turret.projSpeed = Infinity;
+  turret.damage = 20;
+  turret.range = 20;
+  turret.cooldown = 0;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  enemy.alive = false;
+  const hpBefore = enemy.hp;
+  w.update(0.5, {});
+  ok(enemy.hp === hpBefore && turret.targetId === 0, "turret ignores dead enemies");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "multi-lane turret test can place ballista");
+  const turret = placed.tower;
+  turret.projSpeed = Infinity;
+  turret.damage = 10;
+  turret.range = 100;
+  turret.attackRate = 10;
+  turret.cooldown = 0;
+  const north = spawnEnemyAt(w, "husk", "north-gate", 2);
+  const gardenPath = w.lanePaths["southeast-garden"];
+  const garden = spawnEnemyAt(w, "husk", "southeast-garden", gardenPath.total * 0.75);
+  const northHp = north.hp;
+  const gardenHp = garden.hp;
+  w.update(0.1, {});
+  ok(turret.targetId === garden.id, "turret prioritizes the enemy farther along its lane");
+  ok(garden.hp === gardenHp - turret.damage && north.hp === northHp, "turret can damage enemies from a non-default lane");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "projectile turret test can place ballista");
+  const turret = placed.tower;
+  turret.damage = 12;
+  turret.range = 100;
+  turret.projSpeed = 50;
+  turret.attackRate = 1;
+  turret.cooldown = 0;
+  const enemy = spawnEnemyAt(w, "husk", "northeast-market", w.lanePaths["northeast-market"].total * 0.5);
+  const hpBefore = enemy.hp;
+  w.update(0.1, {});
+  ok(w.projectiles.length > 0, "projectile turret creates a projectile against a valid target");
+  run(w, 20, 0.05, {});
+  ok(enemy.hp < hpBefore, "projectile turret damage lands on a multi-lane enemy");
+}
+
+{
+  for (const towerId of ["barricade", "spikegate", "trapstake", "censer", "brazier"]) {
+    const w = new World(LEVEL);
+    w.hero.alive = false;
+    w.hero.respawnTimer = Infinity;
+    const cell = towerId === "barricade" || towerId === "spikegate" ? { col: 24, row: 11 } : { col: 21, row: 10 };
+    const placed = w.tryPlaceTower(towerId, cell.col, cell.row);
+    ok(placed.ok, `${towerId} can be placed for non-turret targeting smoke`);
+    const defense = placed.tower;
+    defense.damage = 99;
+    defense.range = 100;
+    defense.attackRate = 20;
+    defense.cooldown = 0;
+    const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+    const hpBefore = enemy.hp;
+    w.update(0.5, {});
+    ok(defense.targetId === 0, `${towerId} does not use turret target acquisition`);
+    ok(enemy.hp === hpBefore, `${towerId} does not deal turret damage in A3`);
   }
 }
 

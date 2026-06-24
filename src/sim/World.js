@@ -148,6 +148,7 @@ export class World {
     tower.damage *= 1 + (this.bonuses.towerDamagePct || 0) / 100;
     tower.range *= 1 + (this.bonuses.rangePct || 0) / 100;
     tower.fireRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
+    tower.attackRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
     this.towers.push(tower);
     this.occupied.add(cellKey(col, row));
     this.events.push({ kind: "place", x: w.x, z: w.z });
@@ -285,15 +286,21 @@ export class World {
     if (e.hp <= 0) this._killEnemy(e);
   }
 
-  _nearestEnemyWithin(x, z, range) {
+  _bestTurretTarget(t) {
     let best = null;
-    let bestD = range * range;
+    let bestProgress = -Infinity;
+    let bestD = Infinity;
+    const r2 = t.range * t.range;
     for (const e of this.enemies) {
       if (!e.alive) continue;
-      const d = dist2(x, z, e.x, e.z);
-      if (d <= bestD) {
-        bestD = d;
+      const d = dist2(t.x, t.z, e.x, e.z);
+      if (d > r2) continue;
+      const lane = this.lanePaths[e.laneId] || this.lane;
+      const progress = lane && lane.total > 0 ? e.dist / lane.total : e.dist;
+      if (progress > bestProgress || (progress === bestProgress && d < bestD)) {
         best = e;
+        bestProgress = progress;
+        bestD = d;
       }
     }
     return best;
@@ -443,16 +450,16 @@ export class World {
   _updateTowers(dt) {
     for (const t of this.towers) {
       if (!t.alive) continue;
-      t.cooldown -= dt;
-      // Re-acquire target if lost.
-      let target = t.targetId ? this._enemyById(t.targetId) : null;
-      if (!target || dist2(t.x, t.z, target.x, target.z) > t.range * t.range) {
-        target = this._nearestEnemyWithin(t.x, t.z, t.range);
-        t.targetId = target ? target.id : 0;
+      if (t.defenseType !== "turret") {
+        t.targetId = 0;
+        continue;
       }
+      t.cooldown -= dt;
+      const target = this._bestTurretTarget(t);
+      t.targetId = target ? target.id : 0;
       if (target) t.facing = Math.atan2(target.x - t.x, target.z - t.z);
       if (target && t.cooldown <= 0) {
-        t.cooldown = 1 / t.fireRate;
+        t.cooldown = 1 / Math.max(0.01, t.attackRate || t.fireRate || 1);
         if (t.projSpeed === Infinity) {
           // Hitscan.
           this._applyHit(target, t.x, t.z, t.damage, t.splash);
