@@ -170,7 +170,10 @@ rig: ${state.animationSet || "none"}
 loaded: ${state.modelLoaded ? "yes" : "no"}
 fallback: ${state.fallbackUsed ? "yes" : "no"}
 anim: ${state.animationLoaded ? "yes" : "no"}
+desired: ${state.desiredState || "pending"}
 clip: ${state.currentClip || "pending"}
+moving: ${state.isMoving ? "yes" : "no"} d:${Number(state.movementDelta || 0).toFixed(3)} lane:${Number(state.laneProgressDelta || 0).toFixed(3)}
+blocker: ${state.attackingBlocker ? "yes" : "no"}
 clips: ${(state.availableClips || []).join(", ") || "pending"}`;
       try {
         const out = new pc.Vec3();

@@ -11,7 +11,7 @@ import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
-import { enemyAnimationSet, enemyModelUrl, resolveEnemyVisual } from "./enemyVisuals.js";
+import { enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -121,6 +121,11 @@ function animationChangesPose(entity) {
     return false;
   }
   return poseChanged(before, poseSignature(probe));
+}
+
+function animationStateChangesPose(entity, layer, state) {
+  gotoAnim(layer, state, 0);
+  return animationChangesPose(entity);
 }
 
 const MISSION_CAMERA = {
@@ -659,12 +664,9 @@ export class PCRenderer {
     const tracks = {};
     try {
       for (const lib of animSet.libs || []) collectAnimTracks(await this._loadEnemyContainer(`${type}:${visual.animationSet}`, lib), tracks);
-      const clips = animSet.clips || {};
-      const idle = tracks[clips.idle];
-      const walk = tracks[clips.walk] || tracks[clips.run];
-      const run = tracks[clips.run] || tracks[clips.walk];
-      if (!idle || !walk) return null;
       const availableClips = Object.keys(tracks).sort();
+      const clips = resolveEnemyAnimationClips(animSet, availableClips);
+      if (!clips.safe || !tracks[clips.idle] || !tracks[clips.movement]) return null;
 
       model.addComponent("anim", { activate: true });
       const assign = (state, clipName, loop = true) => {
@@ -678,11 +680,25 @@ export class PCRenderer {
         }
       };
       assign("Idle", clips.idle, true);
-      assign("Walk", clips.walk || clips.run, true);
-      assign("Run", clips.run || clips.walk, true);
+      const choosePoseClip = (state, candidates) => {
+        for (const clipName of candidates || []) {
+          if (!assign(state, clipName, true)) continue;
+          const changed = animationStateChangesPose(model, model.anim.baseLayer || null, state);
+          if (changed !== false) return clipName;
+        }
+        return "";
+      };
+      const layer = model.anim.baseLayer || null;
+      const walkClip = choosePoseClip("Walk", clips.walkCandidates);
+      const runClip = choosePoseClip("Run", clips.runCandidates) || walkClip;
+      if (!walkClip) return null;
+      assign("Walk", walkClip, true);
+      assign("Run", runClip, true);
+      clips.walk = walkClip;
+      clips.run = runClip;
+      clips.movement = walkClip;
       const hasAttack = assign("Attack", clips.attack, false);
       const hasDeath = assign("Death", clips.death, false);
-      const layer = model.anim.baseLayer || null;
       gotoAnim(layer, "Idle", 0);
       const probe = animationChangesPose(model);
       if (probe === false) return null;
@@ -1115,11 +1131,12 @@ export class PCRenderer {
         this.enemyEntities.set(e.id, ent);
         this._attachEnemyModel(ent, e.type, visual);
       }
-      const prev = ent._ossaraPrevPos || { x: e.x, z: e.z };
+      const prev = ent._ossaraPrevPos || { x: e.x, z: e.z, dist: e.dist || 0 };
       const movedDist = Math.hypot(e.x - prev.x, e.z - prev.z);
+      const progressed = Math.abs((e.dist || 0) - (prev.dist || 0));
       const forcedState = e.previewAnimState || "";
       const forcedClip = e.previewAnimClip || "";
-      const moving = forcedState ? (forcedState === "walk" || forcedState === "run") : movedDist > 0.002 && !e.attackingBlocker;
+      const moving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.002 || progressed > 0.002) && !e.attackingBlocker;
       if (movedDist > 0.001) ent.setLocalEulerAngles(0, (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI, 0);
       if (forcedClip) ent._ossaraAnim?.playClip?.(forcedClip, true);
       else if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
@@ -1128,8 +1145,17 @@ export class PCRenderer {
         ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
       }
       ent._ossaraAnim?.update(dt);
-      if (ent._ossaraDebug && ent._ossaraAnim?.state) ent._ossaraDebug.currentClip = ent._ossaraAnim.state().currentClip;
-      ent._ossaraPrevPos = { x: e.x, z: e.z };
+      if (ent._ossaraDebug) {
+        const animState = ent._ossaraAnim?.state?.();
+        ent._ossaraDebug.currentClip = animState?.currentClip || ent._ossaraDebug.currentClip;
+        ent._ossaraDebug.currentState = animState?.currentState || "";
+        ent._ossaraDebug.desiredState = forcedClip ? `clip:${forcedClip}` : forcedState || (e.attackingBlocker ? "attack" : moving ? (e.speed >= 2.25 ? "run" : "walk") : "idle");
+        ent._ossaraDebug.isMoving = moving;
+        ent._ossaraDebug.movementDelta = movedDist;
+        ent._ossaraDebug.laneProgressDelta = progressed;
+        ent._ossaraDebug.attackingBlocker = !!e.attackingBlocker;
+      }
+      ent._ossaraPrevPos = { x: e.x, z: e.z, dist: e.dist || 0 };
       ent.setPosition(e.x, e.radius, e.z);
       const flash = Math.max(0, e.hitFlash || 0);
       const showHp = e.alive && (e.hp < e.maxHp || (e.hpBarTimer || 0) > 0 || flash > 0);
