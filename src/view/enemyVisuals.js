@@ -91,3 +91,17 @@ export function enemyAnimationClipForState(resolved, state) {
   if (normalized === "death") return resolved?.death || "";
   return resolved?.idle || "";
 }
+
+export function classifyFullBodyMotion(deltas = {}, threshold = 0.0001) {
+  const moved = (key) => Number(deltas[key] || 0) > threshold;
+  const movedGroups = ["root", "torso", "head", "arms", "legs", "feet"].filter(moved);
+  const lowerBody = moved("legs") || moved("feet");
+  const upperBody = moved("torso") || moved("head") || moved("arms");
+  const core = moved("root") || moved("torso");
+  return {
+    animatedBoneGroups: movedGroups.length,
+    fullBodyAnimated: lowerBody && upperBody && (core || movedGroups.length >= 3),
+    legOnlyAnimation: lowerBody && !upperBody,
+    staticPoseRisk: movedGroups.length === 0 || (lowerBody && !upperBody),
+  };
+}

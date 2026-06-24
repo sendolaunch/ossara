@@ -4,6 +4,7 @@ import { ENEMIES } from "../src/config/enemies.js";
 import { ENEMY_ANIMATION_SETS, ENEMY_VISUAL_THEMES } from "../src/config/enemyVisualThemes.js";
 import {
   ACTIVE_ENEMY_VISUAL_THEME,
+  classifyFullBodyMotion,
   enemyAnimationClipForState,
   enemyAnimationSet,
   enemyModelUrl,
@@ -53,6 +54,18 @@ for (const id of Object.keys(ENEMIES)) {
   ok(enemyAnimationClipForState(resolvedClips, "walk") !== "T-Pose", `${id} walk state does not select T-Pose`);
   ok(enemyAnimationClipForState(resolvedClips, "run") !== "T-Pose", `${id} run state does not select T-Pose`);
   ok(clipBank.has(enemyAnimationClipForState(resolvedClips, "attack")), `${id} attack clip remains mapped`);
+  const visualResolvedClips = resolveEnemyAnimationClips({ ...anim, clips: { ...(anim.clips || {}), ...(visual.animationClips || {}) } }, Array.from(clipBank));
+  ok(clipBank.has(enemyAnimationClipForState(visualResolvedClips, "walk")), `${id} visual walk override selects an existing clip`);
+  ok(clipBank.has(enemyAnimationClipForState(visualResolvedClips, "run")), `${id} visual run override selects an existing clip`);
+  ok(enemyAnimationClipForState(visualResolvedClips, "walk") !== "T-Pose", `${id} visual walk override does not select T-Pose`);
+  ok(enemyAnimationClipForState(visualResolvedClips, "run") !== "T-Pose", `${id} visual run override does not select T-Pose`);
+  for (const [state, speed] of Object.entries(visual.animationSpeed || {})) {
+    ok(Number.isFinite(speed) && speed > 0, `${id} ${state} animation speed is positive`);
+  }
+  ok(visual.useProceduralLocomotionFallback === true, `${id} opts into procedural locomotion fallback`);
+  ok(Number.isFinite(visual.proceduralLocomotion?.bob) && visual.proceduralLocomotion.bob > 0, `${id} procedural bob is configured`);
+  ok(Number.isFinite(visual.proceduralLocomotion?.sway) && visual.proceduralLocomotion.sway > 0, `${id} procedural sway is configured`);
+  ok(Number.isFinite(visual.proceduralLocomotion?.lean) && visual.proceduralLocomotion.lean > 0, `${id} procedural lean is configured`);
   const url = enemyModelUrl(visual);
   ok(url.startsWith("models/skeletons/"), `${id} resolves to skeleton model URL`);
   ok(existsSync(join("public", url)), `${id} model file exists locally`);
@@ -75,6 +88,15 @@ ok(enemyAnimationClipForState(fallbackClips, "attack") === "Hit_A", "attack fall
 const unsafeClips = resolveEnemyAnimationClips({ clips: { idle: "Idle_A", walk: "Missing_Walk" } }, ["Idle_A", "T-Pose"]);
 ok(!unsafeClips.safe, "missing movement clip without compatible fallback is unsafe");
 ok(enemyAnimationClipForState(unsafeClips, "walk") === "", "unsafe movement state does not select an undefined clip");
+
+const fullBody = classifyFullBodyMotion({ root: 0.02, torso: 0.03, head: 0.01, arms: 0.04, legs: 0.05 });
+ok(fullBody.fullBodyAnimated, "full-body probe classifies torso/head/arms/legs motion as full-body");
+ok(!fullBody.legOnlyAnimation, "full-body probe does not classify full-body motion as leg-only");
+
+const legOnly = classifyFullBodyMotion({ root: 0, torso: 0, head: 0, arms: 0, legs: 0.05, feet: 0.02 });
+ok(!legOnly.fullBodyAnimated, "full-body probe rejects leg-only motion as full-body");
+ok(legOnly.legOnlyAnimation, "full-body probe classifies leg-only motion");
+ok(legOnly.staticPoseRisk, "leg-only motion is a static/T-pose readability risk");
 
 const missing = resolveEnemyVisual("missing-type");
 ok(missing.fallbackShape === "box" && missing.fallbackColor === "ash", "missing enemy type falls back to husk primitive");

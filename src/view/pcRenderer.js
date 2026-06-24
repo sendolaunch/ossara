@@ -11,7 +11,7 @@ import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
-import { enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
+import { classifyFullBodyMotion, enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -125,6 +125,41 @@ function findAnimProbe(entity) {
     || entity?.findByName?.("chest")
     || entity?.findByName?.("upperarm.l")
     || null;
+}
+
+const FULL_BODY_PROBES = {
+  root: ["root", "hips", "pelvis"],
+  torso: ["spine", "chest"],
+  head: ["head", "neck"],
+  arms: ["upperarm.l", "upperarm.r", "lowerarm.l", "lowerarm.r", "hand.l", "hand.r"],
+  legs: ["upperleg.l", "upperleg.r", "lowerleg.l", "lowerleg.r"],
+  feet: ["foot.l", "foot.r", "toes.l", "toes.r"],
+};
+
+function findAnyByName(entity, names = []) {
+  for (const name of names) {
+    const found = entity?.findByName?.(name);
+    if (found) return found;
+  }
+  return null;
+}
+
+function fullBodyProbeMap(entity) {
+  const out = {};
+  for (const [group, names] of Object.entries(FULL_BODY_PROBES)) out[group] = findAnyByName(entity, names);
+  return out;
+}
+
+function fullBodyPose(probes = {}) {
+  const out = {};
+  for (const [group, bone] of Object.entries(probes)) out[group] = poseSignature(bone);
+  return out;
+}
+
+function fullBodyDeltas(before = {}, after = {}) {
+  const out = {};
+  for (const group of Object.keys(FULL_BODY_PROBES)) out[group] = poseDistance(before[group], after[group]);
+  return out;
 }
 
 function animationChangesPose(entity, probe = findAnimProbe(entity)) {
@@ -248,7 +283,7 @@ export class PCRenderer {
     const states = this.enemyDebugStates().slice(0, 7);
     this.enemyAnimDebugEl.textContent = [
       "ENEMY ANIM DEBUG",
-      ...states.map((s) => `${s.id || "?"} ${s.type || "?"} desired=${s.desiredState || "?"} state=${s.currentState || "?"} clip=${s.currentClip || "?"} t=${Number(s.currentTime || 0).toFixed(2)} moving=${s.isMoving ? "Y" : "N"} bound=${s.animBound === null ? "?" : s.animBound ? "Y" : "N"} bone=${s.boneProbeName || "-"} d=${Number(s.boneDelta || 0).toFixed(4)} fallback=${s.fallbackUsed ? "Y" : "N"} reason=${s.fallbackReason || "-"}`),
+      ...states.map((s) => `${s.id || "?"} ${s.type || "?"} desired=${s.desiredState || "?"} state=${s.currentState || "?"} clip=${s.currentClip || "?"} speed=${Number(s.playbackSpeed || 1).toFixed(2)} t=${Number(s.currentTime || 0).toFixed(2)} moving=${s.isMoving ? "Y" : "N"} full=${s.fullBodyAnimated ? "Y" : "N"} legOnly=${s.legOnlyAnimation ? "Y" : "N"} proc=${s.proceduralLocomotionActive ? "Y" : "N"} risk=${s.staticPoseRisk ? "Y" : "N"} groups=${s.animatedBoneGroups || 0} root=${Number(s.fullBodyDeltas?.root || 0).toFixed(3)} torso=${Number(s.fullBodyDeltas?.torso || 0).toFixed(3)} head=${Number(s.fullBodyDeltas?.head || 0).toFixed(3)} arms=${Number(s.fullBodyDeltas?.arms || 0).toFixed(3)} legs=${Number(s.fullBodyDeltas?.legs || 0).toFixed(3)} fallback=${s.fallbackUsed ? "Y" : "N"}`),
     ].join("\n");
   }
 
@@ -715,8 +750,16 @@ export class PCRenderer {
     try {
       for (const lib of animSet.libs || []) collectAnimTracks(await this._loadEnemyContainer(`${type}:${visual.animationSet}`, lib), tracks);
       const availableClips = Object.keys(tracks).sort();
-      const clips = resolveEnemyAnimationClips(animSet, availableClips);
+      const clips = resolveEnemyAnimationClips({
+        ...animSet,
+        clips: { ...(animSet.clips || {}), ...(visual.animationClips || {}) },
+      }, availableClips);
       if (!clips.safe || !tracks[clips.idle] || !tracks[clips.movement]) return null;
+      const speedCfg = visual.animationSpeed || {};
+      const speedForState = (state) => {
+        const key = String(state || "idle").toLowerCase();
+        return Number.isFinite(speedCfg[key]) ? speedCfg[key] : Number.isFinite(speedCfg.move) && (key === "walk" || key === "run") ? speedCfg.move : 1;
+      };
 
       model.addComponent("anim", { activate: true });
       const assign = (state, clipName, loop = true) => {
@@ -751,9 +794,11 @@ export class PCRenderer {
       const hasDeath = assign("Death", clips.death, false);
       gotoAnim(layer, "Idle", 0);
       const probeBone = findAnimProbe(model);
+      const bodyProbes = fullBodyProbeMap(model);
       const probe = animationChangesPose(model, probeBone);
       if (probe === false) return null;
       gotoAnim(layer, "Idle", 0);
+      const initialBodyPose = fullBodyPose(bodyProbes);
       const st = {
         layer,
         moving: false,
@@ -774,6 +819,12 @@ export class PCRenderer {
         animBound: null,
         staticWhileMoving: false,
         failed: false,
+        fullBodyDeltas: {},
+        fullBodyAnimated: false,
+        legOnlyAnimation: false,
+        staticPoseRisk: false,
+        animatedBoneGroups: 0,
+        lastFullBodyPose: initialBodyPose,
       };
       const play = (state, blend = 0.12) => {
         if (!state) return;
@@ -786,6 +837,7 @@ export class PCRenderer {
         st.staticWhileMoving = false;
         st.failed = false;
         st.lastPose = poseSignature(probeBone);
+        st.lastFullBodyPose = fullBodyPose(bodyProbes);
       };
       return {
         setMoving(moving, running = false) {
@@ -835,7 +887,7 @@ export class PCRenderer {
           const shouldAnimate = st.current === "Walk" || st.current === "Run" || st.current === "Attack" || st.current === "Death";
           if (shouldAnimate && typeof model.anim?.update === "function") {
             try {
-              model.anim.update(dt);
+              model.anim.update(dt * speedForState(st.current));
             } catch (_) {
               st.failed = true;
             }
@@ -844,7 +896,15 @@ export class PCRenderer {
           st.boneDelta = poseDistance(st.lastPose, pose);
           st.boneChanged = st.boneDelta > 0.0001;
           st.lastPose = pose;
-          st.elapsed += dt;
+          const bodyPose = fullBodyPose(bodyProbes);
+          st.fullBodyDeltas = fullBodyDeltas(st.lastFullBodyPose, bodyPose);
+          st.lastFullBodyPose = bodyPose;
+          const bodyClass = classifyFullBodyMotion(st.fullBodyDeltas, 0.0001);
+          st.fullBodyAnimated = bodyClass.fullBodyAnimated;
+          st.legOnlyAnimation = bodyClass.legOnlyAnimation;
+          st.staticPoseRisk = bodyClass.staticPoseRisk;
+          st.animatedBoneGroups = bodyClass.animatedBoneGroups;
+          st.elapsed += dt * speedForState(st.current);
           if (shouldAnimate && st.boneChanged) {
             st.staticTime = 0;
             st.animBound = true;
@@ -870,6 +930,7 @@ export class PCRenderer {
             currentState: st.current,
             currentClip: st.currentClip || st.current,
             currentTime: st.elapsed,
+            playbackSpeed: speedForState(st.current),
             hasAttack,
             hasDeath,
             availableClips,
@@ -881,6 +942,11 @@ export class PCRenderer {
             animBound: st.animBound,
             staticWhileMoving: st.staticWhileMoving,
             failed: st.failed,
+            fullBodyDeltas: st.fullBodyDeltas,
+            fullBodyAnimated: st.fullBodyAnimated,
+            legOnlyAnimation: st.legOnlyAnimation,
+            staticPoseRisk: st.staticPoseRisk,
+            animatedBoneGroups: st.animatedBoneGroups,
           };
         },
       };
@@ -965,6 +1031,33 @@ export class PCRenderer {
       animBound: false,
       staticWhileMoving: reason === "static-animation",
     };
+  }
+
+  _syncEnemyProceduralLocomotion(ent, enemy, moving, forcedState = "", forcedClip = "", dt = 0) {
+    const visual = ent?._ossaraVisual || {};
+    const wrap = ent?._ossaraVisualWrap;
+    if (!wrap) return false;
+    const clipLooksLikeMove = !forcedClip || /walk|run|move|movement|locomotion/i.test(forcedClip);
+    const stateLooksLikeMove = !forcedState || forcedState === "walk" || forcedState === "run";
+    const active = !!visual.useProceduralLocomotionFallback && !!moving && !enemy.attackingBlocker && clipLooksLikeMove && stateLooksLikeMove;
+    if (!active) {
+      wrap.setLocalPosition(0, 0, 0);
+      wrap.setLocalEulerAngles(0, 0, 0);
+      ent._ossaraProceduralLocomotionActive = false;
+      return false;
+    }
+    const cfg = visual.proceduralLocomotion || {};
+    const runMul = enemy.speed >= 2.25 || forcedState === "run" || /run/i.test(forcedClip) ? 1.2 : 1;
+    const rate = (cfg.rate || Math.max(3, enemy.speed * 2.6)) * runMul;
+    ent._ossaraProcT = (ent._ossaraProcT || enemy.id * 0.37) + dt * rate;
+    const t = ent._ossaraProcT;
+    const bob = Math.abs(Math.sin(t)) * (cfg.bob ?? 0.04);
+    const sway = Math.sin(t) * (cfg.sway ?? 3.5);
+    const lean = cfg.lean ?? 4;
+    wrap.setLocalPosition(0, bob, 0);
+    wrap.setLocalEulerAngles(lean, 0, sway);
+    ent._ossaraProceduralLocomotionActive = true;
+    return true;
   }
 
   enemyDebugStates() {
@@ -1251,6 +1344,7 @@ export class PCRenderer {
         hitRing.enabled = false;
         ent.addChild(hitRing);
         ent._ossaraVisualWrap = visualWrap;
+        ent._ossaraVisual = visual;
         ent._ossaraFallbackBody = body;
         ent._ossaraBody = body;
         ent._ossaraBodyMat = bodyMat;
@@ -1287,11 +1381,13 @@ export class PCRenderer {
         ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
       }
       ent._ossaraAnim?.update(dt);
+      const proceduralActive = this._syncEnemyProceduralLocomotion(ent, e, moving, forcedState, forcedClip, dt);
       if (ent._ossaraDebug) {
         const animState = ent._ossaraAnim?.state?.();
         ent._ossaraDebug.currentClip = animState?.currentClip || ent._ossaraDebug.currentClip;
         ent._ossaraDebug.currentState = animState?.currentState || "";
         ent._ossaraDebug.currentTime = animState?.currentTime ?? 0;
+        ent._ossaraDebug.playbackSpeed = animState?.playbackSpeed ?? 1;
         ent._ossaraDebug.desiredState = forcedClip ? `clip:${forcedClip}` : forcedState || (e.attackingBlocker ? "attack" : moving ? (e.speed >= 2.25 ? "run" : "walk") : "idle");
         ent._ossaraDebug.isMoving = moving;
         ent._ossaraDebug.movementDelta = movedDist;
@@ -1304,6 +1400,12 @@ export class PCRenderer {
         ent._ossaraDebug.boneChanged = !!animState?.boneChanged;
         ent._ossaraDebug.animBound = animState?.animBound ?? null;
         ent._ossaraDebug.staticWhileMoving = !!animState?.staticWhileMoving;
+        ent._ossaraDebug.fullBodyDeltas = animState?.fullBodyDeltas || {};
+        ent._ossaraDebug.fullBodyAnimated = !!animState?.fullBodyAnimated;
+        ent._ossaraDebug.legOnlyAnimation = !!animState?.legOnlyAnimation;
+        ent._ossaraDebug.staticPoseRisk = !!animState?.staticPoseRisk && !proceduralActive;
+        ent._ossaraDebug.animatedBoneGroups = animState?.animatedBoneGroups || 0;
+        ent._ossaraDebug.proceduralLocomotionActive = proceduralActive;
         if (animState?.failed && moving) this._useEnemyPrimitiveFallback(ent, "static-animation");
       }
       ent._ossaraPrevPos = { x: e.x, z: e.z, dist: e.dist || 0 };

@@ -172,9 +172,12 @@ fallback: ${state.fallbackUsed ? "yes" : "no"}
 anim: ${state.animationLoaded ? "yes" : "no"}
 desired: ${state.desiredState || "pending"}
 clip: ${state.currentClip || "pending"}
-time: ${Number(state.currentTime || 0).toFixed(2)} animEnt: ${state.animEntityName || "-"}
+time: ${Number(state.currentTime || 0).toFixed(2)} speed:${Number(state.playbackSpeed || 1).toFixed(2)} animEnt: ${state.animEntityName || "-"}
 moving: ${state.isMoving ? "yes" : "no"} d:${Number(state.movementDelta || 0).toFixed(3)} lane:${Number(state.laneProgressDelta || 0).toFixed(3)}
 bone: ${state.boneProbeName || "-"} delta:${Number(state.boneDelta || 0).toFixed(4)} bound:${state.animBound === null ? "?" : state.animBound ? "yes" : "no"}
+fullBody: ${state.fullBodyAnimated ? "YES" : "NO"} legOnly: ${state.legOnlyAnimation ? "YES" : "NO"} staticRisk: ${state.staticPoseRisk ? "YES" : "NO"}
+groups: ${state.animatedBoneGroups || 0} root:${Number(state.fullBodyDeltas?.root || 0).toFixed(3)} torso:${Number(state.fullBodyDeltas?.torso || 0).toFixed(3)} head:${Number(state.fullBodyDeltas?.head || 0).toFixed(3)} arms:${Number(state.fullBodyDeltas?.arms || 0).toFixed(3)} legs:${Number(state.fullBodyDeltas?.legs || 0).toFixed(3)}
+procedural: ${state.proceduralLocomotionActive ? "YES" : "NO"}
 blocker: ${state.attackingBlocker ? "yes" : "no"}
 fallbackReason: ${state.fallbackReason || "-"}
 clips: ${(state.availableClips || []).join(", ") || "pending"}`;
