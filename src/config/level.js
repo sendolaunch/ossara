@@ -11,6 +11,7 @@ export const LANES = [
     spawn: { col: 60, row: 0 },
     spawnWidth: 3.9,
     spawnSpreadFade: 22,
+    corridorWidth: 2.7,
     waypoints: [
       { col: 60, row: 0 },
       { col: 60, row: 20 },
@@ -38,6 +39,7 @@ export const LANES = [
     spawn: { col: 12, row: 12 },
     spawnWidth: 3.4,
     spawnSpreadFade: 20,
+    corridorWidth: 2.5,
     waypoints: [
       { col: 12, row: 12 },
       { col: 12, row: 26 },
@@ -69,6 +71,7 @@ export const LANES = [
     spawn: { col: 108, row: 12 },
     spawnWidth: 3.4,
     spawnSpreadFade: 20,
+    corridorWidth: 2.5,
     waypoints: [
       { col: 108, row: 12 },
       { col: 108, row: 26 },
@@ -100,6 +103,7 @@ export const LANES = [
     spawn: { col: 12, row: 78 },
     spawnWidth: 3.6,
     spawnSpreadFade: 21,
+    corridorWidth: 2.6,
     waypoints: [
       { col: 12, row: 78 },
       { col: 28, row: 78 },
@@ -131,6 +135,7 @@ export const LANES = [
     spawn: { col: 108, row: 78 },
     spawnWidth: 3.6,
     spawnSpreadFade: 21,
+    corridorWidth: 2.6,
     waypoints: [
       { col: 108, row: 78 },
       { col: 92, row: 78 },
@@ -200,6 +205,7 @@ export const LEVEL = {
   openBuildable: true,
   spawnWidth: 3.6,
   spawnSpreadFade: 21,
+  corridorWidth: 2.6,
 
   core: { col: 60, row: 45 },
   heroSpawn: { col: 60, row: 51 },

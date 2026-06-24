@@ -10,6 +10,20 @@ import { HERO } from "../config/hero.js";
 import { CLASS_KITS } from "../config/kits.js";
 import { MOVE } from "../config/moves.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, gridToWorld, worldToGrid, cellKey, expandRects, getLevelLanes } from "./pathing.js";
+import {
+  advanceEnemyAlongLane,
+  applyEnemySeparation,
+  chooseBlockadeAttackSlot,
+  computeLanePosition,
+  computeSpawnSpreadOffset,
+  isBlockerNearLane,
+  isEnemyInBlockerAttackContact,
+  isEnemyInBlockerContact,
+  isEnemyInBlockerPhysicalContact,
+  isEnemyNearBlocker,
+  moveToward,
+  releaseAttackSlot,
+} from "./enemyMovement.js";
 import { Pool } from "./pool.js";
 import { createEnemy, resetEnemy } from "./Enemy.js";
 import { createProjectile, resetProjectile } from "./Projectile.js";
@@ -29,71 +43,6 @@ const REPAIR_COST = (baseCost, hp, maxHp) => {
   if (!maxHp || hp >= maxHp) return 0;
   return Math.max(1, Math.ceil(baseCost * 0.35 * ((maxHp - hp) / maxHp)));
 };
-const SPAWN_SPREAD_PATTERN = [-0.62, 0.62, -0.28, 0.28, 0, -0.46, 0.46, -0.78, 0.78];
-const BLOCKADE_SLOT_OFFSETS = [0, -0.68, 0.68, -1.22, 1.22];
-
-function spawnSpreadOffset(id, width) {
-  const base = SPAWN_SPREAD_PATTERN[id % SPAWN_SPREAD_PATTERN.length] * width;
-  const n = Math.sin(id * 12.9898 + width * 78.233) * 43758.5453;
-  const jitter = (n - Math.floor(n) - 0.5) * width * 0.16;
-  return Math.max(-width * 0.85, Math.min(width * 0.85, base + jitter));
-}
-
-function lanePerpAtDistance(lane, dist) {
-  if (!lane?.pts?.length || lane.pts.length < 2) return { x: 1, z: 0 };
-  let d = Math.max(0, dist);
-  for (let i = 0; i < lane.segLen.length; i++) {
-    const seg = lane.segLen[i];
-    if (d <= seg || i === lane.segLen.length - 1) {
-      const a = lane.pts[i];
-      const b = lane.pts[i + 1];
-      const dx = b.x - a.x;
-      const dz = b.z - a.z;
-      const len = Math.hypot(dx, dz) || 1;
-      return { x: -dz / len, z: dx / len };
-    }
-    d -= seg;
-  }
-  return { x: 1, z: 0 };
-}
-
-function laneTangentAtDistance(lane, dist) {
-  if (!lane?.pts?.length || lane.pts.length < 2) return { x: 0, z: 1 };
-  let d = Math.max(0, dist);
-  for (let i = 0; i < lane.segLen.length; i++) {
-    const seg = lane.segLen[i];
-    if (d <= seg || i === lane.segLen.length - 1) {
-      const a = lane.pts[i];
-      const b = lane.pts[i + 1];
-      const dx = b.x - a.x;
-      const dz = b.z - a.z;
-      const len = Math.hypot(dx, dz) || 1;
-      return { x: dx / len, z: dz / len };
-    }
-    d -= seg;
-  }
-  return { x: 0, z: 1 };
-}
-
-function pointAtDistanceWithOffset(lane, dist, offset = 0, fade = 12) {
-  const p = pointAtDistance(lane, dist);
-  if (!offset || p.done) return p;
-  const perp = lanePerpAtDistance(lane, dist);
-  const k = Math.max(0, 1 - Math.max(0, dist) / Math.max(1, fade));
-  return { ...p, x: p.x + perp.x * offset * k, z: p.z + perp.z * offset * k };
-}
-
-function moveToward(e, target, maxStep) {
-  const dx = target.x - e.x;
-  const dz = target.z - e.z;
-  const d = Math.hypot(dx, dz);
-  if (d <= 0.0001) return true;
-  const step = Math.min(maxStep, d);
-  e.x += (dx / d) * step;
-  e.z += (dz / d) * step;
-  return d <= maxStep + 0.03;
-}
-
 export class World {
   constructor(level, waves = WAVES, opts = {}) {
     this.level = level;
@@ -358,9 +307,9 @@ export class World {
     const id = this._nextId++;
     const lane = path.lane || {};
     const width = lane.spawnWidth ?? this.level.spawnWidth ?? 1.8;
-    const offset = spawnSpreadOffset(id, width);
+    const offset = computeSpawnSpreadOffset(id, width);
     const fade = lane.spawnSpreadFade ?? this.level.spawnSpreadFade ?? 14;
-    const start = pointAtDistanceWithOffset(path, 0, offset, fade);
+    const start = computeLanePosition(path, 0, offset, { fadeNearCore: fade, corridorWidth: lane.corridorWidth ?? this.level.corridorWidth });
     this.enemyPool.acquire(def, id, start, path.id || laneId || this.defaultLaneId, { laneOffset: offset, laneOffsetFade: fade });
   }
 
@@ -408,9 +357,10 @@ export class World {
       const blocker = this._findBlockingDefense(e);
       if (blocker) {
         e.blockingTargetId = blocker.id;
-        const slot = this._assignBlockerSlot(e, blocker);
-        const atSlot = slot ? moveToward(e, slot, e.speed * dt) : this._enemyInBlockerContact(e, blocker);
-        e.attackingBlocker = !!(atSlot && this._enemyInBlockerContact(e, blocker));
+        const lane = this.lanePaths[e.laneId] || this.lane;
+        const slot = chooseBlockadeAttackSlot(e, blocker, this.enemies, lane);
+        const atSlot = slot ? moveToward(e, slot, e.speed * dt) : isEnemyInBlockerContact(e, blocker);
+        e.attackingBlocker = !!(atSlot && isEnemyInBlockerAttackContact(e, blocker));
         if (e.attackingBlocker) {
           this._applyBlockadeContactDamage(blocker, e, dt);
           if (e.attackCd <= 0) {
@@ -420,12 +370,9 @@ export class World {
         }
         continue;
       }
-      this._releaseBlockerSlot(e);
-      e.dist += e.speed * dt;
+      releaseAttackSlot(e);
       const lane = this.lanePaths[e.laneId] || this.lane;
-      const p = pointAtDistanceWithOffset(lane, e.dist, e.laneOffset || 0, e.laneOffsetFade || 12);
-      e.x = p.x;
-      e.z = p.z;
+      const p = advanceEnemyAlongLane(e, lane, dt, { corridorWidth: lane.lane?.corridorWidth ?? this.level.corridorWidth });
       if (p.done && !e.counted) {
         e.counted = true;
         e.alive = false;
@@ -442,14 +389,12 @@ export class World {
     let best = null;
     let bestD = Infinity;
     const lane = this.lanePaths[e.laneId] || this.lane;
-    const lanePoint = pointAtDistance(lane, e.dist);
     for (const t of this.towers) {
       if (!t.alive || t.defenseType !== "blockade" || !t.blocksEnemies || !t.targetableByEnemies || t.hp <= 0) continue;
-      const laneCatch = (t.contactRadius || t.blockRadius || 0.55) + e.radius + 0.8;
-      if (dist2(t.x, t.z, lanePoint.x, lanePoint.z) > laneCatch * laneCatch) continue;
-      const reach = e.attackRange + e.radius + (t.blockRadius || 0.55) + 0.7;
+      if (!isBlockerNearLane(e, t, lane)) continue;
+      if (!isEnemyNearBlocker(e, t)) continue;
       const d = dist2(e.x, e.z, t.x, t.z);
-      if (d <= reach * reach && d < bestD) {
+      if (d < bestD) {
         bestD = d;
         best = t;
       }
@@ -458,110 +403,20 @@ export class World {
   }
 
   _enemyInBlockerContact(e, t) {
-    const contact = e.attackRange + (t.contactRadius || t.blockRadius || 0.55);
-    return dist2(e.x, e.z, t.x, t.z) <= contact * contact;
+    return isEnemyInBlockerContact(e, t);
   }
 
-  _releaseBlockerSlot(e) {
-    e.blockingTargetId = 0;
-    e.attackingBlocker = false;
-    e.attackSlotIndex = -1;
-    e.attackSlotX = 0;
-    e.attackSlotZ = 0;
-  }
-
-  _slotForBlocker(e, t, slotIndex) {
-    const lane = this.lanePaths[e.laneId] || this.lane;
-    const tangent = laneTangentAtDistance(lane, e.dist);
-    const perp = lanePerpAtDistance(lane, e.dist);
-    const front = -(t.contactRadius || t.blockRadius || 0.55) - e.radius + 0.03;
-    const side = BLOCKADE_SLOT_OFFSETS[slotIndex] || 0;
-    return {
-      x: t.x + tangent.x * front + perp.x * side,
-      z: t.z + tangent.z * front + perp.z * side,
-    };
-  }
-
-  _assignBlockerSlot(e, t) {
-    if (e.blockingTargetId === t.id && e.attackSlotIndex >= 0) {
-      const slot = this._slotForBlocker(e, t, e.attackSlotIndex);
-      e.attackSlotX = slot.x;
-      e.attackSlotZ = slot.z;
-      return slot;
-    }
-    let bestIndex = 0;
-    let bestScore = Infinity;
-    for (let i = 0; i < BLOCKADE_SLOT_OFFSETS.length; i++) {
-      const slot = this._slotForBlocker(e, t, i);
-      let crowd = 0;
-      for (const other of this.enemies) {
-        if (!other.alive || other.id === e.id || other.blockingTargetId !== t.id || other.attackSlotIndex !== i) continue;
-        crowd++;
-      }
-      const d = Math.hypot(e.x - slot.x, e.z - slot.z);
-      const score = d + crowd * 2.4 + i * 0.02;
-      if (score < bestScore) {
-        bestScore = score;
-        bestIndex = i;
-      }
-    }
-    const slot = this._slotForBlocker(e, t, bestIndex);
-    e.attackSlotIndex = bestIndex;
-    e.attackSlotX = slot.x;
-    e.attackSlotZ = slot.z;
-    return slot;
+  _enemyInBlockerAttackContact(e, t) {
+    return isEnemyInBlockerAttackContact(e, t);
   }
 
   _applyEnemySeparation(dt) {
-    const live = this.enemies.filter((e) => e.alive);
-    if (live.length < 2) return;
-    const pushes = new Map();
-    for (let i = 0; i < live.length; i++) {
-      for (let j = i + 1; j < live.length; j++) {
-        const a = live[i];
-        const b = live[j];
-        const min = (a.collisionRadius || a.radius || 0.28) + (b.collisionRadius || b.radius || 0.28);
-        const dx = a.x - b.x;
-        const dz = a.z - b.z;
-        const d = Math.hypot(dx, dz);
-        if (d >= min || d > 2.2) continue;
-        const nx = d > 0.0001 ? dx / d : ((a.id % 2) ? 1 : -1);
-        const nz = d > 0.0001 ? dz / d : ((a.id % 3) ? 0.25 : -0.25);
-        const force = Math.min(0.34, (min - d) * 0.5) * Math.min(1, dt * 18);
-        const pa = pushes.get(a) || { x: 0, z: 0 };
-        const pb = pushes.get(b) || { x: 0, z: 0 };
-        pa.x += nx * force;
-        pa.z += nz * force;
-        pb.x -= nx * force;
-        pb.z -= nz * force;
-        pushes.set(a, pa);
-        pushes.set(b, pb);
-      }
-    }
-    for (const [e, push] of pushes) {
-      e.x += push.x;
-      e.z += push.z;
-      const lane = this.lanePaths[e.laneId] || this.lane;
-      const center = pointAtDistance(lane, e.dist);
-      if (center.done) continue;
-      const perp = lanePerpAtDistance(lane, e.dist);
-      const dx = e.x - center.x;
-      const dz = e.z - center.z;
-      const alongPerp = dx * perp.x + dz * perp.z;
-      const maxOffset = e.blockingTargetId ? 1.65 : 1.25;
-      if (Math.abs(alongPerp) > maxOffset) {
-        const excess = alongPerp - Math.sign(alongPerp) * maxOffset;
-        e.x -= perp.x * excess;
-        e.z -= perp.z * excess;
-      }
-    }
+    applyEnemySeparation(this.enemies, (e) => this.lanePaths[e.laneId] || this.lane, { dt, corridorWidth: this.level.corridorWidth ?? 2.6 });
   }
 
   _applyBlockadeContactDamage(t, e, dt) {
     if (!t.contactDamage || t.contactDamage <= 0 || !e.alive) return;
-    const radius = t.contactRadius || t.blockRadius || 0.55;
-    const contact = e.radius + radius;
-    if (dist2(e.x, e.z, t.x, t.z) > contact * contact) return;
+    if (!isEnemyInBlockerPhysicalContact(e, t)) return;
     t.contactCd = Math.max(0, (t.contactCd || 0) - dt);
     if (t.contactCd > 0) return;
     this._damageEnemy(e, t.contactDamage);
@@ -683,7 +538,7 @@ export class World {
     t.alive = false;
     t.targetId = 0;
     for (const e of this.enemies) {
-      if (e.blockingTargetId === t.id) this._releaseBlockerSlot(e);
+      if (e.blockingTargetId === t.id) releaseAttackSlot(e);
     }
     this.occupied.delete(cellKey(t.col, t.row));
     this._refreshDefenseEconomy(t);
