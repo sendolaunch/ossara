@@ -455,17 +455,25 @@ export class PCRenderer {
   // ---- picking -------------------------------------------------------------
   pointerToCell(clientX, clientY, level) {
     const rect = this.domElement.getBoundingClientRect();
-    const sx = clientX - rect.left;
-    const sy = clientY - rect.top;
+    if (!rect.width || !rect.height) return null;
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+    if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) return null;
+    const sx = localX * ((this.domElement.width || rect.width) / rect.width);
+    const sy = localY * ((this.domElement.height || rect.height) / rect.height);
     const cam = this.cameraEntity.camera;
     const near = cam.screenToWorld(sx, sy, cam.nearClip);
     const far = cam.screenToWorld(sx, sy, cam.farClip);
     const dy = far.y - near.y;
     if (Math.abs(dy) < 1e-6) return null;
     const t = -near.y / dy;
+    if (t < 0) return null;
     const hx = near.x + (far.x - near.x) * t;
     const hz = near.z + (far.z - near.z) * t;
-    return { ...worldToGrid(hx, hz, level), x: hx, z: hz };
+    const cell = worldToGrid(hx, hz, level);
+    const snapped = gridToWorld(cell.col, cell.row, level);
+    this.pointerDebug = { clientX, clientY, sx, sy, hitX: hx, hitZ: hz, col: cell.col, row: cell.row, x: snapped.x, z: snapped.z };
+    return { ...cell, x: snapped.x, z: snapped.z, hitX: hx, hitZ: hz };
   }
 
   setHover(col2, row, level, state, opts = {}) {

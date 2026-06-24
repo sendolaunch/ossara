@@ -103,10 +103,11 @@ const oldWindow = globalThis.window;
   const canvas = target();
   const hoverCalls = [];
   let placed = null;
+  let hoverStatus = null;
   const renderer = {
     domElement: canvas,
     setHover: (...args) => hoverCalls.push(args),
-    pointerToCell: () => ({ col: 4, row: 5, x: 0, z: 0 }),
+    pointerToCell: (x) => x === 99 ? { col: 8, row: 9, x: 4, z: 4 } : { col: 4, row: 5, x: 0, z: 0 },
     getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
     zoomBy: () => {},
     orbit: () => {},
@@ -116,26 +117,36 @@ const oldWindow = globalThis.window;
     marrow: 100,
     level: {},
     availableTowers: ["barricade"],
-    placementStatus: () => ({ ok: true, reason: "ok" }),
+    placementStatus: (id, col) => col === 8 ? { ok: false, reason: "path" } : { ok: true, reason: "ok" },
     tryPlaceTower: (id, col, row, opts) => {
       placed = { id, col, row, opts };
       return { ok: true };
     },
   };
   const input = new Input(renderer, () => world);
+  input.onHoverStatus = (status) => { hoverStatus = status; };
   canvas.dispatch("click", { clientX: 10, clientY: 20 });
   const attack = input.consume();
   ok(attack.attack && attack.attackX === 0 && attack.attackZ === 0, "normal left-click queues a manual hero attack");
   input.select("barricade");
+  ok(input.selected === "barricade", "selecting a tower enters build mode");
   canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
   fakeWindow.dispatch("keydown", { key: "r", preventDefault() {} });
   input.refreshHover();
   const opts = hoverCalls.at(-1)?.[4] || {};
   ok(Math.abs(opts.rotation - Math.PI / 2) < 1e-9, "rotate updates build ghost facing");
-  canvas.dispatch("click");
+  ok(hoverStatus?.ok && hoverStatus.col === 4 && hoverStatus.row === 5, "hover status reports the snapped build cell");
+  canvas.dispatch("mousemove", { clientX: 99, clientY: 20 });
+  input.refreshHover();
+  ok(hoverStatus?.reason === "path", "hover status reports invalid placement reasons");
+  canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
+  input.refreshHover();
+  canvas.dispatch("click", { clientX: 10, clientY: 20 });
   ok(placed?.id === "barricade" && placed.col === 4 && placed.row === 5, "click places selected tower at hover cell");
   ok(Math.abs(placed?.opts?.facing - Math.PI / 2) < 1e-9, "placement sends rotated facing to sim");
   ok(!input.consume().attack, "build-mode left-click places tower instead of queuing hero attack");
+  canvas.dispatch("contextmenu", { preventDefault() {} });
+  ok(input.selected === null && input.hoverCell === null, "right-click cancels build mode");
 }
 
 globalThis.window = oldWindow;

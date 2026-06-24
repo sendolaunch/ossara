@@ -123,19 +123,29 @@ section("building rules");
   ok(w.buildableAt(27, 10), "can build on the opposite north choke shoulder");
   ok(w.buildableAt(21, 13), "can build near the Ward approach");
   ok(w.buildableAt(27, 13), "can build near the opposite Ward approach");
-  ok(w.buildableAt(4, 12), "can build on an empty off-lane tile");
+  ok(!w.buildableAt(4, 12), "cannot build outside marked buildable zones");
+
+  for (const lane of LEVEL.lanes) {
+    const shoulder = lane.buildShoulders[0];
+    const shoulderWorld = new World(LEVEL);
+    const rShoulder = shoulderWorld.tryPlaceTower("ballista", shoulder.col, shoulder.row);
+    ok(rShoulder.ok, `valid placement succeeds on ${lane.id} shoulder`);
+  }
 
   const before = w.marrow;
-  const r1 = w.tryPlaceTower("ballista", 4, 12);
+  const r1 = w.tryPlaceTower("ballista", 21, 10);
   ok(r1.ok, "valid placement succeeds");
   ok(w.marrow === before - TOWERS.ballista.cost, "marrow deducted by tower cost");
-  ok(!w.buildableAt(4, 12), "tile is occupied after placing");
+  ok(!w.buildableAt(21, 10), "tile is occupied after placing");
 
-  const r2 = w.tryPlaceTower("ballista", 4, 12);
+  const r2 = w.tryPlaceTower("ballista", 21, 10);
   ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
 
   const r3 = w.tryPlaceTower("ballista", 24, 11);
   ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
+
+  const rBlocked = w.tryPlaceTower("ballista", 16, 17);
+  ok(!rBlocked.ok && rBlocked.reason === "blocked", "cannot place on blocked ruins");
 
   for (const lane of LEVEL.lanes) {
     const rSpawn = w.tryPlaceTower("ballista", lane.spawn.col, lane.spawn.row);
@@ -148,8 +158,11 @@ section("building rules");
   const rSpawn = w.tryPlaceTower("ballista", heroSpawn.col, heroSpawn.row);
   ok(!rSpawn.ok && rSpawn.reason === "reserved", "cannot place on the hero spawn");
 
+  const rOutside = w.tryPlaceTower("ballista", 4, 12);
+  ok(!rOutside.ok && rOutside.reason === "buildable", "cannot place outside marked buildable zones");
+
   w.marrow = 0;
-  const r4 = w.tryPlaceTower("ballista", 4, 13);
+  const r4 = w.tryPlaceTower("ballista", 27, 10);
   ok(!r4.ok && r4.reason === "marrow", "cannot afford without marrow");
 }
 

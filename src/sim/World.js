@@ -34,6 +34,10 @@ export class World {
     this.lane = this.lanePaths[this.defaultLaneId] || buildLanePath(level);
     this.pathSet = pathCellSet(level);
     this.occupied = new Set(); // cell keys with a tower on them
+    this.buildableSet = null;
+    if (Array.isArray(level.buildableZones) && level.buildableZones.length) {
+      this.buildableSet = new Set(expandRects(level.buildableZones).map((cell) => cellKey(cell.col, cell.row)));
+    }
 
     // impassable ruins (obstacle rects minus any cell on the lane)
     this.blockedSet = new Set();
@@ -117,6 +121,7 @@ export class World {
     if (this.reservedSet.has(k)) return { ok: false, reason: "reserved" };
     if (this.pathSet.has(k)) return { ok: false, reason: "path" };
     if (this.blockedSet.has(k)) return { ok: false, reason: "blocked" };
+    if (this.buildableSet && !this.buildableSet.has(k)) return { ok: false, reason: "buildable" };
     if (this.occupied.has(k)) return { ok: false, reason: "occupied" };
     const def = typeId ? TOWERS[typeId] : null;
     if (!opts.ignoreCost && def && this.marrow < def.cost) return { ok: false, reason: "marrow" };

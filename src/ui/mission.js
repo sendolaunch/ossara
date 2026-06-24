@@ -12,6 +12,17 @@ import { Input } from "../input/Input.js";
 import { CSS } from "../config/palette.js";
 import { resolveMissionStart } from "../config/missions.js";
 
+const PLACEMENT_MESSAGES = {
+  marrow: "Not enough Marrow.",
+  path: "Enemy path.",
+  reserved: "Spawn or Ward-Crystal reserved.",
+  blocked: "Blocked by ruins.",
+  buildable: "Outside buildable zone.",
+  occupied: "Occupied by another defense.",
+  bounds: "Outside mission grounds.",
+  phase: "Build mode is locked during combat.",
+};
+
 export class Mission {
   constructor(appEl, uiEl, { onExit }) {
     this.appEl = appEl;
@@ -38,18 +49,10 @@ export class Mission {
       onExit: () => this._exit(),
     });
     this.input.onSelectChange = (id) => this.hud.setSelected(id);
+    this.input.onHoverStatus = (status) => this.hud.setPlacementStatus(status);
     this.input.onPlaceResult = (res) => {
       if (!res.ok) {
-        const messages = {
-          marrow: "Not enough Marrow.",
-          blocked: "Can't build on ruins.",
-          path: "Can't build on the enemy lane.",
-          occupied: "A defense already holds that spot.",
-          reserved: "Keep the crystal, breach, and hero spawn clear.",
-          bounds: "Build inside the mission grounds.",
-          phase: "Build mode is locked during combat.",
-        };
-        this.hud.toast(messages[res.reason] || "Can't build there.", CSS.blood);
+        this.hud.toast(PLACEMENT_MESSAGES[res.reason] || "Can't build there.", CSS.blood);
       }
     };
     this.input.onBuildBlocked = () => this.hud.toast("Build mode is locked during combat.", CSS.blood);

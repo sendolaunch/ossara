@@ -55,6 +55,16 @@ function towerIcon(id, c) {
 }
 
 const colorCss = { void: CSS.void, bone: CSS.bone, plague: CSS.plague, rot: CSS.rot, ash: CSS.ash, blood: CSS.blood, gold: CSS.gold };
+const placementReasonText = {
+  marrow: "Not enough Marrow",
+  path: "Enemy path",
+  reserved: "Spawn or Ward-Crystal reserved",
+  blocked: "Blocked by ruins",
+  buildable: "Outside buildable zone",
+  occupied: "Occupied by another defense",
+  bounds: "Outside mission grounds",
+  phase: "Building locked during combat",
+};
 
 export class HUD {
   constructor(root, cb) {
@@ -66,6 +76,7 @@ export class HUD {
     this._heroIconId = null;
     this.rewardSummary = null;
     this.selectedTowerId = null;
+    this.placementStatus = null;
     this._build();
   }
 
@@ -229,6 +240,7 @@ export class HUD {
 
   setSelected(id) {
     this.selectedTowerId = id || null;
+    this.placementStatus = null;
     for (const [tid, b] of Object.entries(this.towerBtns || {})) {
       const on = tid === id;
       b.style.borderColor = on ? CSS.plague : "rgba(110,230,90,0.22)";
@@ -245,6 +257,10 @@ export class HUD {
   setRewardSummary(summary) {
     this.rewardSummary = summary;
     if (this.overlay.style.display === "flex" && this.elEndSub) this._writeWinSummary();
+  }
+
+  setPlacementStatus(status) {
+    this.placementStatus = status || null;
   }
 
   _writeWinSummary(world = null) {
@@ -283,13 +299,18 @@ export class HUD {
       } else if (this.selectedTowerId && TOWERS[this.selectedTowerId]) {
         const t = TOWERS[this.selectedTowerId];
         const afford = world.marrow >= t.cost;
+        const placement = this.placementStatus && this.placementStatus.towerId === this.selectedTowerId ? this.placementStatus : null;
         this.elBuildTitle.textContent = t.name.toUpperCase();
-        this.elBuildTitle.style.color = afford ? CSS.plague : CSS.blood;
+        this.elBuildTitle.style.color = afford && (!placement || placement.ok) ? CSS.plague : CSS.blood;
         this.elBuildMeta.textContent = `Cost ${t.cost} Marrow  |  You have ${Math.floor(world.marrow)}`;
-        this.elBuildMeta.style.color = afford ? CSS.gold : CSS.blood;
-        this.elBuildControls.textContent = afford
-          ? "Click to build. R rotates. Right-click or Esc cancels."
-          : "Not enough Marrow. Choose a cheaper defense or clear the wave.";
+        this.elBuildMeta.style.color = afford && (!placement || placement.ok) ? CSS.gold : CSS.blood;
+        if (placement && !placement.ok) {
+          this.elBuildControls.textContent = `${placementReasonText[placement.reason] || "Invalid placement"}. R rotates. Right-click or Esc cancels.`;
+        } else {
+          this.elBuildControls.textContent = afford
+            ? "Click to build. R rotates. Right-click or Esc cancels."
+            : "Not enough Marrow. Choose a cheaper defense or clear the wave.";
+        }
       } else {
         this.elBuildTitle.textContent = "BUILD PHASE";
         this.elBuildTitle.style.color = CSS.plague;
@@ -384,6 +405,7 @@ export class HUD {
     this._lastWaveIndex = -1;
     this.rewardSummary = null;
     this.selectedTowerId = null;
+    this.placementStatus = null;
     this.overlay.style.display = "none";
   }
 }

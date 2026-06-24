@@ -28,6 +28,7 @@ export class Input {
     this.onPlaceResult = null;
     this.onSelectChange = null;
     this.onBuildBlocked = null;
+    this.onHoverStatus = null;
 
     this._bind(renderer.domElement);
   }
@@ -97,6 +98,7 @@ export class Input {
     this.rotation = 0;
     if (!this.selected) this.renderer.setHover(null);
     if (this.onSelectChange) this.onSelectChange(this.selected);
+    if (this.onHoverStatus) this.onHoverStatus(null);
   }
 
   cancelBuild() {
@@ -104,6 +106,7 @@ export class Input {
     this.hoverCell = null;
     this.renderer.setHover(null);
     if (this.onSelectChange) this.onSelectChange(null);
+    if (this.onHoverStatus) this.onHoverStatus(null);
   }
 
   rotateBuild() {
@@ -122,7 +125,7 @@ export class Input {
 
   _handleClick(e = {}) {
     if (this.selected) {
-      this._tryPlace();
+      this._tryPlace(e);
       return;
     }
     const world = this.getWorld();
@@ -134,8 +137,35 @@ export class Input {
       : { x: null, z: null };
   }
 
-  _tryPlace() {
-    if (!this.selected || !this.hoverCell) return;
+  _cellFromPointer(clientX, clientY, world) {
+    if (!world || !this.renderer.pointerToCell || !Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
+    return this.renderer.pointerToCell(clientX, clientY, world.level);
+  }
+
+  _showBuildCell(world, cell) {
+    if (!this.selected || !cell) {
+      this.hoverCell = null;
+      this.renderer.setHover(null);
+      if (this.onHoverStatus) this.onHoverStatus(null);
+      return null;
+    }
+    this.hoverCell = { col: cell.col, row: cell.row };
+    const def = TOWERS[this.selected];
+    const status = world.placementStatus
+      ? world.placementStatus(this.selected, cell.col, cell.row)
+      : { ok: world.buildableAt(cell.col, cell.row) && world.marrow >= def.cost, reason: "legacy" };
+    this.renderer.setHover(cell.col, cell.row, world.level, status.ok ? "ok" : "bad", {
+      towerId: this.selected,
+      range: def.range,
+      rotation: this.rotation,
+      reason: status.reason,
+    });
+    if (this.onHoverStatus) this.onHoverStatus({ towerId: this.selected, col: cell.col, row: cell.row, ...status });
+    return status;
+  }
+
+  _tryPlace(e = {}) {
+    if (!this.selected) return;
     const world = this.getWorld();
     if (world.phase !== "prep") {
       const res = { ok: false, reason: "phase" };
@@ -144,6 +174,14 @@ export class Input {
       if (this.onPlaceResult) this.onPlaceResult(res, selected);
       return;
     }
+    const clickedCell = this._cellFromPointer(e.clientX, e.clientY, world);
+    const cell = clickedCell || this.hoverCell;
+    if (!cell) {
+      const res = { ok: false, reason: "bounds" };
+      if (this.onPlaceResult) this.onPlaceResult(res, this.selected);
+      return;
+    }
+    this._showBuildCell(world, cell);
     const res = world.tryPlaceTower(this.selected, this.hoverCell.col, this.hoverCell.row, { facing: this.rotation });
     if (this.onPlaceResult) this.onPlaceResult(res, this.selected);
   }
@@ -165,29 +203,22 @@ export class Input {
     if (!this._mouse) {
       this.hoverCell = null;
       this.renderer.setHover(null);
+      if (this.onHoverStatus) this.onHoverStatus(null);
       return;
     }
-    const cell = this.renderer.pointerToCell(this._mouse.x, this._mouse.y, world.level);
+    const cell = this._cellFromPointer(this._mouse.x, this._mouse.y, world);
     if (!cell) {
       this.hoverCell = null;
       this.renderer.setHover(null);
+      if (this.onHoverStatus) this.onHoverStatus(null);
       return;
     }
-    this.hoverCell = { col: cell.col, row: cell.row };
     if (!this.selected) {
       this.renderer.setHover(null);
+      if (this.onHoverStatus) this.onHoverStatus(null);
       return;
     }
-    const def = TOWERS[this.selected];
-    const status = world.placementStatus
-      ? world.placementStatus(this.selected, cell.col, cell.row)
-      : { ok: world.buildableAt(cell.col, cell.row) && world.marrow >= def.cost, reason: "legacy" };
-    this.renderer.setHover(cell.col, cell.row, world.level, status.ok ? "ok" : "bad", {
-      towerId: this.selected,
-      range: def.range,
-      rotation: this.rotation,
-      reason: status.reason,
-    });
+    this._showBuildCell(world, cell);
   }
 
   movementIntent() {
