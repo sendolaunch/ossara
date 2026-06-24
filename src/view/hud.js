@@ -132,27 +132,36 @@ export class HUD {
     hr.append(this.heroIcon, hrInfo);
     this.root.appendChild(hr);
 
-    // ---- build bar (bottom) ----
+    // ---- compact defense keybind strip (bottom-left) ----
     const bottom = el("div", {
       position: "absolute",
       bottom: "14px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "min(720px, calc(100vw - 320px))",
-      minWidth: "520px",
+      left: "14px",
       ...panel(),
-      padding: "10px 12px",
+      padding: "8px",
       display: "flex",
-      gap: "14px",
+      gap: "8px",
       alignItems: "center",
-      justifyContent: "center",
       zIndex: "3",
       pointerEvents: "auto",
     });
     this.towerRow = el("div", { display: "flex", gap: "8px", alignItems: "stretch", flexShrink: "0" });
+    bottom.append(this.towerRow);
+    this.root.appendChild(bottom);
+
+    // ---- contextual build/defense info (bottom-right, only when useful) ----
+    this.infoPanel = el("div", {
+      position: "absolute",
+      right: "14px",
+      bottom: "14px",
+      width: "min(360px, calc(100vw - 32px))",
+      ...panel(),
+      padding: "9px 12px",
+      display: "none",
+      zIndex: "3",
+      pointerEvents: "none",
+    });
     this.elBuildInfo = el("div", {
-      flex: "1",
-      minWidth: "280px",
       display: "flex",
       flexDirection: "column",
       gap: "4px",
@@ -177,10 +186,10 @@ export class HUD {
       color: CSS.ash,
       font: "700 11px ui-monospace, monospace",
       lineHeight: "1.35",
-    }, "Select defense [1]/[2] or click a card. Enter starts wave.");
+    }, "");
     this.elBuildInfo.append(this.elBuildTitle, this.elBuildMeta, this.elBuildControls);
-    bottom.append(this.towerRow, this.elBuildInfo);
-    this.root.appendChild(bottom);
+    this.infoPanel.appendChild(this.elBuildInfo);
+    this.root.appendChild(this.infoPanel);
 
     // ---- hint ----
     this.elHint = el("div", { display: "none" }, "");
@@ -189,6 +198,43 @@ export class HUD {
     // ---- toast ----
     this.elToast = el("div", { position: "absolute", top: "92px", left: "50%", transform: "translateX(-50%)", ...panel(), padding: "8px 16px", borderColor: CSS.plague, opacity: "0", transition: "opacity 0.3s", pointerEvents: "none" });
     this.root.appendChild(this.elToast);
+
+    // ---- action menu ----
+    this.actionMenu = el("div", {
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+      ...panel(),
+      padding: "10px",
+      display: "none",
+      gridTemplateColumns: "repeat(2, minmax(132px, 1fr))",
+      gap: "8px",
+      zIndex: "6",
+      pointerEvents: "auto",
+    });
+    const actionBtn = (label, action) => {
+      const btn = el("button", {
+        cursor: "pointer",
+        padding: "10px 12px",
+        borderRadius: "8px",
+        border: `1px solid rgba(202,162,76,0.36)`,
+        background: "rgba(7,8,6,0.86)",
+        color: CSS.bone,
+        font: "800 11px ui-monospace, monospace",
+        letterSpacing: "0.8px",
+      }, label);
+      btn.onclick = () => this.cb.onActionMenu?.(action);
+      return btn;
+    };
+    this.actionMenu.append(
+      actionBtn("Build Defenses", "build"),
+      actionBtn("Repair Defense", "repair"),
+      actionBtn("Upgrade Defense", "upgrade"),
+      actionBtn("Sell Defense", "sell"),
+      actionBtn("Cancel", "cancel")
+    );
+    this.root.appendChild(this.actionMenu);
 
     // ---- end overlay ----
     this.overlay = el("div", { position: "absolute", inset: "0", display: "none", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", background: "rgba(7,8,6,0.82)", pointerEvents: "auto" });
@@ -217,10 +263,10 @@ export class HUD {
       const card = el("button", {
         position: "relative",
         cursor: "pointer",
-        width: "92px",
-        minHeight: "86px",
+        width: "72px",
+        minHeight: "70px",
         ...panel(),
-        padding: "8px 6px 7px",
+        padding: "6px 5px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -229,8 +275,8 @@ export class HUD {
       });
       card.innerHTML =
         `<div style="position:absolute;top:4px;left:6px;font:700 11px ui-monospace,monospace;color:${CSS.ash}">[${i + 1}]</div>` +
-        `<div style="margin-top:4px;height:34px">${towerIcon(id, c)}</div>` +
-        `<div style="font:800 10px ui-monospace,monospace;color:${CSS.bone};text-align:center;line-height:1.1;min-height:22px;display:flex;align-items:center;justify-content:center">${def.name}</div>` +
+        `<div style="margin-top:4px;height:26px;transform:scale(.78)">${towerIcon(id, c)}</div>` +
+        `<div style="font:800 9px ui-monospace,monospace;color:${CSS.bone};text-align:center;line-height:1.05;min-height:19px;display:flex;align-items:center;justify-content:center">${def.name}</div>` +
         `<div style="font:800 11px ui-monospace,monospace;color:${CSS.gold}">${def.cost}</div>` +
         `<div class="lock" style="display:none;position:absolute;inset:0;background:rgba(7,8,6,0.62);border-radius:12px;align-items:center;justify-content:center;font:800 11px ui-monospace,monospace;color:${CSS.blood}">LOCK</div>`;
       card.onclick = () => this.cb.onSelect(id);
@@ -268,6 +314,10 @@ export class HUD {
     this.hoverTower = tower || null;
   }
 
+  setActionMenuOpen(on) {
+    if (this.actionMenu) this.actionMenu.style.display = on ? "grid" : "none";
+  }
+
   _writeWinSummary(world = null) {
     const drops = this.rewardSummary?.drops || [];
     const dropText = drops.length ? ` Recovered ${drops.length} relic${drops.length === 1 ? "" : "s"}.` : "";
@@ -295,6 +345,7 @@ export class HUD {
     this.wardBar.style.background = wardRatio <= 0.34 ? CSS.blood : CSS.plague;
     this.elMarrow.textContent = `${Math.floor(world.marrow)}`;
     if (this.elBuildTitle) {
+      let showInfo = true;
       if (this.hoverTower && this.hoverTower.alive) {
         const t = this.hoverTower;
         const def = TOWERS[t.type] || {};
@@ -307,11 +358,7 @@ export class HUD {
         this.elBuildMeta.style.color = CSS.gold;
         this.elBuildControls.textContent = `[U] Upgrade  [F] Repair (${repairText})  [X] Sell`;
       } else if (world.phase !== "prep") {
-        this.elBuildTitle.textContent = "COMBAT PHASE";
-        this.elBuildTitle.style.color = CSS.gold;
-        this.elBuildMeta.textContent = "Building locked";
-        this.elBuildMeta.style.color = CSS.gold;
-        this.elBuildControls.textContent = "Hold the lane and protect the Ward. Building returns after combat.";
+        showInfo = false;
       } else if (this.selectedTowerId && TOWERS[this.selectedTowerId]) {
         const t = TOWERS[this.selectedTowerId];
         const afford = world.marrow >= t.cost;
@@ -328,12 +375,9 @@ export class HUD {
             : "Not enough Marrow. Choose a cheaper defense or clear the wave.";
         }
       } else {
-        this.elBuildTitle.textContent = "BUILD PHASE";
-        this.elBuildTitle.style.color = CSS.plague;
-        this.elBuildMeta.textContent = `${Math.floor(world.marrow)} Marrow available`;
-        this.elBuildMeta.style.color = CSS.gold;
-        this.elBuildControls.textContent = "Select defense [1]/[2] or click a card. Hover a defense: U/F/X manages it. Enter starts wave.";
+        showInfo = false;
       }
+      if (this.infoPanel) this.infoPanel.style.display = showInfo ? "block" : "none";
     }
     // phase banner
     if (world.phase === "prep") {
@@ -423,6 +467,7 @@ export class HUD {
     this.selectedTowerId = null;
     this.placementStatus = null;
     this.hoverTower = null;
+    this.setActionMenuOpen(false);
     this.overlay.style.display = "none";
   }
 }

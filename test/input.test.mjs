@@ -156,9 +156,12 @@ const oldWindow = globalThis.window;
   const tower = { id: 7, alive: true, col: 3, row: 4 };
   let hovered = null;
   const results = [];
+  const menuStates = [];
+  const spawnStates = [];
   const renderer = {
     domElement: canvas,
     setHover: () => {},
+    setSpawnIndicatorsEnabled: (on) => spawnStates.push(on),
     pointerToCell: () => ({ col: 3, row: 4, x: 0, z: 0 }),
     getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
     zoomBy: () => {},
@@ -179,14 +182,22 @@ const oldWindow = globalThis.window;
   const input = new Input(renderer, () => world);
   input.onTowerHover = (t) => { hovered = t; };
   input.onManageResult = (res) => results.push(res);
+  input.onActionMenuChange = (open) => menuStates.push(open);
   canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
   input.refreshHover();
   ok(hovered === tower, "hovering a placed defense reports tower hover");
+  fakeWindow.dispatch("keydown", { key: "Tab", preventDefault() {} });
+  ok(input.actionMenuOpen && menuStates.at(-1) === true, "Tab opens the action menu");
+  input.chooseActionMenuAction("upgrade");
+  ok(!input.actionMenuOpen && menuStates.at(-1) === false, "action menu closes after choosing an action");
   fakeWindow.dispatch("keydown", { key: "u", preventDefault() {} });
   fakeWindow.dispatch("keydown", { key: "f", preventDefault() {} });
   fakeWindow.dispatch("keydown", { key: "x", preventDefault() {} });
-  ok(results.map((r) => r.action).join(",") === "upgrade,repair,sell", "U/F/X call defense management actions");
+  ok(results.map((r) => r.action).join(",") === "upgrade,upgrade,repair,sell", "action menu and U/F/X route to defense management actions");
   ok(hovered === null, "selling clears hovered defense");
+  fakeWindow.dispatch("keydown", { key: "o", preventDefault() {} });
+  fakeWindow.dispatch("keydown", { key: "o", preventDefault() {} });
+  ok(spawnStates[0] === false && spawnStates[1] === true, "O toggles spawn indicators");
 }
 
 globalThis.window = oldWindow;

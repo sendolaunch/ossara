@@ -10,6 +10,7 @@ import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { loadCharacter } from "./character.js";
+import { spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -107,6 +108,8 @@ export class PCRenderer {
     this.enemyEntities = new Map();
     this.projEntities = new Map();
     this.towerEntities = new Map();
+    this.spawnIndicatorEntities = [];
+    this.spawnIndicatorsEnabled = true;
     this.heroEntity = null;
     this.heroCtl = null;
     this._heroFoot = 0;
@@ -212,6 +215,7 @@ export class PCRenderer {
     };
     for (const lane of level.lanes || []) addLaneMarker(lane);
     this.breachEntity = this.breachEntities[0] || null;
+    this._buildSpawnIndicators(level);
 
     // THE WARD — the failing seal you defend: rune dais + ring + crystal
     const cw = gridToWorld(level.core.col, level.core.row, level);
@@ -319,6 +323,38 @@ export class PCRenderer {
 
     // Hero creation is intentionally owned by setHeroClass(). Mission startup
     // awaits that path so the gameplay loop cannot race model/animation setup.
+  }
+
+  _buildSpawnIndicators(level) {
+    for (const ent of this.spawnIndicatorEntities || []) ent.destroy();
+    this.spawnIndicatorEntities = [];
+    const auraMat = mat("plague", 0.9);
+    const crystalMat = mat("plague", 1.45);
+    const barMat = mat("bone", 0.25);
+    for (const spec of spawnIndicatorSpecs(level)) {
+      const group = new pc.Entity(`spawn-indicator-${spec.id}`);
+      const aura = prim("torus", auraMat);
+      aura.setLocalScale(1.2 + spec.threatRating * 0.16, 1.2 + spec.threatRating * 0.16, 1.2 + spec.threatRating * 0.16);
+      aura.setLocalEulerAngles(90, 0, 0);
+      aura.setLocalPosition(0, 0.18, 0);
+      group.addChild(aura);
+      const crystal = prim("cone", crystalMat);
+      crystal.setLocalScale(0.45, 1.0, 0.45);
+      crystal.setLocalPosition(0, 1.15, 0);
+      group.addChild(crystal);
+      const threatBar = prim("box", barMat);
+      threatBar.setLocalScale(0.55 + spec.threatRating * 0.35, 0.08, 0.22);
+      threatBar.setLocalPosition(0, 2.05, 0);
+      group.addChild(threatBar);
+      group.setPosition(spec.x, 0, spec.z);
+      group._ossaraSpec = spec;
+      this.app.root.addChild(group);
+      this.spawnIndicatorEntities.push(group);
+    }
+  }
+
+  setSpawnIndicatorsEnabled(on) {
+    this.spawnIndicatorsEnabled = !!on;
   }
 
   async _loadFallbackHero(classId = "unknown") {
@@ -514,12 +550,26 @@ export class PCRenderer {
 
   // ---- per-frame sync ------------------------------------------------------
   update(world, dt, heroAnim = {}) {
+    this._syncSpawnIndicators(world, dt);
     this._followCamera(world.hero, dt);
     this._syncEnemies(world);
     this._syncProjectiles(world);
     this._syncTowers(world);
     this._syncHero(world, heroAnim);
     // PlayCanvas auto-renders on its own loop.
+  }
+
+  _syncSpawnIndicators(world, dt) {
+    const show = spawnIndicatorsVisible(world, this.spawnIndicatorsEnabled);
+    const t = performance.now() * 0.001;
+    for (const ent of this.spawnIndicatorEntities || []) {
+      ent.enabled = show;
+      if (!show) continue;
+      const pulse = 1 + Math.sin(t * 2.4 + (ent._ossaraSpec?.threatRating || 1)) * 0.08;
+      ent.setLocalScale(pulse, pulse, pulse);
+      const crystal = ent.children?.[1];
+      if (crystal) crystal.setLocalEulerAngles(0, t * 55, 0);
+    }
   }
 
   _syncEnemies(world) {

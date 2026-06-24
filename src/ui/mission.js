@@ -54,12 +54,15 @@ export class Mission {
     this.hud = new HUD(this.hudRoot, {
       onStart: () => this.input.requestStart(),
       onSelect: (id) => this.input.select(id),
+      onActionMenu: (action) => this.input.chooseActionMenuAction(action),
       onRestart: () => this.restart(),
       onExit: () => this._exit(),
     });
     this.input.onSelectChange = (id) => this.hud.setSelected(id);
     this.input.onHoverStatus = (status) => this.hud.setPlacementStatus(status);
     this.input.onTowerHover = (tower) => this.hud.setTowerHover(tower);
+    this.input.onActionMenuChange = (open) => this.hud.setActionMenuOpen(open);
+    this.input.onSpawnInfoToggle = (on) => this.hud.toast(on ? "Spawn markers shown." : "Spawn markers hidden.", CSS.gold);
     this.input.onPlaceResult = (res) => {
       if (!res.ok) {
         this.hud.toast(PLACEMENT_MESSAGES[res.reason] || "Can't build there.", CSS.blood);
@@ -70,6 +73,7 @@ export class Mission {
         this.hud.toast(MANAGEMENT_MESSAGES[res.reason] || "Can't manage that defense.", CSS.blood);
         return;
       }
+      if (res.action === "build") this.hud.toast("Choose a defense with [1]/[2]/[3] or the bottom-left cards.", CSS.gold);
       if (res.action === "upgrade") this.hud.toast(`${res.tower.type} upgraded to L${res.tower.level}.`, CSS.plague);
       if (res.action === "repair") this.hud.toast(`${res.tower.type} repaired.`, CSS.plague);
       if (res.action === "sell") this.hud.toast(`Defense sold. +${res.refund} Marrow`, CSS.gold);

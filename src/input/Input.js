@@ -24,6 +24,8 @@ export class Input {
     this.rotation = 0;
     this.hoverCell = null;
     this.hoverTower = null;
+    this.actionMenuOpen = false;
+    this.spawnInfoVisible = true;
     this._mouse = null;
     this._orbitDrag = null;
     this.onPlaceResult = null;
@@ -32,6 +34,8 @@ export class Input {
     this.onHoverStatus = null;
     this.onTowerHover = null;
     this.onManageResult = null;
+    this.onActionMenuChange = null;
+    this.onSpawnInfoToggle = null;
 
     this._bind(renderer.domElement);
   }
@@ -39,10 +43,15 @@ export class Input {
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o"].includes(k)) e.preventDefault();
       if (k === "q") this.pendingSlam = true;
       if (k === "enter") this.pendingStart = true;
-      if (k === "escape") this.cancelBuild();
+      if (k === "escape") {
+        if (this.actionMenuOpen) this.closeActionMenu();
+        else this.cancelBuild();
+      }
+      if (k === "tab") this.toggleActionMenu();
+      if (k === "o") this.toggleSpawnInfo();
       if (k === "r" && this.selected) this.rotateBuild();
       if (k === "u" && !this.selected) this._manageHovered("upgrade");
       if (k === "f" && !this.selected) this._manageHovered("repair");
@@ -133,6 +142,37 @@ export class Input {
 
   requestStart() {
     this.pendingStart = true;
+  }
+
+  toggleActionMenu() {
+    this.actionMenuOpen = !this.actionMenuOpen;
+    if (this.onActionMenuChange) this.onActionMenuChange(this.actionMenuOpen);
+  }
+
+  closeActionMenu() {
+    if (!this.actionMenuOpen) return;
+    this.actionMenuOpen = false;
+    if (this.onActionMenuChange) this.onActionMenuChange(false);
+  }
+
+  chooseActionMenuAction(action) {
+    if (action === "cancel") {
+      this.closeActionMenu();
+      return;
+    }
+    if (action === "build") {
+      this.closeActionMenu();
+      if (this.onManageResult) this.onManageResult({ ok: true, action: "build" });
+      return;
+    }
+    if (action === "upgrade" || action === "repair" || action === "sell") this._manageHovered(action);
+    this.closeActionMenu();
+  }
+
+  toggleSpawnInfo() {
+    this.spawnInfoVisible = !this.spawnInfoVisible;
+    if (typeof this.renderer.setSpawnIndicatorsEnabled === "function") this.renderer.setSpawnIndicatorsEnabled(this.spawnInfoVisible);
+    if (this.onSpawnInfoToggle) this.onSpawnInfoToggle(this.spawnInfoVisible);
   }
 
   _handleClick(e = {}) {
