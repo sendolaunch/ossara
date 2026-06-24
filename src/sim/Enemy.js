@@ -15,6 +15,11 @@ export function createEnemy() {
     leak: 1,
     bounty: 0,
     radius: 0.3,
+    attackDamage: 1,
+    attackRate: 1,
+    attackRange: 0.6,
+    attackCd: 0,
+    blockingTargetId: 0,
     color: "ash",
     boss: false,
     laneId: "",
@@ -36,6 +41,11 @@ export function resetEnemy(e, def, id, startPos, laneId = "") {
   e.leak = def.leak;
   e.bounty = def.bounty;
   e.radius = def.radius;
+  e.attackDamage = def.attackDamage ?? Math.max(1, def.leak * 12);
+  e.attackRate = def.attackRate ?? 1;
+  e.attackRange = def.attackRange ?? 0.6;
+  e.attackCd = 0;
+  e.blockingTargetId = 0;
   e.color = def.color;
   e.boss = !!def.boss;
   e.laneId = laneId;

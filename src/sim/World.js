@@ -116,14 +116,14 @@ export class World {
 
   placementStatus(typeId, col, row, opts = {}) {
     const k = cellKey(col, row);
-    if (typeId && !TOWERS[typeId]) return { ok: false, reason: "unknown" };
+    const def = typeId ? TOWERS[typeId] : null;
+    if (typeId && !def) return { ok: false, reason: "unknown" };
     if (col < 0 || row < 0 || col >= this.level.cols || row >= this.level.rows) return { ok: false, reason: "bounds" };
     if (this.reservedSet.has(k)) return { ok: false, reason: "reserved" };
-    if (this.pathSet.has(k)) return { ok: false, reason: "path" };
+    if (this.pathSet.has(k) && !(def && def.blocksEnemies)) return { ok: false, reason: "path" };
     if (this.blockedSet.has(k)) return { ok: false, reason: "blocked" };
     if (this.buildableSet && !this.buildableSet.has(k)) return { ok: false, reason: "buildable" };
     if (this.occupied.has(k)) return { ok: false, reason: "occupied" };
-    const def = typeId ? TOWERS[typeId] : null;
     if (!opts.ignoreCost && def && this.marrow < def.cost) return { ok: false, reason: "marrow" };
     return { ok: true, reason: "ok" };
   }
@@ -215,6 +215,17 @@ export class World {
   _updateEnemies(dt) {
     for (const e of this.enemies) {
       if (!e.alive) continue;
+      e.attackCd -= dt;
+      const blocker = this._findBlockingDefense(e);
+      if (blocker) {
+        e.blockingTargetId = blocker.id;
+        if (e.attackCd <= 0) {
+          this._damageTower(blocker, e.attackDamage, e);
+          e.attackCd = 1 / e.attackRate;
+        }
+        continue;
+      }
+      e.blockingTargetId = 0;
       e.dist += e.speed * dt;
       const lane = this.lanePaths[e.laneId] || this.lane;
       const p = pointAtDistance(lane, e.dist);
@@ -228,6 +239,34 @@ export class World {
         this.stats.leaked++;
         this.events.push({ kind: "leak", x: this.core.x, z: this.core.z, amount: e.leak });
       }
+    }
+  }
+
+  _findBlockingDefense(e) {
+    let best = null;
+    let bestD = Infinity;
+    for (const t of this.towers) {
+      if (!t.alive || t.defenseType !== "blockade" || !t.blocksEnemies || !t.targetableByEnemies || t.hp <= 0) continue;
+      const reach = e.attackRange + e.radius + (t.blockRadius || 0.55);
+      const d = dist2(e.x, e.z, t.x, t.z);
+      if (d <= reach * reach && d < bestD) {
+        bestD = d;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  _damageTower(t, dmg, source = null) {
+    if (!t || !t.alive || t.hp <= 0) return;
+    t.hp -= dmg;
+    this.events.push({ kind: "towerHit", id: t.id, x: t.x, z: t.z, amount: dmg, sourceId: source?.id || 0 });
+    if (t.hp <= 0) {
+      t.hp = 0;
+      t.alive = false;
+      t.targetId = 0;
+      this.occupied.delete(cellKey(t.col, t.row));
+      this.events.push({ kind: "towerDown", id: t.id, x: t.x, z: t.z });
     }
   }
 
@@ -403,6 +442,7 @@ export class World {
 
   _updateTowers(dt) {
     for (const t of this.towers) {
+      if (!t.alive) continue;
       t.cooldown -= dt;
       // Re-acquire target if lost.
       let target = t.targetId ? this._enemyById(t.targetId) : null;

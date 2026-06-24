@@ -568,7 +568,10 @@ export class PCRenderer {
   }
 
   _syncTowers(world) {
+    const seen = new Set();
     for (const t of world.towers) {
+      if (!t.alive) continue;
+      seen.add(t.id);
       let ent = this.towerEntities.get(t.id);
       if (!ent) {
         ent = new pc.Entity("tower");
@@ -587,6 +590,12 @@ export class PCRenderer {
       }
       const head = ent.findByName("head");
       if (head) head.setLocalEulerAngles(0, (t.facing * 180) / Math.PI, 0);
+    }
+    for (const [id, ent] of this.towerEntities) {
+      if (!seen.has(id)) {
+        ent.destroy();
+        this.towerEntities.delete(id);
+      }
     }
   }
 

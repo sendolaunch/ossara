@@ -337,7 +337,10 @@ export class Renderer {
   }
 
   _syncTowers(world) {
+    const seen = new Set();
     for (const t of world.towers) {
+      if (!t.alive) continue;
+      seen.add(t.id);
       let mesh = this.towerMeshes.get(t.id);
       if (!mesh) {
         mesh = createTowerMesh(t.type);
@@ -347,6 +350,12 @@ export class Renderer {
       }
       const head = mesh.getObjectByName("head");
       if (head) head.rotation.y = t.facing;
+    }
+    for (const [id, mesh] of this.towerMeshes) {
+      if (!seen.has(id)) {
+        this.entityGroup.remove(mesh);
+        this.towerMeshes.delete(id);
+      }
     }
   }
 

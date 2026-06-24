@@ -102,6 +102,44 @@ section("first breach pacing");
 }
 
 // ---------------------------------------------------------------------------
+section("defense type data model");
+{
+  const validTypes = new Set(["blockade", "turret", "trap", "aura"]);
+  for (const [id, def] of Object.entries(TOWERS)) {
+    ok(validTypes.has(def.defenseType), `${id} has a valid defenseType`);
+    ok(typeof def.physical === "boolean", `${id} declares whether it is physical`);
+    ok(typeof def.blocksEnemies === "boolean", `${id} declares whether it blocks enemies`);
+    ok(typeof def.targetableByEnemies === "boolean", `${id} declares whether enemies can target it`);
+    ok(Number.isFinite(def.hp), `${id} has hp`);
+    ok(Number.isFinite(def.maxHp), `${id} has maxHp`);
+    ok(Number.isFinite(def.blockRadius), `${id} has blockRadius`);
+    ok(Number.isFinite(def.range), `${id} has range`);
+    ok(Number.isFinite(def.damage), `${id} has damage`);
+    ok(Number.isFinite(def.attackRate), `${id} has attackRate`);
+    ok(def.attackRate === def.fireRate, `${id} keeps attackRate aligned with legacy fireRate`);
+    if (def.physical) {
+      ok(def.maxHp > 0 && def.hp > 0, `${id} physical defense has positive HP`);
+    } else {
+      ok(!def.blocksEnemies && !def.targetableByEnemies, `${id} non-physical defense is not a blocker/target`);
+    }
+    if (def.defenseType === "trap") {
+      ok(Number.isFinite(def.charges) && def.charges > 0, `${id} trap has charges`);
+      ok(Number.isFinite(def.resetTime) && def.resetTime > 0, `${id} trap has resetTime`);
+      ok(Number.isFinite(def.triggerRadius) && def.triggerRadius > 0, `${id} trap has triggerRadius`);
+    }
+    if (def.defenseType === "aura") {
+      ok(Number.isFinite(def.duration) && def.duration > 0, `${id} aura has duration`);
+      ok(Number.isFinite(def.tickRate) && def.tickRate > 0, `${id} aura has tickRate`);
+      ok(def.effect && typeof def.effect === "object", `${id} aura has an effect descriptor`);
+    }
+  }
+  ok(TOWERS.barricade.defenseType === "blockade", "Barricade is classified as a blockade");
+  ok(TOWERS.barricade.blocksEnemies && TOWERS.barricade.targetableByEnemies, "Barricade is a physical enemy target");
+  ok(TOWERS.spikegate.defenseType === "blockade", "Spike-gate is classified as a blockade variant");
+  ok(TOWERS.spikegate.blocksEnemies && TOWERS.spikegate.targetableByEnemies, "Spike-gate is a physical enemy target");
+}
+
+// ---------------------------------------------------------------------------
 section("building rules");
 {
   const w = new World(LEVEL);
@@ -135,6 +173,13 @@ section("building rules");
   const before = w.marrow;
   const r1 = w.tryPlaceTower("ballista", 21, 10);
   ok(r1.ok, "valid placement succeeds");
+  ok(r1.tower.defenseType === TOWERS.ballista.defenseType, "placed tower stores defenseType");
+  ok(r1.tower.physical === TOWERS.ballista.physical, "placed tower stores physical flag");
+  ok(r1.tower.blocksEnemies === TOWERS.ballista.blocksEnemies, "placed tower stores blocksEnemies flag");
+  ok(r1.tower.targetableByEnemies === TOWERS.ballista.targetableByEnemies, "placed tower stores targetableByEnemies flag");
+  ok(r1.tower.hp === TOWERS.ballista.hp && r1.tower.maxHp === TOWERS.ballista.maxHp, "placed tower stores HP fields");
+  ok(r1.tower.blockRadius === TOWERS.ballista.blockRadius, "placed tower stores blockRadius");
+  ok(r1.tower.attackRate === TOWERS.ballista.attackRate, "placed tower stores attackRate");
   ok(w.marrow === before - TOWERS.ballista.cost, "marrow deducted by tower cost");
   ok(!w.buildableAt(21, 10), "tile is occupied after placing");
 
@@ -143,6 +188,10 @@ section("building rules");
 
   const r3 = w.tryPlaceTower("ballista", 24, 11);
   ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
+
+  const laneBlocker = new World(LEVEL);
+  const rBlockadePath = laneBlocker.tryPlaceTower("barricade", 24, 11);
+  ok(rBlockadePath.ok, "blockades can be placed on lane path cells");
 
   const rBlocked = w.tryPlaceTower("ballista", 16, 17);
   ok(!rBlocked.ok && rBlocked.reason === "blocked", "cannot place on blocked ruins");
@@ -195,6 +244,75 @@ section("multi-lane spawning");
   w.startWave();
   w.update(0.1, {});
   ok(w.enemies[0]?.laneId === "southeast-garden", "wave groups can spawn on a requested lane");
+}
+
+// ---------------------------------------------------------------------------
+section("enemy vs blockade interaction");
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("barricade", 24, 11);
+  ok(placed.ok, "barricade can be placed as a path blocker");
+  const barricade = placed.tower;
+  barricade.damage = 0; // isolate enemy-vs-blockade behavior from legacy tower attacks
+  barricade.hp = 24;
+  barricade.maxHp = 24;
+  w._spawnEnemy("husk", w.defaultLaneId);
+  const enemy = w.enemies[0];
+  enemy.dist = 10.4;
+  const nearBlocker = pointAtDistance(w.lane, enemy.dist);
+  enemy.x = nearBlocker.x;
+  enemy.z = nearBlocker.z;
+  const distBefore = enemy.dist;
+  const hpBefore = barricade.hp;
+  w.update(0.1, {});
+  ok(enemy.blockingTargetId === barricade.id, "enemy targets a nearby living blockade");
+  ok(barricade.hp < hpBefore, "enemy attack decreases barricade HP");
+  ok(approx(enemy.dist, distBefore), "enemy pauses while attacking barricade");
+
+  let guard = 0;
+  while (barricade.alive && guard < 80) {
+    w.update(0.1, {});
+    guard++;
+  }
+  ok(!barricade.alive && barricade.hp === 0, "barricade can be destroyed by enemy attacks");
+  ok(w.placementStatus("barricade", barricade.col, barricade.row, { ignoreCost: true }).ok, "destroyed blockade releases its occupied cell");
+  const distAfterDestroy = enemy.dist;
+  w.update(0.5, {});
+  ok(enemy.dist > distAfterDestroy, "enemy resumes pathing after blockade is destroyed");
+
+  const coreBefore = w.core.hp;
+  run(w, 800, 0.05, {});
+  ok(w.stats.leaked > 0 && w.core.hp < coreBefore, "core still takes damage if no blockade survives");
+}
+
+{
+  for (const towerId of ["trapstake", "censer", "ballista"]) {
+    const w = new World(LEVEL);
+    w.hero.alive = false;
+    w.hero.respawnTimer = Infinity;
+    const placed = w.tryPlaceTower(towerId, 21, 10);
+    ok(placed.ok, `${towerId} can be placed for non-blocker interaction smoke`);
+    const tower = placed.tower;
+    tower.damage = 0;
+    tower.hp = 10;
+    tower.maxHp = 10;
+    w._spawnEnemy("husk", w.defaultLaneId);
+    const enemy = w.enemies[0];
+    enemy.dist = 10.4;
+    const p = pointAtDistance(w.lane, enemy.dist);
+    enemy.x = p.x;
+    enemy.z = p.z;
+    tower.x = enemy.x;
+    tower.z = enemy.z;
+    const distBefore = enemy.dist;
+    const hpBefore = tower.hp;
+    w.update(0.5, {});
+    ok(enemy.blockingTargetId !== tower.id, `${towerId} is not treated as a blockade target`);
+    ok(enemy.dist > distBefore, `${towerId} does not pause enemy movement`);
+    ok(tower.hp === hpBefore, `${towerId} is not damaged by enemies in A2`);
+  }
 }
 
 // ---------------------------------------------------------------------------
