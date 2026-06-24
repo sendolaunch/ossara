@@ -1,0 +1,58 @@
+import { defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
+
+let pass = 0;
+let fail = 0;
+const ok = (cond, msg) => (cond ? pass++ : (fail++, console.error("  FAIL:", msg)));
+
+ok(defenseTypeLabel("blockade") === "Blockade", "blockade type is human-readable");
+ok(defenseTypeLabel("turret") === "Turret", "turret type is human-readable");
+ok(defenseTypeLabel("trap") === "Trap", "trap type is human-readable");
+ok(defenseTypeLabel("aura") === "Aura", "aura type is human-readable");
+
+const hoveredBlockade = {
+  id: 1,
+  type: "barricade",
+  defenseType: "blockade",
+  alive: true,
+  level: 2,
+  hp: 155.3,
+  maxHp: 420,
+  physical: true,
+  upgradeCost: 90,
+  repairCost: 13,
+  sellRefund: 18,
+};
+const hoverData = defensePanelData(hoveredBlockade);
+ok(hoverData.title.includes("BARRICADE") && hoverData.title.includes("L2"), "hover panel names defense and level");
+ok(hoverData.meta.includes("Blockade") && hoverData.meta.includes("HP 156 / 420"), "hover panel includes type and HP");
+ok(hoverData.controls.includes("[U]") && hoverData.controls.includes("[F]") && hoverData.controls.includes("[X]"), "hover panel includes U/F/X actions");
+
+const trapData = defensePanelData({
+  id: 2,
+  type: "trapstake",
+  defenseType: "trap",
+  alive: true,
+  level: 1,
+  maxHp: 0,
+  charges: 3,
+  maxCharges: 6,
+  upgradeCost: 70,
+  repairCost: 0,
+  sellRefund: 20,
+});
+ok(trapData.meta.includes("Trap") && trapData.meta.includes("Charges 3 / 6"), "trap hover panel shows charges");
+
+const world = { marrow: 100 };
+const selectedData = selectedDefensePanelData("barricade", world, { towerId: "barricade", ok: true });
+ok(selectedData.title === "BARRICADE" && selectedData.meta.includes("Cost 35 Marrow"), "selected defense panel includes name and cost");
+ok(selectedData.canBuild, "selected defense panel marks affordable valid placement");
+
+const invalidData = selectedDefensePanelData("barricade", world, { towerId: "barricade", ok: false, reason: "path" });
+ok(!invalidData.canBuild, "invalid placement marks selected panel blocked");
+ok(invalidData.controls.includes("Enemy path"), "invalid placement reason surfaces to HUD data");
+
+const poorData = selectedDefensePanelData("spikegate", { marrow: 10 }, { towerId: "spikegate", ok: true });
+ok(!poorData.canBuild && poorData.controls.includes("Not enough Marrow"), "selected panel reports insufficient Marrow");
+
+console.log(`hudData: ${pass}/${pass + fail} checks passed`);
+if (fail) process.exit(1);

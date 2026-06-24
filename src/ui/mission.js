@@ -24,7 +24,7 @@ const PLACEMENT_MESSAGES = {
 };
 
 const MANAGEMENT_MESSAGES = {
-  missing: "Hover a defense first.",
+  missing: "No defense targeted.",
   dead: "That defense is gone.",
   max: "Defense already max level.",
   marrow: "Not enough Marrow.",

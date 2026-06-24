@@ -66,6 +66,58 @@ const placementReasonText = {
   phase: "Building locked during combat",
 };
 
+const DEFENSE_TYPE_LABELS = {
+  blockade: "Blockade",
+  turret: "Turret",
+  trap: "Trap",
+  aura: "Aura",
+};
+
+export function defenseTypeLabel(type) {
+  return DEFENSE_TYPE_LABELS[type] || "Defense";
+}
+
+export function defensePanelData(tower) {
+  if (!tower || !tower.alive) return null;
+  const def = TOWERS[tower.type] || {};
+  const maxLevel = tower.maxLevel || 3;
+  const hpText = tower.maxHp > 0
+    ? `HP ${Math.ceil(tower.hp)} / ${Math.ceil(tower.maxHp)}`
+    : tower.defenseType === "trap"
+      ? `Charges ${tower.charges ?? 0} / ${tower.maxCharges ?? tower.charges ?? 0}`
+      : tower.defenseType === "aura"
+        ? `Duration ${Math.max(0, Math.ceil(tower.remainingDuration ?? 0))}s`
+        : "Field defense";
+  const upgradeText = tower.level >= maxLevel ? "Max level" : `Upgrade ${tower.upgradeCost} Marrow`;
+  const repairText = tower.physical && tower.maxHp > 0 ? `Repair ${tower.repairCost} Marrow` : "Repair n/a";
+  return {
+    title: `${def.name || tower.type}  L${tower.level || 1}`.toUpperCase(),
+    type: defenseTypeLabel(tower.defenseType),
+    meta: `${defenseTypeLabel(tower.defenseType)}  |  ${hpText}  |  ${upgradeText}  |  Sell +${tower.sellRefund}`,
+    controls: `[U] Upgrade  [F] ${repairText}  [X] Sell`,
+  };
+}
+
+export function selectedDefensePanelData(towerId, world, placementStatus = null) {
+  const def = TOWERS[towerId];
+  if (!def || !world) return null;
+  const afford = world.marrow >= def.cost;
+  const placement = placementStatus && placementStatus.towerId === towerId ? placementStatus : null;
+  let controls = "Click to build. R rotates. Right-click or Esc cancels.";
+  if (placement && !placement.ok) {
+    controls = `${placementReasonText[placement.reason] || "Invalid placement"}. R rotates. Right-click or Esc cancels.`;
+  } else if (!afford) {
+    controls = "Not enough Marrow. Choose a cheaper defense or clear the wave.";
+  }
+  return {
+    title: `${def.name}`.toUpperCase(),
+    type: defenseTypeLabel(def.defenseType),
+    canBuild: afford && (!placement || placement.ok),
+    meta: `${defenseTypeLabel(def.defenseType)}  |  Cost ${def.cost} Marrow  |  You have ${Math.floor(world.marrow)}`,
+    controls,
+  };
+}
+
 export class HUD {
   constructor(root, cb) {
     this.cb = cb;
@@ -149,12 +201,14 @@ export class HUD {
     bottom.append(this.towerRow);
     this.root.appendChild(bottom);
 
-    // ---- contextual build/defense info (bottom-right, only when useful) ----
+    // ---- contextual build/defense info (bottom-center, only when useful) ----
     this.infoPanel = el("div", {
       position: "absolute",
-      right: "14px",
+      left: "50%",
       bottom: "14px",
-      width: "min(360px, calc(100vw - 32px))",
+      transform: "translateX(-50%)",
+      width: "min(440px, calc(100vw - 390px))",
+      minWidth: "300px",
       ...panel(),
       padding: "9px 12px",
       display: "none",
@@ -206,14 +260,22 @@ export class HUD {
       top: "50%",
       transform: "translate(-50%, -50%)",
       ...panel(),
-      padding: "10px",
+      padding: "12px",
       display: "none",
-      gridTemplateColumns: "repeat(2, minmax(132px, 1fr))",
+      gridTemplateColumns: "repeat(3, minmax(132px, 1fr))",
       gap: "8px",
       zIndex: "6",
       pointerEvents: "auto",
     });
-    const actionBtn = (label, action) => {
+    const actionTitle = el("div", {
+      gridColumn: "1 / -1",
+      color: CSS.gold,
+      font: "900 12px 'Cinzel', ui-monospace, monospace",
+      letterSpacing: "2px",
+      textAlign: "center",
+      padding: "2px 0 4px",
+    }, "COMMAND MENU");
+    const actionBtn = (label, action, hint = "") => {
       const btn = el("button", {
         cursor: "pointer",
         padding: "10px 12px",
@@ -223,16 +285,19 @@ export class HUD {
         color: CSS.bone,
         font: "800 11px ui-monospace, monospace",
         letterSpacing: "0.8px",
-      }, label);
+        minHeight: "48px",
+      }, `<span style="display:block;color:${CSS.bone}">${label}</span><span style="display:block;margin-top:3px;color:${CSS.ash};font:700 10px ui-monospace,monospace">${hint}</span>`);
       btn.onclick = () => this.cb.onActionMenu?.(action);
       return btn;
     };
     this.actionMenu.append(
-      actionBtn("Build Defenses", "build"),
-      actionBtn("Repair Defense", "repair"),
-      actionBtn("Upgrade Defense", "upgrade"),
-      actionBtn("Sell Defense", "sell"),
-      actionBtn("Cancel", "cancel")
+      actionTitle,
+      actionBtn("Build Defenses", "build", "1 / 2 / 3"),
+      actionBtn("Repair Defense", "repair", "F"),
+      actionBtn("Upgrade Defense", "upgrade", "U"),
+      actionBtn("Sell Defense", "sell", "X"),
+      actionBtn("Toggle Spawn Info", "spawn", "O"),
+      actionBtn("Cancel", "cancel", "Esc")
     );
     this.root.appendChild(this.actionMenu);
 
@@ -263,8 +328,8 @@ export class HUD {
       const card = el("button", {
         position: "relative",
         cursor: "pointer",
-        width: "72px",
-        minHeight: "70px",
+        width: "86px",
+        minHeight: "80px",
         ...panel(),
         padding: "6px 5px",
         display: "flex",
@@ -274,10 +339,10 @@ export class HUD {
         transition: "all 0.12s",
       });
       card.innerHTML =
-        `<div style="position:absolute;top:4px;left:6px;font:700 11px ui-monospace,monospace;color:${CSS.ash}">[${i + 1}]</div>` +
-        `<div style="margin-top:4px;height:26px;transform:scale(.78)">${towerIcon(id, c)}</div>` +
-        `<div style="font:800 9px ui-monospace,monospace;color:${CSS.bone};text-align:center;line-height:1.05;min-height:19px;display:flex;align-items:center;justify-content:center">${def.name}</div>` +
-        `<div style="font:800 11px ui-monospace,monospace;color:${CSS.gold}">${def.cost}</div>` +
+        `<div style="position:absolute;top:4px;left:6px;font:800 11px ui-monospace,monospace;color:${CSS.ash}">[${i + 1}]</div>` +
+        `<div style="margin-top:5px;height:30px;transform:scale(.86)">${towerIcon(id, c)}</div>` +
+        `<div style="font:900 10px ui-monospace,monospace;color:${CSS.bone};text-align:center;line-height:1.08;min-height:22px;display:flex;align-items:center;justify-content:center">${def.name}</div>` +
+        `<div style="font:900 12px ui-monospace,monospace;color:${CSS.gold}">${def.cost}</div>` +
         `<div class="lock" style="display:none;position:absolute;inset:0;background:rgba(7,8,6,0.62);border-radius:12px;align-items:center;justify-content:center;font:800 11px ui-monospace,monospace;color:${CSS.blood}">LOCK</div>`;
       card.onclick = () => this.cb.onSelect(id);
       this.towerBtns[id] = card;
@@ -347,33 +412,21 @@ export class HUD {
     if (this.elBuildTitle) {
       let showInfo = true;
       if (this.hoverTower && this.hoverTower.alive) {
-        const t = this.hoverTower;
-        const def = TOWERS[t.type] || {};
-        const hpText = t.maxHp > 0 ? `HP ${Math.ceil(t.hp)} / ${Math.ceil(t.maxHp)}` : t.defenseType === "trap" ? `Charges ${t.charges ?? 0} / ${t.maxCharges ?? t.charges ?? 0}` : t.defenseType === "aura" ? `Duration ${Math.max(0, Math.ceil(t.remainingDuration ?? 0))}s` : "Field defense";
-        const upgradeText = t.level >= (t.maxLevel || 3) ? "Max level" : `Upgrade ${t.upgradeCost} Marrow`;
-        const repairText = t.physical && t.maxHp > 0 ? `Repair ${t.repairCost} Marrow` : "Repair n/a";
-        this.elBuildTitle.textContent = `${def.name || t.type}  L${t.level || 1}`.toUpperCase();
+        const data = defensePanelData(this.hoverTower);
+        this.elBuildTitle.textContent = data.title;
         this.elBuildTitle.style.color = CSS.plague;
-        this.elBuildMeta.textContent = `${hpText}  |  ${upgradeText}  |  Sell +${t.sellRefund}`;
+        this.elBuildMeta.textContent = data.meta;
         this.elBuildMeta.style.color = CSS.gold;
-        this.elBuildControls.textContent = `[U] Upgrade  [F] Repair (${repairText})  [X] Sell`;
+        this.elBuildControls.textContent = data.controls;
       } else if (world.phase !== "prep") {
         showInfo = false;
       } else if (this.selectedTowerId && TOWERS[this.selectedTowerId]) {
-        const t = TOWERS[this.selectedTowerId];
-        const afford = world.marrow >= t.cost;
-        const placement = this.placementStatus && this.placementStatus.towerId === this.selectedTowerId ? this.placementStatus : null;
-        this.elBuildTitle.textContent = t.name.toUpperCase();
-        this.elBuildTitle.style.color = afford && (!placement || placement.ok) ? CSS.plague : CSS.blood;
-        this.elBuildMeta.textContent = `Cost ${t.cost} Marrow  |  You have ${Math.floor(world.marrow)}`;
-        this.elBuildMeta.style.color = afford && (!placement || placement.ok) ? CSS.gold : CSS.blood;
-        if (placement && !placement.ok) {
-          this.elBuildControls.textContent = `${placementReasonText[placement.reason] || "Invalid placement"}. R rotates. Right-click or Esc cancels.`;
-        } else {
-          this.elBuildControls.textContent = afford
-            ? "Click to build. R rotates. Right-click or Esc cancels."
-            : "Not enough Marrow. Choose a cheaper defense or clear the wave.";
-        }
+        const data = selectedDefensePanelData(this.selectedTowerId, world, this.placementStatus);
+        this.elBuildTitle.textContent = data.title;
+        this.elBuildTitle.style.color = data.canBuild ? CSS.plague : CSS.blood;
+        this.elBuildMeta.textContent = data.meta;
+        this.elBuildMeta.style.color = data.canBuild ? CSS.gold : CSS.blood;
+        this.elBuildControls.textContent = data.controls;
       } else {
         showInfo = false;
       }

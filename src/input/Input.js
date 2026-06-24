@@ -165,6 +165,11 @@ export class Input {
       if (this.onManageResult) this.onManageResult({ ok: true, action: "build" });
       return;
     }
+    if (action === "spawn") {
+      this.toggleSpawnInfo();
+      this.closeActionMenu();
+      return;
+    }
     if (action === "upgrade" || action === "repair" || action === "sell") this._manageHovered(action);
     this.closeActionMenu();
   }

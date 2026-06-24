@@ -190,6 +190,7 @@ const oldWindow = globalThis.window;
   ok(input.actionMenuOpen && menuStates.at(-1) === true, "Tab opens the action menu");
   input.chooseActionMenuAction("upgrade");
   ok(!input.actionMenuOpen && menuStates.at(-1) === false, "action menu closes after choosing an action");
+  input.chooseActionMenuAction("spawn");
   fakeWindow.dispatch("keydown", { key: "u", preventDefault() {} });
   fakeWindow.dispatch("keydown", { key: "f", preventDefault() {} });
   fakeWindow.dispatch("keydown", { key: "x", preventDefault() {} });
@@ -197,7 +198,7 @@ const oldWindow = globalThis.window;
   ok(hovered === null, "selling clears hovered defense");
   fakeWindow.dispatch("keydown", { key: "o", preventDefault() {} });
   fakeWindow.dispatch("keydown", { key: "o", preventDefault() {} });
-  ok(spawnStates[0] === false && spawnStates[1] === true, "O toggles spawn indicators");
+  ok(spawnStates[0] === false && spawnStates[1] === true && spawnStates[2] === false, "action menu and O toggle spawn indicators");
 }
 
 globalThis.window = oldWindow;
