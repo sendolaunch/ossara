@@ -149,6 +149,39 @@ export const LANES = [
 
 const firstLane = LANES[0];
 
+function dirForSegment(a, b) {
+  const dc = Math.sign(b.col - a.col);
+  const dr = Math.sign(b.row - a.row);
+  if (Math.abs(dc) > Math.abs(dr)) return dc > 0 ? "east" : "west";
+  return dr > 0 ? "south" : "north";
+}
+
+function buildLaneTelegraphs(lanes, step = 6) {
+  const out = [];
+  for (const lane of lanes) {
+    let count = 0;
+    for (let i = 1; i < lane.waypoints.length; i++) {
+      const a = lane.waypoints[i - 1];
+      const b = lane.waypoints[i];
+      const dc = Math.sign(b.col - a.col);
+      const dr = Math.sign(b.row - a.row);
+      const len = Math.abs(b.col - a.col) + Math.abs(b.row - a.row);
+      const dir = dirForSegment(a, b);
+      for (let d = i === 1 ? 4 : step; d < len; d += step) {
+        out.push({
+          laneId: lane.id,
+          col: a.col + dc * d,
+          row: a.row + dr * d,
+          dir,
+          y: 0.34,
+          index: count++,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 export const LEVEL = {
   name: "The Fallen Courtyard",
   cols: 121,
@@ -160,7 +193,7 @@ export const LEVEL = {
   heroSpawn: { col: 60, row: 51 },
   lanes: LANES,
   spawns: LANES.map((lane) => ({ id: lane.id, name: lane.name, ...lane.spawn })),
-  laneTelegraphs: LANES.flatMap((lane) => lane.telegraphs.map((t) => ({ ...t, laneId: lane.id }))),
+  laneTelegraphs: buildLaneTelegraphs(LANES),
 
   // Metadata for lane teaching/readability. With openBuildable enabled, these
   // are hints and tests anchors, not tiny build islands.

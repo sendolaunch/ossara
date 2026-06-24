@@ -84,7 +84,10 @@ section("pathing");
     ok(lane.waypoints.some((wp) => wp.col === lane.choke.col && wp.row === lane.choke.row), `${lane.id} choke sits on its lane`);
     ok(Array.isArray(lane.buildShoulders) && lane.buildShoulders.length >= 2, `${lane.id} has build shoulders near its approach`);
     ok(LEVEL.buildableZones.some((zone) => zone.laneId === lane.id), `${lane.id} has a buildable zone near its choke`);
-    ok(LEVEL.laneTelegraphs.some((tele) => tele.laneId === lane.id), `${lane.id} has build-phase lane telegraph data`);
+    const telegraphs = LEVEL.laneTelegraphs.filter((tele) => tele.laneId === lane.id);
+    ok(telegraphs.length >= 4, `${lane.id} has multiple dense build-phase lane telegraphs`);
+    ok(telegraphs.every((tele) => tele.y > 0.2), `${lane.id} telegraphs float above the ground`);
+    ok(telegraphs.every((tele) => ["north", "south", "east", "west"].includes(tele.dir)), `${lane.id} telegraphs carry directional rotation data`);
   }
   ok(LEVEL.buildableZones.some((zone) => zone.laneId === "core"), "central crystal apron has a buildable zone");
   ok(LEVEL.breach && !Array.isArray(LEVEL.breach), "legacy first breach alias still exposes one default spawn");
@@ -851,12 +854,25 @@ section("manual hero attack and slam damages");
   en.hp = hpAfterAttack;
   const nearX = en.x;
   const nearZ = en.z;
+  en.x = w.hero.x - Math.sin(w.hero.facing) * 0.8;
+  en.z = w.hero.z - Math.cos(w.hero.facing) * 0.8;
+  w._heroAttack(w.hero, { attackX: w.hero.x + Math.sin(w.hero.facing), attackZ: w.hero.z + Math.cos(w.hero.facing) });
+  ok(en.hp === hpAfterAttack, "manual attack ignores enemies behind the hero");
+
+  w.hero.attackCd = 0;
   en.x = w.hero.x + 10;
   en.z = w.hero.z + 10;
   w._heroAttack(w.hero, { attackX: en.x, attackZ: en.z });
   ok(en.hp === hpAfterAttack, "out-of-range manual attack does not damage enemies");
   en.x = nearX;
   en.z = nearZ;
+
+  const coreBeforeAttack = w.core.hp;
+  const tower = w.tryPlaceTower("barricade", 60, 32).tower;
+  const towerHpBeforeAttack = tower.hp;
+  w.hero.attackCd = 0;
+  w._heroAttack(w.hero, { attackX: tower.x, attackZ: tower.z });
+  ok(tower.hp === towerHpBeforeAttack && w.core.hp === coreBeforeAttack, "manual attack does not damage towers or the Ward-Crystal");
 
   w.hero.attackCd = 0;
   w.hero.abilityCd = 0;

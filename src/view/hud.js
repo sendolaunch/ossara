@@ -292,23 +292,37 @@ export class HUD {
       top: "50%",
       transform: "translate(-50%, -50%)",
       ...panel(),
-      padding: "9px",
+      padding: "0",
       display: "none",
-      gridTemplateColumns: "repeat(3, minmax(118px, 1fr))",
-      gap: "7px",
+      width: "360px",
+      height: "300px",
+      borderRadius: "50%",
       zIndex: "6",
       pointerEvents: "auto",
     });
     const actionTitle = el("div", {
-      gridColumn: "1 / -1",
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
       color: CSS.gold,
       font: "900 12px 'Cinzel', ui-monospace, monospace",
       letterSpacing: "2px",
       textAlign: "center",
-      padding: "2px 0 4px",
-    }, "COMMAND MENU");
-    const actionBtn = (label, action, hint = "") => {
+      width: "116px",
+      height: "116px",
+      borderRadius: "50%",
+      border: `1px solid rgba(202,162,76,0.42)`,
+      background: "rgba(7,8,6,0.86)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      lineHeight: "1.25",
+    }, "COMMAND<br>WHEEL");
+    const actionBtn = (label, action, hint = "", pos = {}) => {
       const btn = el("button", {
+        position: "absolute",
+        ...pos,
         cursor: "pointer",
         padding: "8px 10px",
         borderRadius: "8px",
@@ -318,18 +332,30 @@ export class HUD {
         font: "800 11px ui-monospace, monospace",
         letterSpacing: "0.8px",
         minHeight: "42px",
+        width: "128px",
+        transition: "border-color 0.12s, box-shadow 0.12s, transform 0.12s",
       }, `<span style="display:block;color:${CSS.bone}">${label}</span><span style="display:block;margin-top:3px;color:${CSS.ash};font:700 10px ui-monospace,monospace">${hint}</span>`);
       btn.onclick = () => this.cb.onActionMenu?.(action);
+      btn.onmouseenter = () => {
+        btn.style.borderColor = CSS.plague;
+        btn.style.boxShadow = `0 0 14px rgba(110,230,90,0.5)`;
+        btn.style.transform = "scale(1.04)";
+      };
+      btn.onmouseleave = () => {
+        btn.style.borderColor = "rgba(202,162,76,0.36)";
+        btn.style.boxShadow = "none";
+        btn.style.transform = "scale(1)";
+      };
       return btn;
     };
     this.actionMenu.append(
       actionTitle,
-      actionBtn("Build Defenses", "build", "1 / 2 / 3"),
-      actionBtn("Repair Defense", "repair", "F"),
-      actionBtn("Upgrade Defense", "upgrade", "U"),
-      actionBtn("Sell Defense", "sell", "X"),
-      actionBtn("Toggle Spawn Info", "spawn", "O"),
-      actionBtn("Cancel", "cancel", "Esc")
+      actionBtn("Build Defenses", "build", "1 / 2 / 3", { left: "116px", top: "8px" }),
+      actionBtn("Repair Defense", "repair", "F", { left: "8px", top: "92px" }),
+      actionBtn("Upgrade Defense", "upgrade", "U", { right: "8px", top: "92px" }),
+      actionBtn("Sell Defense", "sell", "X", { left: "116px", bottom: "8px" }),
+      actionBtn("Toggle Spawn Info", "spawn", "O", { left: "8px", bottom: "62px" }),
+      actionBtn("Cancel", "cancel", "Esc", { right: "8px", bottom: "62px" })
     );
     this.root.appendChild(this.actionMenu);
 
@@ -422,7 +448,7 @@ export class HUD {
   }
 
   setActionMenuOpen(on) {
-    if (this.actionMenu) this.actionMenu.style.display = on ? "grid" : "none";
+    if (this.actionMenu) this.actionMenu.style.display = on ? "block" : "none";
   }
 
   _writeWinSummary(world = null) {

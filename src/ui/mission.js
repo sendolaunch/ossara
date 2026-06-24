@@ -64,7 +64,7 @@ export class Mission {
     this.input.onTowerHover = (tower) => this.hud.setTowerHover(tower);
     this.input.onCommandTargetChange = (mode, tower) => {
       this.hud.setCommandTarget(mode, tower);
-      if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(tower, mode);
+      if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(tower, mode, this.world.hero);
     };
     this.input.onCommandCastChange = (cast, tower) => {
       this.hud.setCommandCast(cast, tower);

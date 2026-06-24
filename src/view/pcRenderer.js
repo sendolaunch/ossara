@@ -57,7 +57,7 @@ const MISSION_CAMERA = {
   maxPitch: 1.08,
   dist: 10.5,
   minDist: 4.6,
-  maxDist: 42,
+  maxDist: 24,
   targetY: 0.8,
   laneLead: 0.25,
   followSharpness: 0.025,
@@ -371,17 +371,25 @@ export class PCRenderer {
       this.app.root.addChild(group);
       this.spawnIndicatorEntities.push(group);
     }
-    const arrowMat = mat("plague", 0.55);
+    const arrowMat = mat("plague", 0.72);
     const dirYaw = { north: 180, south: 0, east: 90, west: -90 };
     for (const tele of level.laneTelegraphs || []) {
       const w = gridToWorld(tele.col, tele.row, level);
-      const arrow = prim("cone", arrowMat);
-      arrow.name = `lane-telegraph-${tele.laneId || "lane"}`;
-      arrow.setLocalScale(0.32, 0.12, 0.72);
-      arrow.setLocalEulerAngles(90, dirYaw[tele.dir] ?? 0, 0);
-      arrow.setPosition(w.x, 0.16, w.z);
-      this.app.root.addChild(arrow);
-      this.laneTelegraphEntities.push(arrow);
+      const group = new pc.Entity(`lane-telegraph-${tele.laneId || "lane"}`);
+      const shaft = prim("box", arrowMat);
+      shaft.setLocalScale(0.18, 0.07, 0.62);
+      shaft.setLocalPosition(0, 0, -0.12);
+      group.addChild(shaft);
+      const head = prim("box", arrowMat);
+      head.setLocalScale(0.34, 0.08, 0.34);
+      head.setLocalEulerAngles(0, 45, 0);
+      head.setLocalPosition(0, 0.01, 0.32);
+      group.addChild(head);
+      group.setPosition(w.x, tele.y ?? 0.34, w.z);
+      group.setLocalEulerAngles(0, dirYaw[tele.dir] ?? 0, 0);
+      group._ossaraBaseScale = 1;
+      this.app.root.addChild(group);
+      this.laneTelegraphEntities.push(group);
     }
   }
 
@@ -389,11 +397,16 @@ export class PCRenderer {
     this.spawnIndicatorsEnabled = !!on;
   }
 
-  setCommandTarget(tower, action = null) {
+  setCommandTarget(tower, action = null, hero = null) {
     this.commandTarget = tower && tower.alive ? { id: tower.id, x: tower.x, z: tower.z, action } : null;
     if (!this.commandTargetRing) return;
     this.commandTargetRing.enabled = !!this.commandTarget;
-    if (this.commandTarget) this.commandTargetRing.setPosition(tower.x, 0.08, tower.z);
+    if (this.commandTarget) {
+      this.commandTargetRing.setPosition(tower.x, 0.08, tower.z);
+      if (hero) this._setCommandBeam(hero, tower, 0.18);
+    } else if (this.commandBeam) {
+      this.commandBeam.enabled = false;
+    }
   }
 
   setCommandCast(hero, tower, action = null, progress = 0) {
@@ -403,6 +416,13 @@ export class PCRenderer {
       if (!this.commandTarget) this.commandTargetRing.enabled = false;
       return;
     }
+    this._setCommandBeam(hero, tower, 0.45 + progress * 0.45);
+    this.commandTargetRing.enabled = true;
+    this.commandTargetRing.setPosition(tower.x, 0.1, tower.z);
+  }
+
+  _setCommandBeam(hero, tower, thickness = 0.18) {
+    if (!this.commandBeam || !hero || !tower) return;
     const hx = hero.x;
     const hz = hero.z;
     const tx = tower.x;
@@ -414,10 +434,8 @@ export class PCRenderer {
     const midZ = (hz + tz) * 0.5;
     this.commandBeam.enabled = true;
     this.commandBeam.setPosition(midX, 1.05, midZ);
-    this.commandBeam.setLocalScale(0.055 + progress * 0.045, 0.055 + progress * 0.045, len);
+    this.commandBeam.setLocalScale(0.035 + thickness * 0.08, 0.035 + thickness * 0.08, len);
     this.commandBeam.setLocalEulerAngles(0, (Math.atan2(dx, dz) * 180) / Math.PI, 0);
-    this.commandTargetRing.enabled = true;
-    this.commandTargetRing.setPosition(tx, 0.1, tz);
   }
 
   async _loadFallbackHero(classId = "unknown") {
@@ -625,7 +643,7 @@ export class PCRenderer {
     this._syncProjectiles(world);
     this._syncTowers(world);
     this._syncHero(world, heroAnim);
-    this._syncCommandTarget();
+    this._syncCommandTarget(world);
     this._spawnEventFx(world.events);
     this._updateFx(dt);
     // PlayCanvas auto-renders on its own loop.
@@ -633,8 +651,12 @@ export class PCRenderer {
 
   _spawnEventFx(events = []) {
     for (const ev of events) {
-      if (ev.kind === "heroHit") this._spark(ev.x, ev.z, "plague", 0.4);
-      else if (ev.kind === "heroSwing") this._ring(ev.x, ev.z, 1.2, "bone", 0.22);
+      if (ev.kind === "heroHit") {
+        this._slash(ev.heroX ?? ev.x, ev.heroZ ?? ev.z, ev.facing || 0, ev.range || 1.2, "plague");
+        this._spark(ev.x, ev.z, "gold", 0.4);
+      } else if (ev.kind === "heroSwing") {
+        this._slash(ev.x, ev.z, ev.facing || 0, ev.range || 1.2, "bone");
+      }
       else if (ev.kind === "heroDash") this._ring(ev.x, ev.z, ev.range || 1.1, "plague", 0.28);
       else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
       else if (ev.kind === "towerSold") this._ring(ev.x, ev.z, 0.85, "ash", 0.22);
@@ -658,6 +680,17 @@ export class PCRenderer {
     this.fx.push({ ent: e, kind: "spark", life, maxLife: life, vy: 1.25 });
   }
 
+  _slash(x, z, facing, range, colorKey) {
+    const fx = Math.sin(facing);
+    const fz = Math.cos(facing);
+    const e = prim("box", mat(colorKey, 1.35));
+    e.setLocalScale(Math.max(0.9, range * 1.05), 0.08, 0.12);
+    e.setPosition(x + fx * range * 0.62, 0.78, z + fz * range * 0.62);
+    e.setLocalEulerAngles(0, (facing * 180) / Math.PI + 72, 14);
+    this.app.root.addChild(e);
+    this.fx.push({ ent: e, kind: "slash", life: 0.18, maxLife: 0.18, base: Math.max(0.9, range * 1.05) });
+  }
+
   _updateFx(dt) {
     for (let i = this.fx.length - 1; i >= 0; i--) {
       const fx = this.fx[i];
@@ -669,6 +702,9 @@ export class PCRenderer {
       } else if (fx.kind === "spark") {
         const p = fx.ent.getPosition();
         fx.ent.setPosition(p.x, p.y + fx.vy * dt, p.z);
+      } else if (fx.kind === "slash") {
+        const s = 1 + t * 0.22;
+        fx.ent.setLocalScale(fx.base * s, 0.08, 0.12);
       }
       if (fx.life <= 0) {
         fx.ent.destroy();
@@ -677,13 +713,15 @@ export class PCRenderer {
     }
   }
 
-  _syncCommandTarget() {
+  _syncCommandTarget(world) {
     if (!this.commandTargetRing || !this.commandTarget) return;
     const t = performance.now() * 0.001;
     const pulse = 1.05 + Math.sin(t * 7) * 0.12;
     this.commandTargetRing.enabled = true;
     this.commandTargetRing.setPosition(this.commandTarget.x, 0.1, this.commandTarget.z);
     this.commandTargetRing.setLocalScale(1.25 * pulse, 1.25 * pulse, 1.25 * pulse);
+    const tower = world?.towerById ? world.towerById(this.commandTarget.id) : null;
+    if (tower?.alive && world?.hero) this._setCommandBeam(world.hero, tower, 0.18);
   }
 
   _syncSpawnIndicators(world, dt) {
@@ -701,7 +739,7 @@ export class PCRenderer {
       ent.enabled = show;
       if (!show) continue;
       const pulse = 1 + Math.sin(t * 3.2) * 0.08;
-      ent.setLocalScale(0.32 * pulse, 0.12, 0.72 * pulse);
+      ent.setLocalScale(pulse, pulse, pulse);
     }
   }
 

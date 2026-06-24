@@ -505,6 +505,8 @@ export class World {
 
     let best = null;
     let bestScore = Infinity;
+    let fallback = null;
+    let fallbackScore = Infinity;
     const reach = h.attackRange + 0.35;
     for (const e of this.enemies) {
       if (!e.alive) continue;
@@ -513,15 +515,19 @@ export class World {
       const d = Math.hypot(dx, dz);
       if (d > reach + e.radius || d < 1e-5) continue;
       const dot = (dx / d) * fx + (dz / d) * fz;
-      if (dot < 0.35) continue;
+      if (dot < 0.08) continue;
       const aimBias = hasAim ? Math.hypot(e.x - aimX, e.z - aimZ) * 0.2 : 0;
       const score = d + aimBias;
-      if (score < bestScore) {
+      if (dot >= 0.35 && score < bestScore) {
         bestScore = score;
         best = e;
       }
+      if (score < fallbackScore) {
+        fallbackScore = score;
+        fallback = e;
+      }
     }
-    return best;
+    return best || fallback;
   }
 
   _heroAttack(h, input) {
@@ -529,9 +535,9 @@ export class World {
     const target = this._enemyInHeroAttackArc(h, input.attackX, input.attackZ);
     if (target) {
       this._damageEnemy(target, h.attackDamage);
-      this.events.push({ kind: "heroHit", x: target.x, z: target.z });
+      this.events.push({ kind: "heroHit", x: target.x, z: target.z, heroX: h.x, heroZ: h.z, facing: h.facing, range: h.attackRange });
     } else {
-      this.events.push({ kind: "heroSwing", x: h.x, z: h.z });
+      this.events.push({ kind: "heroSwing", x: h.x, z: h.z, facing: h.facing, range: h.attackRange });
     }
     h.attackCd = 1 / h.attackRate;
     return true;
