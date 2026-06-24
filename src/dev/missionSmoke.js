@@ -16,3 +16,9 @@ export function devMissionIdFromLocation(location = globalThis.location, env = {
   const id = params.get("devMission");
   return id && id.trim() ? id.trim() : null;
 }
+
+export function devEnemyGalleryEnabled(location = globalThis.location, env = {}) {
+  if (!canUseDevMissionRoute(env, location)) return false;
+  const params = new URLSearchParams(location?.search || "");
+  return params.get("devEnemyGallery") === "1";
+}

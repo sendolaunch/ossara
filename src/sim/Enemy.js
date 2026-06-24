@@ -20,11 +20,16 @@ export function createEnemy() {
     attackRange: 0.6,
     attackCd: 0,
     blockingTargetId: 0,
+    attackingBlocker: false,
+    attackSlotIndex: -1,
+    attackSlotX: 0,
+    attackSlotZ: 0,
     color: "ash",
     boss: false,
     laneId: "",
     laneOffset: 0,
     laneOffsetFade: 12,
+    collisionRadius: 0.3,
     hitFlash: 0,
     hpBarTimer: 0,
     lastDamage: 0,
@@ -51,11 +56,16 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.attackRange = def.attackRange ?? 0.6;
   e.attackCd = 0;
   e.blockingTargetId = 0;
+  e.attackingBlocker = false;
+  e.attackSlotIndex = -1;
+  e.attackSlotX = 0;
+  e.attackSlotZ = 0;
   e.color = def.color;
   e.boss = !!def.boss;
   e.laneId = laneId;
   e.laneOffset = opts.laneOffset || 0;
   e.laneOffsetFade = opts.laneOffsetFade || 12;
+  e.collisionRadius = def.collisionRadius ?? def.radius;
   e.hitFlash = 0;
   e.hpBarTimer = 0;
   e.lastDamage = 0;

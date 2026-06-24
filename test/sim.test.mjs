@@ -474,13 +474,14 @@ section("enemy vs blockade interaction");
   w._spawnEnemy("husk", w.defaultLaneId);
   const enemy = w.enemies[0];
   enemy.dist = NORTH_CHOKE_DIST;
-  const nearBlocker = pointAtDistance(w.lane, enemy.dist);
-  enemy.x = nearBlocker.x;
-  enemy.z = nearBlocker.z;
+  const attackSlot = w._slotForBlocker(enemy, barricade, 0);
+  enemy.x = attackSlot.x;
+  enemy.z = attackSlot.z;
   const distBefore = enemy.dist;
   const hpBefore = barricade.hp;
   w.update(0.1, {});
   ok(enemy.blockingTargetId === barricade.id, "enemy targets a nearby living blockade");
+  ok(enemy.attackingBlocker, "enemy enters attacking state once it reaches its blockade slot");
   ok(barricade.hp < hpBefore, "enemy attack decreases barricade HP");
   ok(approx(enemy.dist, distBefore), "enemy pauses while attacking barricade");
 
@@ -509,13 +510,15 @@ section("enemy vs blockade interaction");
   const barricade = placed.tower;
   barricade.hp = 100;
   barricade.maxHp = 100;
-  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST - 2.0);
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST - 1.25);
   enemy.speed = 1.6;
   const hpBefore = barricade.hp;
-  const distBefore = enemy.dist;
+  const slot = w._slotForBlocker(enemy, barricade, 0);
+  const slotDistBefore = dist(enemy.x, enemy.z, slot.x, slot.z);
   w.update(0.1, {});
-  ok(enemy.blockingTargetId !== barricade.id, "enemy does not attack blockade outside contact range");
-  ok(enemy.dist > distBefore, "enemy keeps walking closer before attacking blockade");
+  ok(enemy.blockingTargetId === barricade.id, "enemy can acquire a nearby blockade before contact");
+  ok(!enemy.attackingBlocker, "enemy does not attack blockade outside contact range");
+  ok(dist(enemy.x, enemy.z, enemy.attackSlotX, enemy.attackSlotZ) < slotDistBefore, "enemy moves toward its attack slot before attacking");
   ok(barricade.hp === hpBefore, "distant blockade does not take invisible far-away attack damage");
 }
 
@@ -544,12 +547,53 @@ section("enemy vs blockade interaction");
   ok(placed.ok, "spread contact test can place lane barricade");
   const barricade = placed.tower;
   const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
-  enemy.x = barricade.x + barricade.blockRadius + enemy.radius - 0.08;
-  enemy.z = barricade.z;
+  const slot = w._slotForBlocker(enemy, barricade, 1);
+  enemy.x = slot.x;
+  enemy.z = slot.z;
   const hpBefore = barricade.hp;
   w.update(0.1, {});
   ok(enemy.blockingTargetId === barricade.id, "spread enemy still attacks blockade when physically contacting its lane span");
+  ok(enemy.attackingBlocker, "spread enemy attacks only after reaching its assigned slot");
   ok(barricade.hp < hpBefore, "contacting spread enemy damages the blockade");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("barricade", 60, 32);
+  ok(placed.ok, "multi-attacker slot test can place a barricade");
+  const barricade = placed.tower;
+  const enemies = [];
+  for (let i = 0; i < 5; i++) {
+    const e = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST - 0.7);
+    e.speed = 1.6;
+    enemies.push(e);
+  }
+  run(w, 24, 0.05, {});
+  const slots = new Set(enemies.filter((e) => e.blockingTargetId === barricade.id).map((e) => e.attackSlotIndex));
+  ok(slots.size >= 3, "multiple enemies attacking the same blockade choose several slots");
+  const positions = new Set(enemies.map((e) => `${e.x.toFixed(2)},${e.z.toFixed(2)}`));
+  ok(positions.size >= 3, "enemies do not all share the exact same blockade position");
+  ok(enemies.some((e) => e.attackingBlocker), "at least one slotted enemy attacks once close enough");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  for (let i = 0; i < 2; i++) {
+    const e = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST - 6);
+    e.speed = 0;
+    const p = pointAtDistance(w.lane, e.dist);
+    e.x = p.x;
+    e.z = p.z;
+  }
+  w._applyEnemySeparation(0.1);
+  const [a, b] = w.enemies;
+  ok(dist(a.x, a.z, b.x, b.z) > 0.05, "two enemies spawned on the same point separate");
+  const laneCenter = pointAtDistance(w.lane, a.dist);
+  ok(dist(a.x, a.z, laneCenter.x, laneCenter.z) < 1.4, "separated enemies remain near the lane corridor");
 }
 
 {
@@ -560,12 +604,14 @@ section("enemy vs blockade interaction");
   ok(placed.ok, "spike-gate can be placed for contact damage test");
   const spike = placed.tower;
   const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
-  enemy.x = spike.x + spike.contactRadius + enemy.radius - 0.05;
-  enemy.z = spike.z;
+  const slot = w._slotForBlocker(enemy, spike, 0);
+  enemy.x = slot.x;
+  enemy.z = slot.z;
   const enemyHpBefore = enemy.hp;
   const spikeHpBefore = spike.hp;
   w.update(0.1, {});
   ok(enemy.blockingTargetId === spike.id, "spike-gate is still attacked as a blockade");
+  ok(enemy.attackingBlocker, "spike-gate is only attacked from a contact slot");
   ok(spike.hp < spikeHpBefore, "spike-gate takes enemy blockade damage");
   ok(enemy.hp < enemyHpBefore, "spike-gate deals contact damage to touching enemy");
   ok(enemy.hitFlash > 0 && enemy.hpBarTimer > 0, "spike-gate contact damage triggers enemy hit feedback");
@@ -584,8 +630,9 @@ section("enemy vs blockade interaction");
   ok(placed.ok, "normal barricade can be placed for contact damage comparison");
   const barricade = placed.tower;
   const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
-  enemy.x = barricade.x + barricade.contactRadius + enemy.radius - 0.05;
-  enemy.z = barricade.z;
+  const slot = w._slotForBlocker(enemy, barricade, 0);
+  enemy.x = slot.x;
+  enemy.z = slot.z;
   const hpBefore = enemy.hp;
   w.update(0.1, {});
   ok(enemy.hp === hpBefore, "normal barricade does not deal contact damage");

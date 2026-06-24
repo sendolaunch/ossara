@@ -8,6 +8,7 @@
 // leak                ward damage if it reaches the core
 // bounty              Marrow granted on kill
 // radius              body radius for hit/collision checks
+// collisionRadius     soft local crowding radius; defaults to radius
 // attackDamage/rate/range  simple defense-attack knobs for blockades
 // color               palette key
 
@@ -21,6 +22,7 @@ export const ENEMIES = {
     leak: 1,
     bounty: 6,
     radius: 0.28,
+    collisionRadius: 0.34,
     attackDamage: 18,
     attackRate: 1.0,
     attackRange: 0.65,
@@ -35,6 +37,7 @@ export const ENEMIES = {
     leak: 1,
     bounty: 7,
     radius: 0.22,
+    collisionRadius: 0.3,
     attackDamage: 12,
     attackRate: 1.25,
     attackRange: 0.55,
@@ -49,6 +52,7 @@ export const ENEMIES = {
     leak: 3,
     bounty: 18,
     radius: 0.42,
+    collisionRadius: 0.5,
     attackDamage: 34,
     attackRate: 0.75,
     attackRange: 0.8,
@@ -63,6 +67,7 @@ export const ENEMIES = {
     leak: 10,
     bounty: 100,
     radius: 0.6,
+    collisionRadius: 0.68,
     attackDamage: 55,
     attackRate: 0.65,
     attackRange: 0.95,

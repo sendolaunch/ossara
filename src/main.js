@@ -15,10 +15,11 @@ import { rollMissionDrops } from "./sim/loot.js";
 import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
 import { Inventory } from "./ui/inventory.js";
 import { HeroSelect } from "./ui/heroSelect.js";
+import { EnemyGallery } from "./ui/enemyGallery.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
 import { getDifficulty, getMission } from "./config/missions.js";
-import { devMissionIdFromLocation } from "./dev/missionSmoke.js";
+import { devEnemyGalleryEnabled, devMissionIdFromLocation } from "./dev/missionSmoke.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -39,6 +40,7 @@ let mapSelect = null;
 let heroSelect = null;
 let username = "The Warded";
 const devMissionId = devMissionIdFromLocation(window.location, import.meta.env);
+const devEnemyGallery = devEnemyGalleryEnabled(window.location, import.meta.env);
 
 function ensureHub() {
   if (!hub) {
@@ -209,7 +211,12 @@ window.OSSARA = {
   startMission,
 };
 
-if (devMissionId) {
+if (devEnemyGallery) {
+  screensRoot.style.display = "none";
+  app.style.display = "";
+  const gallery = new EnemyGallery(app, ui);
+  gallery.start();
+} else if (devMissionId) {
   seedDevMissionProfile();
   startMission(devMissionId);
 } else {

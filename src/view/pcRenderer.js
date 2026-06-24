@@ -97,6 +97,32 @@ function gotoAnim(layer, state, blend = 0.12) {
   }
 }
 
+function poseSignature(entity) {
+  const p = entity?.getLocalPosition?.();
+  const r = entity?.getLocalRotation?.();
+  if (!p || !r) return null;
+  return [p.x, p.y, p.z, r.x, r.y, r.z, r.w];
+}
+
+function poseChanged(a, b, eps = 0.0001) {
+  if (!a || !b) return null;
+  let delta = 0;
+  for (let i = 0; i < a.length; i++) delta += Math.abs(a[i] - b[i]);
+  return delta > eps;
+}
+
+function animationChangesPose(entity) {
+  const probe = entity?.findByName?.("hips") || entity?.findByName?.("chest") || entity?.findByName?.("upperarm.l");
+  if (!probe || typeof entity?.anim?.update !== "function") return null;
+  const before = poseSignature(probe);
+  try {
+    for (let i = 0; i < 8; i++) entity.anim.update(1 / 30);
+  } catch (_) {
+    return false;
+  }
+  return poseChanged(before, poseSignature(probe));
+}
+
 const MISSION_CAMERA = {
   yaw: Math.PI / 2,
   pitch: 0.68,
@@ -652,37 +678,58 @@ export class PCRenderer {
       assign("Idle", clips.idle, true);
       assign("Move", clips.walk || clips.run, true);
       const hasAttack = assign("Attack", clips.attack, false);
-      assign("Death", clips.death, false);
+      const hasDeath = assign("Death", clips.death, false);
       const layer = model.anim.baseLayer || null;
       gotoAnim(layer, "Idle", 0);
-      const st = { layer, moving: false, attacking: false, hasAttack, attackTimer: 0 };
+      const probe = animationChangesPose(model);
+      if (probe === false) return null;
+      gotoAnim(layer, "Idle", 0);
+      const st = { layer, moving: false, attacking: false, hasAttack, hasDeath, attackTimer: 0, current: "Idle", preview: false };
+      const play = (state, blend = 0.12) => {
+        if (!state) return;
+        gotoAnim(layer, state, blend);
+        st.current = state;
+      };
       return {
         setMoving(moving) {
           moving = !!moving;
+          st.preview = false;
           if (st.attacking || st.moving === moving) return;
           st.moving = moving;
-          gotoAnim(layer, moving ? "Move" : "Idle", 0.14);
+          play(moving ? "Move" : "Idle", 0.14);
         },
         setAttacking(attacking) {
           attacking = !!attacking;
+          st.preview = false;
           if (!hasAttack) return;
           if (attacking && !st.attacking) {
             st.attacking = true;
             st.attackTimer = 0.45;
-            gotoAnim(layer, "Attack", 0.08);
+            play("Attack", 0.08);
           } else if (!attacking && st.attacking) {
             st.attacking = false;
             st.attackTimer = 0;
-            gotoAnim(layer, st.moving ? "Move" : "Idle", 0.12);
+            play(st.moving ? "Move" : "Idle", 0.12);
           }
         },
+        setPreviewState(state) {
+          const normalized = state === "walk" ? "Move" : state === "attack" ? (hasAttack ? "Attack" : "Idle") : state === "death" ? (hasDeath ? "Death" : "Idle") : "Idle";
+          st.preview = true;
+          st.attacking = normalized === "Attack";
+          st.moving = normalized === "Move";
+          play(normalized, 0.1);
+        },
         update(dt) {
+          if (st.preview) return;
           if (!st.attacking) return;
           st.attackTimer -= dt;
           if (st.attackTimer <= 0) {
             st.attacking = false;
-            gotoAnim(layer, st.moving ? "Move" : "Idle", 0.12);
+            play(st.moving ? "Move" : "Idle", 0.12);
           }
+        },
+        state() {
+          return { loaded: true, currentClip: st.current, hasAttack, hasDeath };
         },
       };
     } catch (_) {
@@ -714,6 +761,13 @@ export class PCRenderer {
           this.enemyModelWarned.add(`${type}:anim`);
           console.warn(`[pcRenderer] enemy animation unavailable for ${type}; keeping primitive fallback`);
         }
+        ent._ossaraDebug = {
+          type,
+          modelLoaded: false,
+          fallbackUsed: true,
+          animationLoaded: false,
+          currentClip: "fallback",
+        };
         model.destroy();
         return;
       }
@@ -721,7 +775,26 @@ export class PCRenderer {
       ent._ossaraModel = model;
       ent._ossaraAnim = animCtl;
       if (ent._ossaraFallbackBody) ent._ossaraFallbackBody.enabled = false;
+      ent._ossaraDebug = {
+        type,
+        modelLoaded: true,
+        fallbackUsed: false,
+        animationLoaded: !!animCtl,
+        currentClip: animCtl?.state?.().currentClip || "static",
+      };
     });
+  }
+
+  enemyDebugStates() {
+    return Array.from(this.enemyEntities.values()).map((ent) => ({
+      id: ent._ossaraEnemyId,
+      ...(ent._ossaraDebug || {
+        modelLoaded: false,
+        fallbackUsed: true,
+        animationLoaded: false,
+        currentClip: "fallback",
+      }),
+    }));
   }
 
   // ---- camera --------------------------------------------------------------
@@ -1003,17 +1076,29 @@ export class PCRenderer {
         ent._ossaraHpBg = hpBg;
         ent._ossaraHpFill = hpFill;
         ent._ossaraHitRing = hitRing;
+        ent._ossaraDebug = {
+          type: e.type,
+          modelLoaded: false,
+          fallbackUsed: true,
+          animationLoaded: false,
+          currentClip: "fallback",
+        };
         this.app.root.addChild(ent);
         this.enemyEntities.set(e.id, ent);
         this._attachEnemyModel(ent, e.type, visual);
       }
       const prev = ent._ossaraPrevPos || { x: e.x, z: e.z };
       const movedDist = Math.hypot(e.x - prev.x, e.z - prev.z);
-      const moving = movedDist > 0.002 && !e.blockingTargetId;
+      const forcedState = e.previewAnimState || "";
+      const moving = forcedState ? forcedState === "walk" : movedDist > 0.002 && !e.attackingBlocker;
       if (movedDist > 0.001) ent.setLocalEulerAngles(0, (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI, 0);
-      ent._ossaraAnim?.setMoving(moving);
-      ent._ossaraAnim?.setAttacking(!!e.blockingTargetId);
+      if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
+      else {
+        ent._ossaraAnim?.setMoving(moving);
+        ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
+      }
       ent._ossaraAnim?.update(dt);
+      if (ent._ossaraDebug && ent._ossaraAnim?.state) ent._ossaraDebug.currentClip = ent._ossaraAnim.state().currentClip;
       ent._ossaraPrevPos = { x: e.x, z: e.z };
       ent.setPosition(e.x, e.radius, e.z);
       const flash = Math.max(0, e.hitFlash || 0);
