@@ -8,6 +8,7 @@ import { TOWERS } from "../config/towers.js";
 import { WAVES } from "../config/waves.js";
 import { HERO } from "../config/hero.js";
 import { CLASS_KITS } from "../config/kits.js";
+import { MOVE } from "../config/moves.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, gridToWorld, worldToGrid, cellKey, expandRects, getLevelLanes } from "./pathing.js";
 import { Pool } from "./pool.js";
 import { createEnemy, resetEnemy } from "./Enemy.js";
@@ -43,7 +44,7 @@ export class World {
     this.pathSet = pathCellSet(level);
     this.occupied = new Set(); // cell keys with a tower on them
     this.buildableSet = null;
-    if (Array.isArray(level.buildableZones) && level.buildableZones.length) {
+    if (!level.openBuildable && Array.isArray(level.buildableZones) && level.buildableZones.length) {
       this.buildableSet = new Set(expandRects(level.buildableZones).map((cell) => cellKey(cell.col, cell.row)));
     }
 
@@ -554,14 +555,39 @@ export class World {
       return;
     }
 
+    h.dashCd = Math.max(0, (h.dashCd || 0) - dt);
+    h.dashTimer = Math.max(0, (h.dashTimer || 0) - dt);
+
     // Movement (WASD-derived direction, normalized).
     let mx = input.moveX || 0;
     let mz = input.moveZ || 0;
     const m = Math.hypot(mx, mz);
-    if (m > 0) {
-      mx /= m;
-      mz /= m;
-      const step = h.speed * dt;
+    if (input.dash && h.dashCd <= 0) {
+      if (m > 0) {
+        h.dashX = mx / m;
+        h.dashZ = mz / m;
+      } else {
+        h.dashX = Math.sin(h.facing);
+        h.dashZ = Math.cos(h.facing);
+      }
+      h.dashTimer = MOVE.dashTime;
+      h.dashCd = MOVE.dashCooldown;
+      h.facing = Math.atan2(h.dashX, h.dashZ);
+      this.events.push({ kind: "heroDash", x: h.x, z: h.z, range: 1.2 });
+    }
+    const dashing = h.dashTimer > 0;
+    if (dashing) {
+      mx = h.dashX;
+      mz = h.dashZ;
+    }
+    const speedMul = dashing ? MOVE.dashMul : 1;
+    if (dashing || m > 0) {
+      const moveLen = Math.hypot(mx, mz);
+      if (moveLen > 0) {
+        mx /= moveLen;
+        mz /= moveLen;
+      }
+      const step = h.speed * speedMul * dt;
       // per-axis move with obstacle collision (slides along ruins)
       const nx = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, h.x + mx * step));
       if (!this._blockedAt(nx, h.z)) h.x = nx;

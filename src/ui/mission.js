@@ -25,6 +25,7 @@ const PLACEMENT_MESSAGES = {
 
 const MANAGEMENT_MESSAGES = {
   missing: "No defense targeted.",
+  range: "No defense in range.",
   dead: "That defense is gone.",
   max: "Defense already max level.",
   marrow: "Not enough Marrow.",
@@ -61,6 +62,14 @@ export class Mission {
     this.input.onSelectChange = (id) => this.hud.setSelected(id);
     this.input.onHoverStatus = (status) => this.hud.setPlacementStatus(status);
     this.input.onTowerHover = (tower) => this.hud.setTowerHover(tower);
+    this.input.onCommandTargetChange = (mode, tower) => {
+      this.hud.setCommandTarget(mode, tower);
+      if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(tower, mode);
+    };
+    this.input.onCommandCastChange = (cast, tower) => {
+      this.hud.setCommandCast(cast, tower);
+      if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(this.world.hero, tower, cast?.action || null, cast ? 1 - cast.remaining / cast.duration : 0);
+    };
     this.input.onActionMenuChange = (open) => this.hud.setActionMenuOpen(open);
     this.input.onSpawnInfoToggle = (on) => this.hud.toast(on ? "Spawn markers shown." : "Spawn markers hidden.", CSS.gold);
     this.input.onPlaceResult = (res) => {
@@ -181,7 +190,8 @@ export class Mission {
     this.last = now;
     if (dt > 0.1) dt = 0.1;
 
-    this.input.updateCamera(dt);
+    if (typeof this.input.update === "function") this.input.update(dt);
+    else this.input.updateCamera(dt);
     this.input.refreshHover();
 
     const heroMoveIntent = this.input.movementIntent ? this.input.movementIntent() : { moving: false, running: false };

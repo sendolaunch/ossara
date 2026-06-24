@@ -32,6 +32,7 @@ const oldWindow = globalThis.window;
     zoomBy: (d) => camera.push(["zoom", d]),
     orbit: (d) => camera.push(["orbit", d]),
     pitchBy: (d) => camera.push(["pitch", d]),
+    resetCamera: () => camera.push(["reset"]),
   };
   const world = {
     phase: "prep",
@@ -66,6 +67,12 @@ const oldWindow = globalThis.window;
   ok(prevented, "middle mouse orbit prevents browser default");
   ok(camera.some((c) => c[0] === "orbit" && Math.abs(c[1]) > 0), "middle mouse drag orbits camera");
   ok(camera.some((c) => c[0] === "pitch" && Math.abs(c[1]) > 0), "middle mouse drag pitches camera");
+  fakeWindow.dispatch("mousedown", { button: 2, clientX: 100, clientY: 100, preventDefault() {} });
+  fakeWindow.dispatch("mousemove", { clientX: 80, clientY: 110 });
+  fakeWindow.dispatch("mouseup", { button: 2 });
+  ok(camera.filter((c) => c[0] === "orbit").length >= 2, "right mouse drag orbits camera outside build mode");
+  fakeWindow.dispatch("keydown", { key: "c", preventDefault() {} });
+  ok(camera.some((c) => c[0] === "reset"), "C recenters mission camera");
 }
 
 {
@@ -153,14 +160,18 @@ const oldWindow = globalThis.window;
   const fakeWindow = target();
   globalThis.window = fakeWindow;
   const canvas = target();
-  const tower = { id: 7, alive: true, col: 3, row: 4 };
+  const tower = { id: 7, alive: true, col: 3, row: 4, x: 0, z: 0, physical: true, hp: 50, maxHp: 100, level: 1, maxLevel: 3 };
+  const farTower = { id: 8, alive: true, col: 9, row: 9, x: 20, z: 20, physical: true, hp: 50, maxHp: 100, level: 1, maxLevel: 3 };
   let hovered = null;
+  const commandTargets = [];
+  const commandCasts = [];
   const results = [];
   const menuStates = [];
   const spawnStates = [];
   const renderer = {
     domElement: canvas,
     setHover: () => {},
+    setCommandTarget: (tower, mode) => commandTargets.push([tower && tower.id, mode]),
     setSpawnIndicatorsEnabled: (on) => spawnStates.push(on),
     pointerToCell: () => ({ col: 3, row: 4, x: 0, z: 0 }),
     getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
@@ -169,9 +180,12 @@ const oldWindow = globalThis.window;
   };
   const world = {
     phase: "active",
+    hero: { alive: true, x: 0, z: 1 },
     level: {},
+    towers: [farTower, tower],
     availableTowers: ["barricade"],
     towerAtCell: (col, row) => (col === 3 && row === 4 && tower.alive ? tower : null),
+    towerById: (id) => (id === tower.id ? tower : id === farTower.id ? farTower : null),
     upgradeTower: (id) => ({ ok: id === tower.id, action: "upgrade", tower }),
     repairTower: (id) => ({ ok: id === tower.id, action: "repair", tower }),
     sellTower: (id) => {
@@ -183,6 +197,8 @@ const oldWindow = globalThis.window;
   input.onTowerHover = (t) => { hovered = t; };
   input.onManageResult = (res) => results.push(res);
   input.onActionMenuChange = (open) => menuStates.push(open);
+  input.onCommandTargetChange = (mode, tower) => commandTargets.push([tower && tower.id, mode]);
+  input.onCommandCastChange = (cast, tower) => commandCasts.push([cast && cast.action, tower && tower.id]);
   canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
   input.refreshHover();
   ok(hovered === tower, "hovering a placed defense reports tower hover");
@@ -190,15 +206,96 @@ const oldWindow = globalThis.window;
   ok(input.actionMenuOpen && menuStates.at(-1) === true, "Tab opens the action menu");
   input.chooseActionMenuAction("upgrade");
   ok(!input.actionMenuOpen && menuStates.at(-1) === false, "action menu closes after choosing an action");
+  ok(input.commandTargetMode === "upgrade" && input.commandTarget === tower, "choosing upgrade enters command target mode on nearest defense");
+  canvas.dispatch("click", { clientX: 10, clientY: 20 });
+  ok(input.commandCast?.action === "upgrade", "left-click starts targeted command cast");
+  ok(!input.consume().attack, "command-mode left-click confirms command instead of attacking");
+  input.updateCommandCast(0.5);
+  ok(results.at(-1)?.action === "upgrade", "command cast completes targeted upgrade");
   input.chooseActionMenuAction("spawn");
   fakeWindow.dispatch("keydown", { key: "u", preventDefault() {} });
+  ok(input.commandTargetMode === "upgrade", "U directly enters upgrade target mode");
+  fakeWindow.dispatch("keydown", { key: "Escape", preventDefault() {} });
+  ok(input.commandTargetMode === null && input.commandTarget === null, "Esc cancels command target mode");
   fakeWindow.dispatch("keydown", { key: "f", preventDefault() {} });
+  fakeWindow.dispatch("keydown", { key: "Enter", preventDefault() {} });
+  input.updateCommandCast(0.5);
   fakeWindow.dispatch("keydown", { key: "x", preventDefault() {} });
-  ok(results.map((r) => r.action).join(",") === "upgrade,upgrade,repair,sell", "action menu and U/F/X route to defense management actions");
+  fakeWindow.dispatch("keydown", { key: "Enter", preventDefault() {} });
+  input.updateCommandCast(0.3);
+  ok(results.map((r) => r.action).join(",") === "upgrade,repair,sell", "command target mode confirms repair/sell management actions");
   ok(hovered === null, "selling clears hovered defense");
+  ok(commandCasts.some((c) => c[0] === "upgrade" && c[1] === tower.id), "command cast callback reports action and target");
   fakeWindow.dispatch("keydown", { key: "o", preventDefault() {} });
   fakeWindow.dispatch("keydown", { key: "o", preventDefault() {} });
   ok(spawnStates[0] === false && spawnStates[1] === true && spawnStates[2] === false, "action menu and O toggle spawn indicators");
+}
+
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const tower = { id: 11, alive: true, col: 2, row: 2, x: 0, z: 0, physical: true, hp: 40, maxHp: 100, level: 1, maxLevel: 3 };
+  const results = [];
+  const renderer = {
+    domElement: canvas,
+    setHover: () => {},
+    setCommandTarget: () => {},
+    setCommandCast: () => {},
+    pointerToCell: () => ({ col: 2, row: 2, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+    orbit: () => {},
+  };
+  const world = {
+    phase: "active",
+    hero: { alive: true, x: 0, z: 1 },
+    level: {},
+    towers: [tower],
+    availableTowers: ["barricade"],
+    towerAtCell: () => tower,
+    towerById: (id) => (id === tower.id ? tower : null),
+    upgradeTower: () => ({ ok: true, action: "upgrade", tower }),
+  };
+  const input = new Input(renderer, () => world);
+  input.onManageResult = (res) => results.push(res);
+  input.enterCommandTargetMode("upgrade");
+  input.confirmCommandTarget();
+  ok(input.commandCast?.action === "upgrade", "confirm starts command cast state");
+  input.cancelCommandCast();
+  input.updateCommandCast(1);
+  ok(!results.length, "cancel before cast completion prevents command action");
+}
+
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const results = [];
+  const renderer = {
+    domElement: canvas,
+    setHover: () => {},
+    setCommandTarget: () => {},
+    pointerToCell: () => ({ col: 1, row: 1, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+    orbit: () => {},
+  };
+  const world = {
+    phase: "prep",
+    hero: { alive: true, x: 0, z: 0 },
+    level: {},
+    towers: [],
+    availableTowers: ["barricade"],
+    placementStatus: () => ({ ok: true, reason: "ok" }),
+    tryPlaceTower: () => ({ ok: true }),
+  };
+  const input = new Input(renderer, () => world);
+  input.onManageResult = (res) => results.push(res);
+  input.select("barricade");
+  input.enterCommandTargetMode("upgrade");
+  ok(input.selected === null, "entering command target mode clears build mode");
+  ok(results.at(-1)?.reason === "range", "command target mode reports no defense in range");
 }
 
 globalThis.window = oldWindow;

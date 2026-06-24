@@ -118,6 +118,34 @@ export function selectedDefensePanelData(towerId, world, placementStatus = null)
   };
 }
 
+export function commandTargetPanelData(action, tower) {
+  if (!action || !tower || !tower.alive) return null;
+  const data = defensePanelData(tower);
+  const label = action === "upgrade" ? "UPGRADE DEFENSE" : action === "repair" ? "REPAIR DEFENSE" : "SELL DEFENSE";
+  const cost = action === "upgrade"
+    ? `Cost ${tower.upgradeCost} Marrow`
+    : action === "repair"
+      ? `Cost ${tower.repairCost} Marrow`
+      : `Refund +${tower.sellRefund} Marrow`;
+  return {
+    title: label,
+    meta: `${data.title}  |  ${data.meta}  |  ${cost}`,
+    controls: "Left-click or Enter confirms. Right-click or Esc cancels.",
+  };
+}
+
+export function commandCastPanelData(cast, tower) {
+  if (!cast || !tower || !tower.alive) return null;
+  const label = cast.action === "upgrade" ? "UPGRADING" : cast.action === "repair" ? "REPAIRING" : "SELLING";
+  const data = defensePanelData(tower);
+  const remaining = Math.max(0, cast.remaining ?? 0);
+  return {
+    title: label,
+    meta: `${data.title}  |  ${remaining.toFixed(1)}s`,
+    controls: "Casting command. Movement allowed. Esc or right-click cancels.",
+  };
+}
+
 export class HUD {
   constructor(root, cb) {
     this.cb = cb;
@@ -130,6 +158,10 @@ export class HUD {
     this.selectedTowerId = null;
     this.placementStatus = null;
     this.hoverTower = null;
+    this.commandTargetMode = null;
+    this.commandTargetTower = null;
+    this.commandCast = null;
+    this.commandCastTower = null;
     this._build();
   }
 
@@ -260,10 +292,10 @@ export class HUD {
       top: "50%",
       transform: "translate(-50%, -50%)",
       ...panel(),
-      padding: "12px",
+      padding: "9px",
       display: "none",
-      gridTemplateColumns: "repeat(3, minmax(132px, 1fr))",
-      gap: "8px",
+      gridTemplateColumns: "repeat(3, minmax(118px, 1fr))",
+      gap: "7px",
       zIndex: "6",
       pointerEvents: "auto",
     });
@@ -278,14 +310,14 @@ export class HUD {
     const actionBtn = (label, action, hint = "") => {
       const btn = el("button", {
         cursor: "pointer",
-        padding: "10px 12px",
+        padding: "8px 10px",
         borderRadius: "8px",
         border: `1px solid rgba(202,162,76,0.36)`,
         background: "rgba(7,8,6,0.86)",
         color: CSS.bone,
         font: "800 11px ui-monospace, monospace",
         letterSpacing: "0.8px",
-        minHeight: "48px",
+        minHeight: "42px",
       }, `<span style="display:block;color:${CSS.bone}">${label}</span><span style="display:block;margin-top:3px;color:${CSS.ash};font:700 10px ui-monospace,monospace">${hint}</span>`);
       btn.onclick = () => this.cb.onActionMenu?.(action);
       return btn;
@@ -379,6 +411,16 @@ export class HUD {
     this.hoverTower = tower || null;
   }
 
+  setCommandTarget(mode, tower) {
+    this.commandTargetMode = mode || null;
+    this.commandTargetTower = tower || null;
+  }
+
+  setCommandCast(cast, tower) {
+    this.commandCast = cast || null;
+    this.commandCastTower = tower || null;
+  }
+
   setActionMenuOpen(on) {
     if (this.actionMenu) this.actionMenu.style.display = on ? "grid" : "none";
   }
@@ -411,7 +453,21 @@ export class HUD {
     this.elMarrow.textContent = `${Math.floor(world.marrow)}`;
     if (this.elBuildTitle) {
       let showInfo = true;
-      if (this.hoverTower && this.hoverTower.alive) {
+      if (this.commandCast && this.commandCastTower?.alive) {
+        const data = commandCastPanelData(this.commandCast, this.commandCastTower);
+        this.elBuildTitle.textContent = data.title;
+        this.elBuildTitle.style.color = CSS.gold;
+        this.elBuildMeta.textContent = data.meta;
+        this.elBuildMeta.style.color = CSS.plague;
+        this.elBuildControls.textContent = data.controls;
+      } else if (this.commandTargetMode && this.commandTargetTower?.alive) {
+        const data = commandTargetPanelData(this.commandTargetMode, this.commandTargetTower);
+        this.elBuildTitle.textContent = data.title;
+        this.elBuildTitle.style.color = this.commandTargetMode === "sell" ? CSS.gold : CSS.plague;
+        this.elBuildMeta.textContent = data.meta;
+        this.elBuildMeta.style.color = CSS.gold;
+        this.elBuildControls.textContent = data.controls;
+      } else if (this.hoverTower && this.hoverTower.alive) {
         const data = defensePanelData(this.hoverTower);
         this.elBuildTitle.textContent = data.title;
         this.elBuildTitle.style.color = CSS.plague;
@@ -520,6 +576,10 @@ export class HUD {
     this.selectedTowerId = null;
     this.placementStatus = null;
     this.hoverTower = null;
+    this.commandTargetMode = null;
+    this.commandTargetTower = null;
+    this.commandCast = null;
+    this.commandCastTower = null;
     this.setActionMenuOpen(false);
     this.overlay.style.display = "none";
   }

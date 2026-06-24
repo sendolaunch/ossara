@@ -40,12 +40,35 @@ function spawnEnemyAt(world, typeId, laneId, dist) {
   return enemy;
 }
 
+function laneDistanceToCell(lane, cell) {
+  let total = 0;
+  for (let i = 1; i < lane.waypoints.length; i++) {
+    const a = lane.waypoints[i - 1];
+    const b = lane.waypoints[i];
+    if (a.col === b.col && a.col === cell.col) {
+      const min = Math.min(a.row, b.row);
+      const max = Math.max(a.row, b.row);
+      if (cell.row >= min && cell.row <= max) return total + Math.abs(cell.row - a.row);
+    }
+    if (a.row === b.row && a.row === cell.row) {
+      const min = Math.min(a.col, b.col);
+      const max = Math.max(a.col, b.col);
+      if (cell.col >= min && cell.col <= max) return total + Math.abs(cell.col - a.col);
+    }
+    total += Math.abs(b.col - a.col) + Math.abs(b.row - a.row);
+  }
+  return total;
+}
+
+const NORTH_LANE = LEVEL.lanes.find((lane) => lane.id === "north-gate");
+const NORTH_CHOKE_DIST = laneDistanceToCell(NORTH_LANE, NORTH_LANE.choke);
+
 // ---------------------------------------------------------------------------
 section("pathing");
 {
   ok(Array.isArray(LEVEL.lanes) && LEVEL.lanes.length === 5, "first breach defines five enemy lanes");
   const expectedLaneIds = ["north-gate", "northwest-stairs", "northeast-market", "southwest-crypt", "southeast-garden"];
-  ok(LEVEL.cols >= 45 && LEVEL.rows >= 35, "fallen courtyard is significantly larger than the tiny tutorial map");
+  ok(LEVEL.cols >= 120 && LEVEL.rows >= 90, "fallen courtyard is scaled for a real multi-lane arena");
   ok(expectedLaneIds.every((id) => LEVEL.lanes.some((lane) => lane.id === id)), "all five required lane ids exist");
   for (const lane of LEVEL.lanes) {
     ok(!!lane.id, `${lane.name || "lane"} has an id`);
@@ -61,6 +84,7 @@ section("pathing");
     ok(lane.waypoints.some((wp) => wp.col === lane.choke.col && wp.row === lane.choke.row), `${lane.id} choke sits on its lane`);
     ok(Array.isArray(lane.buildShoulders) && lane.buildShoulders.length >= 2, `${lane.id} has build shoulders near its approach`);
     ok(LEVEL.buildableZones.some((zone) => zone.laneId === lane.id), `${lane.id} has a buildable zone near its choke`);
+    ok(LEVEL.laneTelegraphs.some((tele) => tele.laneId === lane.id), `${lane.id} has build-phase lane telegraph data`);
   }
   ok(LEVEL.buildableZones.some((zone) => zone.laneId === "core"), "central crystal apron has a buildable zone");
   ok(LEVEL.breach && !Array.isArray(LEVEL.breach), "legacy first breach alias still exposes one default spawn");
@@ -155,6 +179,12 @@ section("defense type data model");
 section("building rules");
 {
   const w = new World(LEVEL);
+  const northLane = LEVEL.lanes.find((lane) => lane.id === "north-gate");
+  const northA = northLane.buildShoulders[0];
+  const northB = northLane.buildShoulders[1];
+  const northC = northLane.buildShoulders[2];
+  const northD = northLane.buildShoulders[3];
+  const northPath = northLane.choke;
   for (const lane of LEVEL.lanes) {
     for (const cell of expandWaypoints(lane.waypoints)) {
       ok(!w.buildableAt(cell.col, cell.row), `cannot build on ${lane.id} path cell ${cellKey(cell.col, cell.row)}`);
@@ -164,16 +194,17 @@ section("building rules");
       ok(w.buildableAt(shoulder.col, shoulder.row), `can build on ${lane.id} shoulder ${cellKey(shoulder.col, shoulder.row)}`);
     }
   }
-  ok(!w.buildableAt(16, 17), "cannot build on a blocked ruin/statue base");
+  ok(LEVEL.openBuildable, "buildable ground is broadly open inside map bounds");
+  ok(!w.buildableAt(50, 44), "cannot build on a blocked ruin/statue base");
   ok(!w.buildableAt(LEVEL.core.col, LEVEL.core.row), "cannot build on the core");
-  ok(!w.buildableAt(22, 16), "cannot build in the core reserved zone");
+  ok(!w.buildableAt(58, 43), "cannot build in the core reserved zone");
   const heroSpawn = worldToGrid(w.hero._spawn.x, w.hero._spawn.z, LEVEL);
   ok(!w.buildableAt(heroSpawn.col, heroSpawn.row), "cannot build on the hero spawn");
-  ok(w.buildableAt(21, 10), "can build on a north choke shoulder");
-  ok(w.buildableAt(27, 10), "can build on the opposite north choke shoulder");
-  ok(w.buildableAt(21, 13), "can build near the Ward approach");
-  ok(w.buildableAt(27, 13), "can build near the opposite Ward approach");
-  ok(!w.buildableAt(4, 12), "cannot build outside marked buildable zones");
+  ok(w.buildableAt(northA.col, northA.row), "can build on a north choke shoulder");
+  ok(w.buildableAt(northB.col, northB.row), "can build on the opposite north choke shoulder");
+  ok(w.buildableAt(northC.col, northC.row), "can build near the Ward approach");
+  ok(w.buildableAt(northD.col, northD.row), "can build near the opposite Ward approach");
+  ok(w.buildableAt(20, 20), "can build on ordinary clear courtyard ground inside bounds");
 
   for (const lane of LEVEL.lanes) {
     const shoulder = lane.buildShoulders[0];
@@ -183,7 +214,7 @@ section("building rules");
   }
 
   const before = w.marrow;
-  const r1 = w.tryPlaceTower("ballista", 21, 10);
+  const r1 = w.tryPlaceTower("ballista", northA.col, northA.row);
   ok(r1.ok, "valid placement succeeds");
   ok(r1.tower.defenseType === TOWERS.ballista.defenseType, "placed tower stores defenseType");
   ok(r1.tower.physical === TOWERS.ballista.physical, "placed tower stores physical flag");
@@ -193,31 +224,31 @@ section("building rules");
   ok(r1.tower.blockRadius === TOWERS.ballista.blockRadius, "placed tower stores blockRadius");
   ok(r1.tower.attackRate === TOWERS.ballista.attackRate, "placed tower stores attackRate");
   ok(w.marrow === before - TOWERS.ballista.cost, "marrow deducted by tower cost");
-  ok(!w.buildableAt(21, 10), "tile is occupied after placing");
+  ok(!w.buildableAt(northA.col, northA.row), "tile is occupied after placing");
   ok(r1.tower.level === 1 && r1.tower.maxLevel === 3, "placed defense starts at level 1 with a level cap");
   ok(r1.tower.baseCost === TOWERS.ballista.cost, "placed defense stores base cost");
   ok(r1.tower.upgradeCost > 0, "placed defense stores upgrade cost");
   ok(r1.tower.sellRefund === Math.floor(TOWERS.ballista.cost * 0.5), "placed defense stores sell refund");
 
-  const r2 = w.tryPlaceTower("ballista", 21, 10);
+  const r2 = w.tryPlaceTower("ballista", northA.col, northA.row);
   ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
 
-  const r3 = w.tryPlaceTower("ballista", 24, 11);
+  const r3 = w.tryPlaceTower("ballista", northPath.col, northPath.row);
   ok(!r3.ok && r3.reason === "path", "cannot place on the lane");
 
   const laneBlocker = new World(LEVEL);
-  const rBlockadePath = laneBlocker.tryPlaceTower("barricade", 24, 11);
+  const rBlockadePath = laneBlocker.tryPlaceTower("barricade", northPath.col, northPath.row);
   ok(rBlockadePath.ok, "blockades can be placed on lane path cells");
 
   const laneTrap = new World(LEVEL);
-  const rTrapPath = laneTrap.tryPlaceTower("trapstake", 24, 11);
+  const rTrapPath = laneTrap.tryPlaceTower("trapstake", northPath.col, northPath.row);
   ok(rTrapPath.ok, "traps can be placed on valid lane path cells without blocking them");
 
   const laneAura = new World(LEVEL);
-  const rAuraPath = laneAura.tryPlaceTower("censer", 24, 11);
+  const rAuraPath = laneAura.tryPlaceTower("censer", northPath.col, northPath.row);
   ok(rAuraPath.ok, "auras can be placed on valid lane path cells without blocking them");
 
-  const rBlocked = w.tryPlaceTower("ballista", 16, 17);
+  const rBlocked = w.tryPlaceTower("ballista", 50, 44);
   ok(!rBlocked.ok && rBlocked.reason === "blocked", "cannot place on blocked ruins");
 
   for (const lane of LEVEL.lanes) {
@@ -231,11 +262,11 @@ section("building rules");
   const rSpawn = w.tryPlaceTower("ballista", heroSpawn.col, heroSpawn.row);
   ok(!rSpawn.ok && rSpawn.reason === "reserved", "cannot place on the hero spawn");
 
-  const rOutside = w.tryPlaceTower("ballista", 4, 12);
-  ok(!rOutside.ok && rOutside.reason === "buildable", "cannot place outside marked buildable zones");
+  const rOutside = w.tryPlaceTower("ballista", -1, 12);
+  ok(!rOutside.ok && rOutside.reason === "bounds", "cannot place outside map bounds");
 
   w.marrow = 0;
-  const r4 = w.tryPlaceTower("ballista", 27, 10);
+  const r4 = w.tryPlaceTower("ballista", northB.col, northB.row);
   ok(!r4.ok && r4.reason === "marrow", "cannot afford without marrow");
 }
 
@@ -244,7 +275,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("barricade", 24, 11);
+  const placed = w.tryPlaceTower("barricade", 60, 32);
   ok(placed.ok, "can place blockade for management tests");
   const tower = placed.tower;
   const marrowBefore = w.marrow;
@@ -261,7 +292,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "can place turret for upgrade tests");
   const tower = placed.tower;
   const damageBefore = tower.damage;
@@ -276,7 +307,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  const placed = w.tryPlaceTower("trapstake", 60, 32);
   ok(placed.ok, "can place trap for upgrade tests");
   const trap = placed.tower;
   const damageBefore = trap.damage;
@@ -291,7 +322,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("censer", 24, 11);
+  const placed = w.tryPlaceTower("censer", 60, 32);
   ok(placed.ok, "can place aura for upgrade tests");
   const aura = placed.tower;
   const damageBefore = aura.damage;
@@ -306,7 +337,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "can place turret for max-level tests");
   const tower = placed.tower;
   ok(w.upgradeTower(tower.id).ok, "first upgrade succeeds");
@@ -316,7 +347,7 @@ section("defense management");
 
   const poor = new World(LEVEL);
   poor.marrow = 999;
-  const p = poor.tryPlaceTower("ballista", 21, 10);
+  const p = poor.tryPlaceTower("ballista", 55, 31);
   ok(p.ok, "can place turret before testing poor upgrade");
   poor.marrow = 0;
   const noMoney = poor.upgradeTower(p.tower.id);
@@ -326,7 +357,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("barricade", 24, 11);
+  const placed = w.tryPlaceTower("barricade", 60, 32);
   ok(placed.ok, "can place blockade for repair tests");
   const tower = placed.tower;
   tower.hp = Math.floor(tower.maxHp / 2);
@@ -338,7 +369,7 @@ section("defense management");
   const full = w.repairTower(tower.id);
   ok(!full.ok && full.reason === "full", "repair fails at full HP");
 
-  const trap = w.tryPlaceTower("trapstake", 24, 12).tower;
+  const trap = w.tryPlaceTower("trapstake", 60, 33).tower;
   const unsupported = w.repairTower(trap.id);
   ok(!unsupported.ok && unsupported.reason === "unsupported", "trap repair/replenishment is not implemented yet");
 }
@@ -346,7 +377,7 @@ section("defense management");
 {
   const w = new World(LEVEL);
   w.marrow = 999;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "can place turret for sell tests");
   const tower = placed.tower;
   const marrowBefore = w.marrow;
@@ -398,7 +429,7 @@ section("enemy vs blockade interaction");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("barricade", 24, 11);
+  const placed = w.tryPlaceTower("barricade", 60, 32);
   ok(placed.ok, "barricade can be placed as a path blocker");
   const barricade = placed.tower;
   barricade.damage = 0; // isolate enemy-vs-blockade behavior from legacy tower attacks
@@ -406,7 +437,7 @@ section("enemy vs blockade interaction");
   barricade.maxHp = 24;
   w._spawnEnemy("husk", w.defaultLaneId);
   const enemy = w.enemies[0];
-  enemy.dist = 10.4;
+  enemy.dist = NORTH_CHOKE_DIST;
   const nearBlocker = pointAtDistance(w.lane, enemy.dist);
   enemy.x = nearBlocker.x;
   enemy.z = nearBlocker.z;
@@ -438,7 +469,7 @@ section("enemy vs blockade interaction");
     const w = new World(LEVEL);
     w.hero.alive = false;
     w.hero.respawnTimer = Infinity;
-    const placed = w.tryPlaceTower(towerId, 21, 10);
+    const placed = w.tryPlaceTower(towerId, 55, 31);
     ok(placed.ok, `${towerId} can be placed for non-blocker interaction smoke`);
     const tower = placed.tower;
     tower.damage = 0;
@@ -446,7 +477,7 @@ section("enemy vs blockade interaction");
     tower.maxHp = 10;
     w._spawnEnemy("husk", w.defaultLaneId);
     const enemy = w.enemies[0];
-    enemy.dist = 10.4;
+    enemy.dist = NORTH_CHOKE_DIST;
     const p = pointAtDistance(w.lane, enemy.dist);
     enemy.x = p.x;
     enemy.z = p.z;
@@ -467,7 +498,7 @@ section("turret behavior cleanup");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "turret can be placed on a build shoulder");
   const turret = placed.tower;
   turret.projSpeed = Infinity;
@@ -476,7 +507,7 @@ section("turret behavior cleanup");
   turret.attackRate = 1;
   turret.fireRate = 1;
   turret.cooldown = 0;
-  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
   const hpBefore = enemy.hp;
   w.update(0.1, {});
   ok(enemy.hp === hpBefore - turret.damage, "turret damages an enemy in range");
@@ -491,14 +522,14 @@ section("turret behavior cleanup");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "out-of-range turret test can place ballista");
   const turret = placed.tower;
   turret.projSpeed = Infinity;
   turret.damage = 20;
   turret.range = 0.25;
   turret.cooldown = 0;
-  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
   const hpBefore = enemy.hp;
   w.update(0.5, {});
   ok(enemy.hp === hpBefore && turret.targetId === 0, "turret ignores enemies outside range");
@@ -508,14 +539,14 @@ section("turret behavior cleanup");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "dead-target turret test can place ballista");
   const turret = placed.tower;
   turret.projSpeed = Infinity;
   turret.damage = 20;
   turret.range = 20;
   turret.cooldown = 0;
-  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
   enemy.alive = false;
   const hpBefore = enemy.hp;
   w.update(0.5, {});
@@ -526,7 +557,7 @@ section("turret behavior cleanup");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "multi-lane turret test can place ballista");
   const turret = placed.tower;
   turret.projSpeed = Infinity;
@@ -548,7 +579,7 @@ section("turret behavior cleanup");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("ballista", 21, 10);
+  const placed = w.tryPlaceTower("ballista", 55, 31);
   ok(placed.ok, "projectile turret test can place ballista");
   const turret = placed.tower;
   turret.damage = 12;
@@ -577,7 +608,7 @@ section("turret behavior cleanup");
     defense.range = 100;
     defense.attackRate = 20;
     defense.cooldown = 0;
-    const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+    const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
     const hpBefore = enemy.hp;
     w.update(0.5, {});
     ok(defense.targetId === 0, `${towerId} does not use turret target acquisition`);
@@ -591,7 +622,7 @@ section("trap behavior");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  const placed = w.tryPlaceTower("trapstake", 60, 32);
   ok(placed.ok, "trap can be placed on a valid lane path cell");
   const trap = placed.tower;
   trap.damage = 0;
@@ -600,7 +631,7 @@ section("trap behavior");
   trap.triggerRadius = 1.1;
   w._spawnEnemy("husk", w.defaultLaneId);
   const enemy = w.enemies[0];
-  enemy.dist = 10.4;
+  enemy.dist = NORTH_CHOKE_DIST;
   const p = pointAtDistance(w.lane, enemy.dist);
   enemy.x = p.x;
   enemy.z = p.z;
@@ -615,7 +646,7 @@ section("trap behavior");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  const placed = w.tryPlaceTower("trapstake", 60, 32);
   ok(placed.ok, "trap damage test can place trapstake");
   const trap = placed.tower;
   trap.damage = 5;
@@ -624,7 +655,7 @@ section("trap behavior");
   trap.resetTime = 1;
   trap.triggerRadius = 1.1;
   trap.resetCd = 0;
-  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
   const hpBefore = enemy.hp;
   w.update(0.1, {});
   ok(enemy.hp === hpBefore - trap.damage, "enemy entering trigger radius triggers trap damage");
@@ -646,15 +677,15 @@ section("trap behavior");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  const placed = w.tryPlaceTower("trapstake", 60, 32);
   ok(placed.ok, "trap area damage test can place trapstake");
   const trap = placed.tower;
   trap.damage = 4;
   trap.charges = 1;
   trap.resetTime = 1;
   trap.triggerRadius = 1.1;
-  const first = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
-  const second = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.8);
+  const first = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  const second = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST + 0.4);
   const far = spawnEnemyAt(w, "husk", w.defaultLaneId, 2);
   const firstHp = first.hp;
   const secondHp = second.hp;
@@ -671,7 +702,7 @@ section("aura behavior");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("censer", 24, 11);
+  const placed = w.tryPlaceTower("censer", 60, 32);
   ok(placed.ok, "aura can be placed on a valid lane path cell");
   const aura = placed.tower;
   aura.damage = 0;
@@ -679,7 +710,7 @@ section("aura behavior");
   aura.tickRate = 1;
   w._spawnEnemy("husk", w.defaultLaneId);
   const enemy = w.enemies[0];
-  enemy.dist = 10.4;
+  enemy.dist = NORTH_CHOKE_DIST;
   const p = pointAtDistance(w.lane, enemy.dist);
   enemy.x = p.x;
   enemy.z = p.z;
@@ -695,7 +726,7 @@ section("aura behavior");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("censer", 24, 11);
+  const placed = w.tryPlaceTower("censer", 60, 32);
   ok(placed.ok, "aura damage test can place censer");
   const aura = placed.tower;
   aura.damage = 3;
@@ -703,7 +734,7 @@ section("aura behavior");
   aura.remainingDuration = 5;
   aura.tickRate = 1;
   aura.tickCd = 0;
-  const inside = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const inside = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
   const outside = spawnEnemyAt(w, "husk", w.defaultLaneId, 2);
   const insideHp = inside.hp;
   const outsideHp = outside.hp;
@@ -722,13 +753,13 @@ section("aura behavior");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const placed = w.tryPlaceTower("brazier", 24, 11);
+  const placed = w.tryPlaceTower("brazier", 60, 32);
   ok(placed.ok, "aura expiry test can place brazier");
   const aura = placed.tower;
   aura.damage = 0;
   aura.remainingDuration = 0.25;
   aura.tickRate = 1;
-  spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
   w.update(0.1, {});
   ok(aura.alive, "aura remains alive before duration reaches zero");
   w.update(0.2, {});
@@ -785,7 +816,7 @@ section("a tower kills enemies and grants marrow");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  const place = w.tryPlaceTower("ballista", 21, 10);
+  const place = w.tryPlaceTower("ballista", 55, 31);
   ok(place.ok, "tower placed next to the lane");
   const marrowBefore = w.marrow;
   w.startWave();
@@ -817,9 +848,37 @@ section("manual hero attack and slam damages");
   ok(en.hp === hpAfterAttack && w.hero.attackCd < cdAfterAttack, "attack cooldown blocks immediate click-spam damage");
 
   w.hero.attackCd = 0;
+  en.hp = hpAfterAttack;
+  const nearX = en.x;
+  const nearZ = en.z;
+  en.x = w.hero.x + 10;
+  en.z = w.hero.z + 10;
+  w._heroAttack(w.hero, { attackX: en.x, attackZ: en.z });
+  ok(en.hp === hpAfterAttack, "out-of-range manual attack does not damage enemies");
+  en.x = nearX;
+  en.z = nearZ;
+
+  w.hero.attackCd = 0;
   w.hero.abilityCd = 0;
   w.update(0.05, { slam: true });
   ok(en.hp < hpAfterAttack || !en.alive, "slam still runs without error and damages nearby enemies");
+}
+
+// ---------------------------------------------------------------------------
+section("mission dash moves and respects cooldown");
+{
+  const w = new World(LEVEL);
+  const x0 = w.hero.x;
+  const z0 = w.hero.z;
+  w.update(0.05, { moveX: 1, moveZ: 0, dash: true });
+  run(w, 8, 0.05, { moveX: 1, moveZ: 0 });
+  const moved = Math.hypot(w.hero.x - x0, w.hero.z - z0);
+  ok(moved > 1.0, "dash moves hero a noticeable distance");
+  const afterDashX = w.hero.x;
+  const cd = w.hero.dashCd;
+  w.update(0.05, { moveX: 1, moveZ: 0, dash: true });
+  ok(w.hero.dashCd < cd && w.hero.dashTimer <= 0.22, "dash cooldown prevents immediate re-dash");
+  ok(w.hero.x >= afterDashX, "blocked cooldown dash does not snap hero backward");
 }
 
 // ---------------------------------------------------------------------------
@@ -828,8 +887,8 @@ section("object pooling reuses dead enemies");
   const w = new World(LEVEL);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
-  w.tryPlaceTower("ballista", 21, 10);
-  w.tryPlaceTower("spire", 27, 10);
+  w.tryPlaceTower("ballista", 55, 31);
+  w.tryPlaceTower("spire", 65, 31);
   w.startWave();
   run(w, 4000, 0.05, {});
   ok(w.enemyPool.pooledCount > 0, "dead enemies were returned to the pool");

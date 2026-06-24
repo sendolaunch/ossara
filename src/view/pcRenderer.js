@@ -52,16 +52,16 @@ const ENEMY_LOOK = {
 
 const MISSION_CAMERA = {
   yaw: Math.PI / 2,
-  pitch: 0.78,
-  minPitch: 0.54,
-  maxPitch: 1.04,
-  dist: 14,
-  minDist: 6.5,
-  maxDist: 34,
+  pitch: 0.68,
+  minPitch: 0.42,
+  maxPitch: 1.08,
+  dist: 10.5,
+  minDist: 4.6,
+  maxDist: 42,
   targetY: 0.8,
-  laneLead: 0.8,
-  followSharpness: 0.01,
-  fov: 52,
+  laneLead: 0.25,
+  followSharpness: 0.025,
+  fov: 56,
 };
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -109,7 +109,10 @@ export class PCRenderer {
     this.projEntities = new Map();
     this.towerEntities = new Map();
     this.spawnIndicatorEntities = [];
+    this.laneTelegraphEntities = [];
+    this.fx = [];
     this.spawnIndicatorsEnabled = true;
+    this.commandTarget = null;
     this.heroEntity = null;
     this.heroCtl = null;
     this._heroFoot = 0;
@@ -321,6 +324,16 @@ export class PCRenderer {
     this.rangeRing.enabled = false;
     this.app.root.addChild(this.rangeRing);
 
+    this.commandTargetMat = mat("gold", 1.1);
+    this.commandTargetRing = prim("torus", this.commandTargetMat);
+    this.commandTargetRing.enabled = false;
+    this.commandTargetRing.setLocalEulerAngles(90, 0, 0);
+    this.app.root.addChild(this.commandTargetRing);
+    this.commandBeamMat = mat("plague", 1.6);
+    this.commandBeam = prim("box", this.commandBeamMat);
+    this.commandBeam.enabled = false;
+    this.app.root.addChild(this.commandBeam);
+
     // Hero creation is intentionally owned by setHeroClass(). Mission startup
     // awaits that path so the gameplay loop cannot race model/animation setup.
   }
@@ -328,6 +341,8 @@ export class PCRenderer {
   _buildSpawnIndicators(level) {
     for (const ent of this.spawnIndicatorEntities || []) ent.destroy();
     this.spawnIndicatorEntities = [];
+    for (const ent of this.laneTelegraphEntities || []) ent.destroy();
+    this.laneTelegraphEntities = [];
     const auraMat = mat("plague", 0.9);
     const crystalMat = mat("plague", 1.45);
     const barMat = mat("bone", 0.25);
@@ -356,10 +371,53 @@ export class PCRenderer {
       this.app.root.addChild(group);
       this.spawnIndicatorEntities.push(group);
     }
+    const arrowMat = mat("plague", 0.55);
+    const dirYaw = { north: 180, south: 0, east: 90, west: -90 };
+    for (const tele of level.laneTelegraphs || []) {
+      const w = gridToWorld(tele.col, tele.row, level);
+      const arrow = prim("cone", arrowMat);
+      arrow.name = `lane-telegraph-${tele.laneId || "lane"}`;
+      arrow.setLocalScale(0.32, 0.12, 0.72);
+      arrow.setLocalEulerAngles(90, dirYaw[tele.dir] ?? 0, 0);
+      arrow.setPosition(w.x, 0.16, w.z);
+      this.app.root.addChild(arrow);
+      this.laneTelegraphEntities.push(arrow);
+    }
   }
 
   setSpawnIndicatorsEnabled(on) {
     this.spawnIndicatorsEnabled = !!on;
+  }
+
+  setCommandTarget(tower, action = null) {
+    this.commandTarget = tower && tower.alive ? { id: tower.id, x: tower.x, z: tower.z, action } : null;
+    if (!this.commandTargetRing) return;
+    this.commandTargetRing.enabled = !!this.commandTarget;
+    if (this.commandTarget) this.commandTargetRing.setPosition(tower.x, 0.08, tower.z);
+  }
+
+  setCommandCast(hero, tower, action = null, progress = 0) {
+    if (!this.commandBeam || !this.commandTargetRing) return;
+    if (!hero || !tower || !tower.alive || !action) {
+      this.commandBeam.enabled = false;
+      if (!this.commandTarget) this.commandTargetRing.enabled = false;
+      return;
+    }
+    const hx = hero.x;
+    const hz = hero.z;
+    const tx = tower.x;
+    const tz = tower.z;
+    const dx = tx - hx;
+    const dz = tz - hz;
+    const len = Math.max(0.2, Math.hypot(dx, dz));
+    const midX = (hx + tx) * 0.5;
+    const midZ = (hz + tz) * 0.5;
+    this.commandBeam.enabled = true;
+    this.commandBeam.setPosition(midX, 1.05, midZ);
+    this.commandBeam.setLocalScale(0.055 + progress * 0.045, 0.055 + progress * 0.045, len);
+    this.commandBeam.setLocalEulerAngles(0, (Math.atan2(dx, dz) * 180) / Math.PI, 0);
+    this.commandTargetRing.enabled = true;
+    this.commandTargetRing.setPosition(tx, 0.1, tz);
   }
 
   async _loadFallbackHero(classId = "unknown") {
@@ -451,6 +509,12 @@ export class PCRenderer {
   // ---- camera --------------------------------------------------------------
   orbit(d) {
     this.camYaw += d;
+  }
+  resetCamera() {
+    this.camYaw = MISSION_CAMERA.yaw;
+    this.camPitch = MISSION_CAMERA.pitch;
+    this.camDist = MISSION_CAMERA.dist;
+    this._cameraPrimed = false;
   }
   pitchBy(d) {
     this.camPitch = clamp(this.camPitch + d, MISSION_CAMERA.minPitch, MISSION_CAMERA.maxPitch);
@@ -561,7 +625,65 @@ export class PCRenderer {
     this._syncProjectiles(world);
     this._syncTowers(world);
     this._syncHero(world, heroAnim);
+    this._syncCommandTarget();
+    this._spawnEventFx(world.events);
+    this._updateFx(dt);
     // PlayCanvas auto-renders on its own loop.
+  }
+
+  _spawnEventFx(events = []) {
+    for (const ev of events) {
+      if (ev.kind === "heroHit") this._spark(ev.x, ev.z, "plague", 0.4);
+      else if (ev.kind === "heroSwing") this._ring(ev.x, ev.z, 1.2, "bone", 0.22);
+      else if (ev.kind === "heroDash") this._ring(ev.x, ev.z, ev.range || 1.1, "plague", 0.28);
+      else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
+      else if (ev.kind === "towerSold") this._ring(ev.x, ev.z, 0.85, "ash", 0.22);
+    }
+  }
+
+  _ring(x, z, range, colorKey, life) {
+    const e = prim("torus", mat(colorKey, 0.9));
+    e.setLocalEulerAngles(90, 0, 0);
+    e.setLocalScale(0.2, 0.2, 0.2);
+    e.setPosition(x, 0.14, z);
+    this.app.root.addChild(e);
+    this.fx.push({ ent: e, kind: "ring", life, maxLife: life, targetScale: Math.max(0.35, range) });
+  }
+
+  _spark(x, z, colorKey, life = 0.3) {
+    const e = prim("sphere", mat(colorKey, 1.4));
+    e.setLocalScale(0.25, 0.25, 0.25);
+    e.setPosition(x, 0.65, z);
+    this.app.root.addChild(e);
+    this.fx.push({ ent: e, kind: "spark", life, maxLife: life, vy: 1.25 });
+  }
+
+  _updateFx(dt) {
+    for (let i = this.fx.length - 1; i >= 0; i--) {
+      const fx = this.fx[i];
+      fx.life -= dt;
+      const t = 1 - Math.max(0, fx.life) / fx.maxLife;
+      if (fx.kind === "ring") {
+        const s = 0.2 + (fx.targetScale - 0.2) * t;
+        fx.ent.setLocalScale(s, s, s);
+      } else if (fx.kind === "spark") {
+        const p = fx.ent.getPosition();
+        fx.ent.setPosition(p.x, p.y + fx.vy * dt, p.z);
+      }
+      if (fx.life <= 0) {
+        fx.ent.destroy();
+        this.fx.splice(i, 1);
+      }
+    }
+  }
+
+  _syncCommandTarget() {
+    if (!this.commandTargetRing || !this.commandTarget) return;
+    const t = performance.now() * 0.001;
+    const pulse = 1.05 + Math.sin(t * 7) * 0.12;
+    this.commandTargetRing.enabled = true;
+    this.commandTargetRing.setPosition(this.commandTarget.x, 0.1, this.commandTarget.z);
+    this.commandTargetRing.setLocalScale(1.25 * pulse, 1.25 * pulse, 1.25 * pulse);
   }
 
   _syncSpawnIndicators(world, dt) {
@@ -574,6 +696,12 @@ export class PCRenderer {
       ent.setLocalScale(pulse, pulse, pulse);
       const crystal = ent.children?.[1];
       if (crystal) crystal.setLocalEulerAngles(0, t * 55, 0);
+    }
+    for (const ent of this.laneTelegraphEntities || []) {
+      ent.enabled = show;
+      if (!show) continue;
+      const pulse = 1 + Math.sin(t * 3.2) * 0.08;
+      ent.setLocalScale(0.32 * pulse, 0.12, 0.72 * pulse);
     }
   }
 
@@ -683,6 +811,12 @@ export class PCRenderer {
     this.projEntities.clear();
     for (const [, ent] of this.towerEntities) ent.destroy();
     this.towerEntities.clear();
+    if (this.commandTargetRing) this.commandTargetRing.enabled = false;
+    if (this.commandBeam) this.commandBeam.enabled = false;
+    this.commandTarget = null;
+    for (const ent of this.laneTelegraphEntities || []) ent.enabled = false;
+    for (const fx of this.fx) fx.ent.destroy();
+    this.fx = [];
     this._prevHero = null;
     this._prevAtkCd = null;
     this._cameraPrimed = false;

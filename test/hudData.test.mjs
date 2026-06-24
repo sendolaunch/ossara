@@ -1,4 +1,4 @@
-import { defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
+import { commandCastPanelData, commandTargetPanelData, defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
 
 let pass = 0;
 let fail = 0;
@@ -26,6 +26,16 @@ const hoverData = defensePanelData(hoveredBlockade);
 ok(hoverData.title.includes("BARRICADE") && hoverData.title.includes("L2"), "hover panel names defense and level");
 ok(hoverData.meta.includes("Blockade") && hoverData.meta.includes("HP 156 / 420"), "hover panel includes type and HP");
 ok(hoverData.controls.includes("[U]") && hoverData.controls.includes("[F]") && hoverData.controls.includes("[X]"), "hover panel includes U/F/X actions");
+
+const commandData = commandTargetPanelData("upgrade", hoveredBlockade);
+ok(commandData.title === "UPGRADE DEFENSE", "command target panel names the action");
+ok(commandData.meta.includes("BARRICADE") && commandData.meta.includes("Cost 90 Marrow"), "command target panel includes target and cost");
+ok(commandData.controls.includes("Left-click") && commandData.controls.includes("Esc"), "command target panel includes confirm/cancel controls");
+
+const castData = commandCastPanelData({ action: "repair", remaining: 0.3 }, hoveredBlockade);
+ok(castData.title === "REPAIRING", "command cast panel names active cast");
+ok(castData.meta.includes("BARRICADE") && castData.meta.includes("0.3s"), "command cast panel includes target and remaining time");
+ok(castData.controls.includes("Movement allowed"), "command cast panel documents movement behavior");
 
 const trapData = defensePanelData({
   id: 2,

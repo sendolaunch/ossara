@@ -5,12 +5,25 @@
 // the player rotates the view.
 
 import { TOWERS } from "../config/towers.js";
+import { DASH_KEY } from "../config/moves.js";
 
 const ROTATE_RATE = 1.9; // rad/sec (arrow left/right)
 const ZOOM_RATE = 12; // units/sec (arrow up/down)
 const WHEEL_ZOOM_STEP = 2.25;
 const MOUSE_ORBIT_RATE = 0.008;
 const MOUSE_PITCH_RATE = 0.004;
+const COMMAND_TARGET_RANGE = 7.5;
+const COMMAND_CAST_TIME = {
+  upgrade: 0.45,
+  repair: 0.45,
+  sell: 0.25,
+};
+
+const dist2 = (ax, az, bx, bz) => {
+  const dx = ax - bx;
+  const dz = az - bz;
+  return dx * dx + dz * dz;
+};
 
 export class Input {
   constructor(renderer, getWorld) {
@@ -18,12 +31,16 @@ export class Input {
     this.getWorld = getWorld;
     this.keys = new Set();
     this.pendingSlam = false;
+    this.pendingDash = false;
     this.pendingAttack = null;
     this.pendingStart = false;
     this.selected = null;
     this.rotation = 0;
     this.hoverCell = null;
     this.hoverTower = null;
+    this.commandTargetMode = null;
+    this.commandTarget = null;
+    this.commandCast = null;
     this.actionMenuOpen = false;
     this.spawnInfoVisible = true;
     this._mouse = null;
@@ -34,6 +51,8 @@ export class Input {
     this.onHoverStatus = null;
     this.onTowerHover = null;
     this.onManageResult = null;
+    this.onCommandTargetChange = null;
+    this.onCommandCastChange = null;
     this.onActionMenuChange = null;
     this.onSpawnInfoToggle = null;
 
@@ -43,19 +62,24 @@ export class Input {
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c"].includes(k)) e.preventDefault();
       if (k === "q") this.pendingSlam = true;
-      if (k === "enter") this.pendingStart = true;
+      if (k === DASH_KEY) this.pendingDash = true;
+      if (k === "enter" && !this.commandTargetMode) this.pendingStart = true;
       if (k === "escape") {
         if (this.actionMenuOpen) this.closeActionMenu();
+        else if (this.commandCast) this.cancelCommandCast();
+        else if (this.commandTargetMode) this.cancelCommandTarget();
         else this.cancelBuild();
       }
       if (k === "tab") this.toggleActionMenu();
       if (k === "o") this.toggleSpawnInfo();
+      if (k === "c" && typeof this.renderer.resetCamera === "function") this.renderer.resetCamera();
       if (k === "r" && this.selected) this.rotateBuild();
-      if (k === "u" && !this.selected) this._manageHovered("upgrade");
-      if (k === "f" && !this.selected) this._manageHovered("repair");
-      if (k === "x" && !this.selected) this._manageHovered("sell");
+      if (k === "enter" && this.commandTargetMode) this.confirmCommandTarget();
+      if (k === "u" && !this.selected && !this.commandCast) this.enterCommandTargetMode("upgrade");
+      if (k === "f" && !this.selected && !this.commandCast) this.enterCommandTargetMode("repair");
+      if (k === "x" && !this.selected && !this.commandCast) this.enterCommandTargetMode("sell");
       if (k === "1") this._selectIdx(0);
       if (k === "2") this._selectIdx(1);
       if (k === "3") this._selectIdx(2);
@@ -75,7 +99,9 @@ export class Input {
     });
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      this.cancelBuild();
+      if (this.commandCast) this.cancelCommandCast();
+      else if (this.commandTargetMode) this.cancelCommandTarget();
+      else this.cancelBuild();
     });
     canvas.addEventListener("click", (e) => this._handleClick(e));
     window.addEventListener(
@@ -87,7 +113,8 @@ export class Input {
       { passive: false }
     );
     window.addEventListener("mousedown", (e) => {
-      if (e.button !== 1) return;
+      if (e.button !== 1 && e.button !== 2) return;
+      if (e.button === 2 && (this.selected || this.commandTargetMode || this.commandCast)) return;
       e.preventDefault();
       this._orbitDrag = { x: e.clientX, y: e.clientY };
     });
@@ -100,7 +127,7 @@ export class Input {
       if (typeof this.renderer.pitchBy === "function") this.renderer.pitchBy(dy * MOUSE_PITCH_RATE);
     });
     window.addEventListener("mouseup", (e) => {
-      if (e.button === 1) this._orbitDrag = null;
+      if (e.button === 1 || e.button === 2) this._orbitDrag = null;
     });
   }
 
@@ -112,6 +139,7 @@ export class Input {
       return;
     }
     this.selected = id && TOWERS[id] ? id : null;
+    if (this.selected) this.cancelCommandTarget({ silent: true });
     this.rotation = 0;
     this.hoverTower = null;
     if (!this.selected) this.renderer.setHover(null);
@@ -128,6 +156,133 @@ export class Input {
     if (this.onSelectChange) this.onSelectChange(null);
     if (this.onHoverStatus) this.onHoverStatus(null);
     if (this.onTowerHover) this.onTowerHover(null);
+  }
+
+  _towerInCommandRange(tower, world = this.getWorld()) {
+    if (!tower || !tower.alive || !world?.hero?.alive) return false;
+    return dist2(tower.x, tower.z, world.hero.x, world.hero.z) <= COMMAND_TARGET_RANGE * COMMAND_TARGET_RANGE;
+  }
+
+  _isCommandCandidate(tower, action, world = this.getWorld()) {
+    if (!this._towerInCommandRange(tower, world)) return false;
+    if (action === "repair") return tower.physical && tower.maxHp > 0;
+    if (action === "upgrade") return tower.level < (tower.maxLevel || 3);
+    if (action === "sell") return true;
+    return false;
+  }
+
+  _nearestCommandTarget(action, world = this.getWorld()) {
+    if (!world?.hero) return null;
+    let best = null;
+    let bestD = Infinity;
+    for (const tower of world.towers || []) {
+      if (!this._isCommandCandidate(tower, action, world)) continue;
+      const d = dist2(tower.x, tower.z, world.hero.x, world.hero.z);
+      if (d < bestD) {
+        bestD = d;
+        best = tower;
+      }
+    }
+    return best;
+  }
+
+  _setCommandTarget(tower) {
+    this.commandTarget = tower && tower.alive ? tower : null;
+    if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(this.commandTarget, this.commandTargetMode);
+    if (this.onCommandTargetChange) this.onCommandTargetChange(this.commandTargetMode, this.commandTarget);
+  }
+
+  enterCommandTargetMode(action) {
+    const world = this.getWorld();
+    if (!["upgrade", "repair", "sell"].includes(action)) return;
+    if (this.selected) this.cancelBuild();
+    if (this.actionMenuOpen) this.closeActionMenu();
+    this.commandTargetMode = action;
+    this.hoverTower = null;
+    if (this.onTowerHover) this.onTowerHover(null);
+    const target = this._nearestCommandTarget(action, world);
+    if (!target) {
+      const res = { ok: false, action, reason: "range" };
+      this.cancelCommandTarget({ silent: true });
+      if (this.onManageResult) this.onManageResult(res);
+      return;
+    }
+    this._setCommandTarget(target);
+  }
+
+  cancelCommandTarget(opts = {}) {
+    this.commandTargetMode = null;
+    this.commandTarget = null;
+    if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(null, null);
+    if (!opts.silent && this.onCommandTargetChange) this.onCommandTargetChange(null, null);
+    if (opts.silent && this.onCommandTargetChange) this.onCommandTargetChange(null, null);
+  }
+
+  confirmCommandTarget() {
+    const action = this.commandTargetMode;
+    const tower = this.commandTarget;
+    const world = this.getWorld();
+    if (!action) return;
+    if (!tower || !this._isCommandCandidate(tower, action, world)) {
+      const res = { ok: false, action, reason: "range" };
+      this.cancelCommandTarget();
+      if (this.onManageResult) this.onManageResult(res);
+      return;
+    }
+    this.commandCast = {
+      action,
+      towerId: tower.id,
+      duration: COMMAND_CAST_TIME[action] || 0.35,
+      remaining: COMMAND_CAST_TIME[action] || 0.35,
+    };
+    this.commandTargetMode = null;
+    this.commandTarget = null;
+    if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(null, null);
+    if (this.onCommandTargetChange) this.onCommandTargetChange(null, null);
+    if (this.onCommandCastChange) this.onCommandCastChange(this.commandCast, tower);
+  }
+
+  cancelCommandCast() {
+    this.commandCast = null;
+    if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(null, null);
+    if (this.onCommandCastChange) this.onCommandCastChange(null, null);
+  }
+
+  _finishCommandCast() {
+    const cast = this.commandCast;
+    if (!cast) return;
+    const world = this.getWorld();
+    const tower = world?.towerById ? world.towerById(cast.towerId) : null;
+    let res = { ok: false, action: cast.action, reason: "missing" };
+    if (tower && this._isCommandCandidate(tower, cast.action, world)) {
+      if (cast.action === "upgrade") res = world.upgradeTower(tower.id);
+      else if (cast.action === "repair") res = world.repairTower(tower.id);
+      else if (cast.action === "sell") res = world.sellTower(tower.id);
+    } else {
+      res = { ok: false, action: cast.action, reason: "range" };
+    }
+    if (!res.ok || cast.action === "sell") this.hoverTower = null;
+    this.commandCast = null;
+    if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(null, null);
+    if (this.onCommandCastChange) this.onCommandCastChange(null, null);
+    if (this.onManageResult) this.onManageResult(res);
+    if (this.onTowerHover) this.onTowerHover(this.hoverTower && this.hoverTower.alive ? this.hoverTower : null);
+  }
+
+  updateCommandCast(dt) {
+    if (!this.commandCast) return;
+    const world = this.getWorld();
+    const tower = world?.towerById ? world.towerById(this.commandCast.towerId) : null;
+    if (!tower || !this._isCommandCandidate(tower, this.commandCast.action, world)) {
+      const action = this.commandCast.action;
+      this.cancelCommandCast();
+      if (this.onManageResult) this.onManageResult({ ok: false, action, reason: "range" });
+      return;
+    }
+    this.commandCast.remaining -= dt;
+    if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(world.hero, tower, this.commandCast.action, 1 - this.commandCast.remaining / this.commandCast.duration);
+    if (this.onCommandCastChange) this.onCommandCastChange(this.commandCast, tower);
+    if (this.commandCast.remaining <= 0) this._finishCommandCast();
   }
 
   rotateBuild() {
@@ -170,7 +325,7 @@ export class Input {
       this.closeActionMenu();
       return;
     }
-    if (action === "upgrade" || action === "repair" || action === "sell") this._manageHovered(action);
+    if (action === "upgrade" || action === "repair" || action === "sell") this.enterCommandTargetMode(action);
     this.closeActionMenu();
   }
 
@@ -181,6 +336,11 @@ export class Input {
   }
 
   _handleClick(e = {}) {
+    if (this.commandCast) return;
+    if (this.commandTargetMode) {
+      this.confirmCommandTarget();
+      return;
+    }
     if (this.selected) {
       this._tryPlace(e);
       return;
@@ -267,6 +427,11 @@ export class Input {
   }
 
   // Arrow keys orbit/zoom the camera. Called each frame with dt.
+  update(dt) {
+    this.updateCamera(dt);
+    this.updateCommandCast(dt);
+  }
+
   updateCamera(dt) {
     if (this.keys.has("arrowleft")) this.renderer.orbit(ROTATE_RATE * dt);
     if (this.keys.has("arrowright")) this.renderer.orbit(-ROTATE_RATE * dt);
@@ -297,6 +462,14 @@ export class Input {
       if (this.onTowerHover) this.onTowerHover(null);
       return;
     }
+    if (this.commandTargetMode) {
+      const tower = this._showTowerHover(world, cell);
+      if (tower && this._isCommandCandidate(tower, this.commandTargetMode, world)) this._setCommandTarget(tower);
+      else if (!this.commandTarget || !this._isCommandCandidate(this.commandTarget, this.commandTargetMode, world)) this._setCommandTarget(this._nearestCommandTarget(this.commandTargetMode, world));
+      this.renderer.setHover(null);
+      if (this.onHoverStatus) this.onHoverStatus(null);
+      return;
+    }
     if (!this.selected) {
       this.hoverCell = { col: cell.col, row: cell.row };
       this.renderer.setHover(null);
@@ -325,12 +498,14 @@ export class Input {
       moveX,
       moveZ,
       slam: this.pendingSlam,
+      dash: this.pendingDash,
       startWave: this.pendingStart,
       attack: !!pendingAttack,
       attackX: pendingAttack?.x,
       attackZ: pendingAttack?.z,
     };
     this.pendingSlam = false;
+    this.pendingDash = false;
     this.pendingAttack = null;
     this.pendingStart = false;
     return out;
