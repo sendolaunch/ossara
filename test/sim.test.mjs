@@ -194,6 +194,10 @@ section("building rules");
   ok(r1.tower.attackRate === TOWERS.ballista.attackRate, "placed tower stores attackRate");
   ok(w.marrow === before - TOWERS.ballista.cost, "marrow deducted by tower cost");
   ok(!w.buildableAt(21, 10), "tile is occupied after placing");
+  ok(r1.tower.level === 1 && r1.tower.maxLevel === 3, "placed defense starts at level 1 with a level cap");
+  ok(r1.tower.baseCost === TOWERS.ballista.cost, "placed defense stores base cost");
+  ok(r1.tower.upgradeCost > 0, "placed defense stores upgrade cost");
+  ok(r1.tower.sellRefund === Math.floor(TOWERS.ballista.cost * 0.5), "placed defense stores sell refund");
 
   const r2 = w.tryPlaceTower("ballista", 21, 10);
   ok(!r2.ok && r2.reason === "occupied", "cannot stack towers on one tile");
@@ -233,6 +237,128 @@ section("building rules");
   w.marrow = 0;
   const r4 = w.tryPlaceTower("ballista", 27, 10);
   ok(!r4.ok && r4.reason === "marrow", "cannot afford without marrow");
+}
+
+// ---------------------------------------------------------------------------
+section("defense management");
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("barricade", 24, 11);
+  ok(placed.ok, "can place blockade for management tests");
+  const tower = placed.tower;
+  const marrowBefore = w.marrow;
+  const cost = tower.upgradeCost;
+  const maxHpBefore = tower.maxHp;
+  const hpBefore = tower.hp;
+  const res = w.upgradeTower(tower.id);
+  ok(res.ok, "upgrade succeeds with enough Marrow");
+  ok(w.marrow === marrowBefore - cost, "upgrade spends Marrow");
+  ok(tower.level === 2, "upgrade increases defense level");
+  ok(tower.maxHp > maxHpBefore && tower.hp > hpBefore, "blockade upgrade improves max HP and current HP");
+}
+
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "can place turret for upgrade tests");
+  const tower = placed.tower;
+  const damageBefore = tower.damage;
+  const rangeBefore = tower.range;
+  const rateBefore = tower.attackRate;
+  ok(w.upgradeTower(tower.id).ok, "turret upgrade succeeds");
+  ok(tower.damage > damageBefore, "turret upgrade improves damage");
+  ok(tower.range > rangeBefore, "turret upgrade improves range");
+  ok(tower.attackRate > rateBefore, "turret upgrade improves attack rate");
+}
+
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("trapstake", 24, 11);
+  ok(placed.ok, "can place trap for upgrade tests");
+  const trap = placed.tower;
+  const damageBefore = trap.damage;
+  const chargesBefore = trap.maxCharges;
+  const radiusBefore = trap.triggerRadius;
+  ok(w.upgradeTower(trap.id).ok, "trap upgrade succeeds");
+  ok(trap.damage > damageBefore, "trap upgrade improves damage");
+  ok(trap.maxCharges > chargesBefore && trap.charges > chargesBefore, "trap upgrade increases charges");
+  ok(trap.triggerRadius > radiusBefore, "trap upgrade improves trigger radius");
+}
+
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("censer", 24, 11);
+  ok(placed.ok, "can place aura for upgrade tests");
+  const aura = placed.tower;
+  const damageBefore = aura.damage;
+  const rangeBefore = aura.range;
+  const durationBefore = aura.duration;
+  ok(w.upgradeTower(aura.id).ok, "aura upgrade succeeds");
+  ok(aura.damage > damageBefore, "aura upgrade improves damage");
+  ok(aura.range > rangeBefore, "aura upgrade improves range");
+  ok(aura.duration > durationBefore && aura.remainingDuration > durationBefore, "aura upgrade improves duration");
+}
+
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "can place turret for max-level tests");
+  const tower = placed.tower;
+  ok(w.upgradeTower(tower.id).ok, "first upgrade succeeds");
+  ok(w.upgradeTower(tower.id).ok, "second upgrade reaches max level");
+  const maxed = w.upgradeTower(tower.id);
+  ok(!maxed.ok && maxed.reason === "max", "upgrade fails at max level");
+
+  const poor = new World(LEVEL);
+  poor.marrow = 999;
+  const p = poor.tryPlaceTower("ballista", 21, 10);
+  ok(p.ok, "can place turret before testing poor upgrade");
+  poor.marrow = 0;
+  const noMoney = poor.upgradeTower(p.tower.id);
+  ok(!noMoney.ok && noMoney.reason === "marrow", "upgrade fails without enough Marrow");
+}
+
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("barricade", 24, 11);
+  ok(placed.ok, "can place blockade for repair tests");
+  const tower = placed.tower;
+  tower.hp = Math.floor(tower.maxHp / 2);
+  const marrowBefore = w.marrow;
+  const repair = w.repairTower(tower.id);
+  ok(repair.ok, "damaged blockade can be repaired");
+  ok(w.marrow < marrowBefore, "repair spends Marrow");
+  ok(tower.hp === tower.maxHp, "repair restores HP");
+  const full = w.repairTower(tower.id);
+  ok(!full.ok && full.reason === "full", "repair fails at full HP");
+
+  const trap = w.tryPlaceTower("trapstake", 24, 12).tower;
+  const unsupported = w.repairTower(trap.id);
+  ok(!unsupported.ok && unsupported.reason === "unsupported", "trap repair/replenishment is not implemented yet");
+}
+
+{
+  const w = new World(LEVEL);
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("ballista", 21, 10);
+  ok(placed.ok, "can place turret for sell tests");
+  const tower = placed.tower;
+  const marrowBefore = w.marrow;
+  const refund = tower.sellRefund;
+  const sell = w.sellTower(tower.id);
+  ok(sell.ok, "sell removes a live defense");
+  ok(w.marrow === marrowBefore + refund, "sell refunds Marrow");
+  ok(!tower.alive, "sold defense is disabled");
+  ok(w.towerAtCell(tower.col, tower.row) === null, "sold defense no longer occupies its cell");
+  ok(w.placementStatus("ballista", tower.col, tower.row, { ignoreCost: true }).ok, "sell releases occupied cell");
+  const soldAgain = w.sellTower(tower.id);
+  ok(!soldAgain.ok && soldAgain.reason === "dead", "cannot sell already destroyed/expired defense");
 }
 
 // ---------------------------------------------------------------------------

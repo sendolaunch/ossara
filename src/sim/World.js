@@ -21,6 +21,14 @@ const dist2 = (ax, az, bx, bz) => {
   return dx * dx + dz * dz;
 };
 
+const UPGRADE_MAX_LEVEL = 3;
+const UPGRADE_COST = (baseCost, level) => Math.ceil(baseCost * (0.75 + (level - 1) * 0.5));
+const SELL_REFUND = (baseCost) => Math.floor(baseCost * 0.5);
+const REPAIR_COST = (baseCost, hp, maxHp) => {
+  if (!maxHp || hp >= maxHp) return 0;
+  return Math.max(1, Math.ceil(baseCost * 0.35 * ((maxHp - hp) / maxHp)));
+};
+
 export class World {
   constructor(level, waves = WAVES, opts = {}) {
     this.level = level;
@@ -149,10 +157,114 @@ export class World {
     tower.range *= 1 + (this.bonuses.rangePct || 0) / 100;
     tower.fireRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
     tower.attackRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
+    this._captureDefenseBaseStats(tower);
+    this._refreshDefenseEconomy(tower);
     this.towers.push(tower);
     this.occupied.add(cellKey(col, row));
     this.events.push({ kind: "place", x: w.x, z: w.z });
     return { ok: true, tower };
+  }
+
+  towerAtCell(col, row) {
+    return this.towers.find((t) => t.alive && t.col === col && t.row === row) || null;
+  }
+
+  towerById(id) {
+    return this.towers.find((t) => t.id === id) || null;
+  }
+
+  upgradeTower(towerId) {
+    const t = this.towerById(towerId);
+    if (!t) return { ok: false, reason: "missing" };
+    if (!t.alive) return { ok: false, reason: "dead", tower: t };
+    if (t.level >= (t.maxLevel || UPGRADE_MAX_LEVEL)) return { ok: false, reason: "max", tower: t };
+    this._refreshDefenseEconomy(t);
+    if (this.marrow < t.upgradeCost) return { ok: false, reason: "marrow", tower: t, cost: t.upgradeCost };
+    const cost = t.upgradeCost;
+    this.marrow -= cost;
+    t.level++;
+    this._applyDefenseLevelStats(t);
+    this._refreshDefenseEconomy(t);
+    this.events.push({ kind: "towerUpgraded", id: t.id, x: t.x, z: t.z, level: t.level });
+    return { ok: true, action: "upgrade", tower: t, cost };
+  }
+
+  repairTower(towerId) {
+    const t = this.towerById(towerId);
+    if (!t) return { ok: false, reason: "missing" };
+    if (!t.alive) return { ok: false, reason: "dead", tower: t };
+    if (!t.physical || t.maxHp <= 0) return { ok: false, reason: "unsupported", tower: t };
+    this._refreshDefenseEconomy(t);
+    if (t.hp >= t.maxHp) return { ok: false, reason: "full", tower: t };
+    if (this.marrow < t.repairCost) return { ok: false, reason: "marrow", tower: t, cost: t.repairCost };
+    const cost = t.repairCost;
+    this.marrow -= cost;
+    t.hp = t.maxHp;
+    this._refreshDefenseEconomy(t);
+    this.events.push({ kind: "towerRepaired", id: t.id, x: t.x, z: t.z });
+    return { ok: true, action: "repair", tower: t, cost };
+  }
+
+  sellTower(towerId) {
+    const t = this.towerById(towerId);
+    if (!t) return { ok: false, reason: "missing" };
+    if (!t.alive) return { ok: false, reason: "dead", tower: t };
+    this._refreshDefenseEconomy(t);
+    const refund = t.sellRefund;
+    this.marrow += refund;
+    this._disableDefense(t, "towerSold");
+    return { ok: true, action: "sell", tower: t, refund };
+  }
+
+  _captureDefenseBaseStats(t) {
+    t.maxLevel = UPGRADE_MAX_LEVEL;
+    t.baseMaxHp = t.maxHp || 0;
+    t.baseDamage = t.damage || 0;
+    t.baseRange = t.range || 0;
+    t.baseAttackRate = t.attackRate || t.fireRate || 1;
+    t.baseFireRate = t.fireRate || t.attackRate || 1;
+    t.baseTriggerRadius = t.triggerRadius ?? null;
+    t.baseCharges = t.maxCharges ?? t.charges ?? null;
+    t.baseDuration = t.duration ?? null;
+  }
+
+  _applyDefenseLevelStats(t) {
+    const tier = Math.max(0, (t.level || 1) - 1);
+    const hpBefore = t.hp || 0;
+    const maxBefore = t.maxHp || 0;
+    if (t.defenseType === "blockade") {
+      t.maxHp = Math.round(t.baseMaxHp * (1 + tier * 0.35));
+      t.hp = Math.min(t.maxHp, hpBefore + Math.max(0, t.maxHp - maxBefore));
+    } else if (t.defenseType === "turret") {
+      t.damage = t.baseDamage * (1 + tier * 0.25);
+      t.range = t.baseRange * (1 + tier * 0.1);
+      t.attackRate = t.baseAttackRate * (1 + tier * 0.1);
+      t.fireRate = t.baseFireRate * (1 + tier * 0.1);
+      t.maxHp = Math.round(t.baseMaxHp * (1 + tier * 0.15));
+      t.hp = Math.min(t.maxHp, hpBefore + Math.max(0, t.maxHp - maxBefore));
+    } else if (t.defenseType === "trap") {
+      const oldMaxCharges = t.maxCharges || 0;
+      t.damage = t.baseDamage * (1 + tier * 0.25);
+      t.triggerRadius = t.baseTriggerRadius == null ? t.triggerRadius : t.baseTriggerRadius * (1 + tier * 0.1);
+      if (t.baseCharges != null) {
+        t.maxCharges = t.baseCharges + tier;
+        t.charges = Math.max(0, (t.charges || 0) + Math.max(0, t.maxCharges - oldMaxCharges));
+      }
+    } else if (t.defenseType === "aura") {
+      const oldDuration = t.duration || 0;
+      t.damage = t.baseDamage * (1 + tier * 0.25);
+      t.range = t.baseRange * (1 + tier * 0.1);
+      if (t.baseDuration != null) {
+        t.duration = t.baseDuration * (1 + tier * 0.15);
+        t.remainingDuration = Math.max(0, (t.remainingDuration ?? t.duration) + Math.max(0, t.duration - oldDuration));
+      }
+    }
+  }
+
+  _refreshDefenseEconomy(t) {
+    t.upgradeCost = t.level >= (t.maxLevel || UPGRADE_MAX_LEVEL) ? 0 : UPGRADE_COST(t.baseCost || 0, t.level || 1);
+    t.repairCost = t.alive && t.physical ? REPAIR_COST(t.baseCost || 0, t.hp || 0, t.maxHp || 0) : 0;
+    t.sellRefund = t.alive ? SELL_REFUND(t.baseCost || 0) : 0;
   }
 
   // ---- wave control ---------------------------------------------------------
@@ -371,6 +483,7 @@ export class World {
     t.alive = false;
     t.targetId = 0;
     this.occupied.delete(cellKey(t.col, t.row));
+    this._refreshDefenseEconomy(t);
     this.events.push({ kind: eventKind, id: t.id, x: t.x, z: t.z });
   }
 

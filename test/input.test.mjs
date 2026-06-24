@@ -149,6 +149,46 @@ const oldWindow = globalThis.window;
   ok(input.selected === null && input.hoverCell === null, "right-click cancels build mode");
 }
 
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const tower = { id: 7, alive: true, col: 3, row: 4 };
+  let hovered = null;
+  const results = [];
+  const renderer = {
+    domElement: canvas,
+    setHover: () => {},
+    pointerToCell: () => ({ col: 3, row: 4, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+    orbit: () => {},
+  };
+  const world = {
+    phase: "active",
+    level: {},
+    availableTowers: ["barricade"],
+    towerAtCell: (col, row) => (col === 3 && row === 4 && tower.alive ? tower : null),
+    upgradeTower: (id) => ({ ok: id === tower.id, action: "upgrade", tower }),
+    repairTower: (id) => ({ ok: id === tower.id, action: "repair", tower }),
+    sellTower: (id) => {
+      tower.alive = false;
+      return { ok: id === tower.id, action: "sell", tower, refund: 17 };
+    },
+  };
+  const input = new Input(renderer, () => world);
+  input.onTowerHover = (t) => { hovered = t; };
+  input.onManageResult = (res) => results.push(res);
+  canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
+  input.refreshHover();
+  ok(hovered === tower, "hovering a placed defense reports tower hover");
+  fakeWindow.dispatch("keydown", { key: "u", preventDefault() {} });
+  fakeWindow.dispatch("keydown", { key: "f", preventDefault() {} });
+  fakeWindow.dispatch("keydown", { key: "x", preventDefault() {} });
+  ok(results.map((r) => r.action).join(",") === "upgrade,repair,sell", "U/F/X call defense management actions");
+  ok(hovered === null, "selling clears hovered defense");
+}
+
 globalThis.window = oldWindow;
 
 console.log(`input: ${pass}/${pass + fail} checks passed`);

@@ -23,12 +23,15 @@ export class Input {
     this.selected = null;
     this.rotation = 0;
     this.hoverCell = null;
+    this.hoverTower = null;
     this._mouse = null;
     this._orbitDrag = null;
     this.onPlaceResult = null;
     this.onSelectChange = null;
     this.onBuildBlocked = null;
     this.onHoverStatus = null;
+    this.onTowerHover = null;
+    this.onManageResult = null;
 
     this._bind(renderer.domElement);
   }
@@ -36,11 +39,14 @@ export class Input {
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x"].includes(k)) e.preventDefault();
       if (k === "q") this.pendingSlam = true;
       if (k === "enter") this.pendingStart = true;
       if (k === "escape") this.cancelBuild();
       if (k === "r" && this.selected) this.rotateBuild();
+      if (k === "u" && !this.selected) this._manageHovered("upgrade");
+      if (k === "f" && !this.selected) this._manageHovered("repair");
+      if (k === "x" && !this.selected) this._manageHovered("sell");
       if (k === "1") this._selectIdx(0);
       if (k === "2") this._selectIdx(1);
       if (k === "3") this._selectIdx(2);
@@ -54,7 +60,9 @@ export class Input {
     canvas.addEventListener("mouseleave", () => {
       this._mouse = null;
       this.hoverCell = null;
+      this.hoverTower = null;
       this._orbitDrag = null;
+      if (this.onTowerHover) this.onTowerHover(null);
     });
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
@@ -96,17 +104,21 @@ export class Input {
     }
     this.selected = id && TOWERS[id] ? id : null;
     this.rotation = 0;
+    this.hoverTower = null;
     if (!this.selected) this.renderer.setHover(null);
     if (this.onSelectChange) this.onSelectChange(this.selected);
     if (this.onHoverStatus) this.onHoverStatus(null);
+    if (this.onTowerHover) this.onTowerHover(null);
   }
 
   cancelBuild() {
     this.selected = null;
     this.hoverCell = null;
+    this.hoverTower = null;
     this.renderer.setHover(null);
     if (this.onSelectChange) this.onSelectChange(null);
     if (this.onHoverStatus) this.onHoverStatus(null);
+    if (this.onTowerHover) this.onTowerHover(null);
   }
 
   rotateBuild() {
@@ -142,11 +154,34 @@ export class Input {
     return this.renderer.pointerToCell(clientX, clientY, world.level);
   }
 
+  _showTowerHover(world, cell) {
+    const tower = cell && world && world.towerAtCell ? world.towerAtCell(cell.col, cell.row) : null;
+    this.hoverTower = tower || null;
+    if (this.onTowerHover) this.onTowerHover(this.hoverTower);
+    return tower;
+  }
+
+  _manageHovered(action) {
+    const world = this.getWorld();
+    const tower = this.hoverTower || null;
+    let res = { ok: false, action, reason: "missing" };
+    if (world && tower) {
+      if (action === "upgrade") res = world.upgradeTower(tower.id);
+      else if (action === "repair") res = world.repairTower(tower.id);
+      else if (action === "sell") res = world.sellTower(tower.id);
+    }
+    if (!res.ok || action === "sell") this.hoverTower = null;
+    if (this.onManageResult) this.onManageResult(res);
+    if (this.onTowerHover) this.onTowerHover(this.hoverTower && this.hoverTower.alive ? this.hoverTower : null);
+  }
+
   _showBuildCell(world, cell) {
     if (!this.selected || !cell) {
       this.hoverCell = null;
+      this.hoverTower = null;
       this.renderer.setHover(null);
       if (this.onHoverStatus) this.onHoverStatus(null);
+      if (this.onTowerHover) this.onTowerHover(null);
       return null;
     }
     this.hoverCell = { col: cell.col, row: cell.row };
@@ -196,28 +231,36 @@ export class Input {
 
   refreshHover() {
     const world = this.getWorld();
-    if (world.phase !== "prep") {
+    if (world.phase !== "prep" && this.selected) {
       this.cancelBuild();
       return;
     }
     if (!this._mouse) {
       this.hoverCell = null;
+      this.hoverTower = null;
       this.renderer.setHover(null);
       if (this.onHoverStatus) this.onHoverStatus(null);
+      if (this.onTowerHover) this.onTowerHover(null);
       return;
     }
     const cell = this._cellFromPointer(this._mouse.x, this._mouse.y, world);
     if (!cell) {
       this.hoverCell = null;
+      this.hoverTower = null;
       this.renderer.setHover(null);
       if (this.onHoverStatus) this.onHoverStatus(null);
+      if (this.onTowerHover) this.onTowerHover(null);
       return;
     }
     if (!this.selected) {
+      this.hoverCell = { col: cell.col, row: cell.row };
       this.renderer.setHover(null);
       if (this.onHoverStatus) this.onHoverStatus(null);
+      this._showTowerHover(world, cell);
       return;
     }
+    this.hoverTower = null;
+    if (this.onTowerHover) this.onTowerHover(null);
     this._showBuildCell(world, cell);
   }
 

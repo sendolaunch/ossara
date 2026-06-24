@@ -23,6 +23,15 @@ const PLACEMENT_MESSAGES = {
   phase: "Build mode is locked during combat.",
 };
 
+const MANAGEMENT_MESSAGES = {
+  missing: "Hover a defense first.",
+  dead: "That defense is gone.",
+  max: "Defense already max level.",
+  marrow: "Not enough Marrow.",
+  full: "Defense already repaired.",
+  unsupported: "Repair is for physical defenses.",
+};
+
 export class Mission {
   constructor(appEl, uiEl, { onExit }) {
     this.appEl = appEl;
@@ -50,10 +59,20 @@ export class Mission {
     });
     this.input.onSelectChange = (id) => this.hud.setSelected(id);
     this.input.onHoverStatus = (status) => this.hud.setPlacementStatus(status);
+    this.input.onTowerHover = (tower) => this.hud.setTowerHover(tower);
     this.input.onPlaceResult = (res) => {
       if (!res.ok) {
         this.hud.toast(PLACEMENT_MESSAGES[res.reason] || "Can't build there.", CSS.blood);
       }
+    };
+    this.input.onManageResult = (res) => {
+      if (!res.ok) {
+        this.hud.toast(MANAGEMENT_MESSAGES[res.reason] || "Can't manage that defense.", CSS.blood);
+        return;
+      }
+      if (res.action === "upgrade") this.hud.toast(`${res.tower.type} upgraded to L${res.tower.level}.`, CSS.plague);
+      if (res.action === "repair") this.hud.toast(`${res.tower.type} repaired.`, CSS.plague);
+      if (res.action === "sell") this.hud.toast(`Defense sold. +${res.refund} Marrow`, CSS.gold);
     };
     this.input.onBuildBlocked = () => this.hud.toast("Build mode is locked during combat.", CSS.blood);
 

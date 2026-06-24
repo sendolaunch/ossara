@@ -77,6 +77,7 @@ export class HUD {
     this.rewardSummary = null;
     this.selectedTowerId = null;
     this.placementStatus = null;
+    this.hoverTower = null;
     this._build();
   }
 
@@ -263,6 +264,10 @@ export class HUD {
     this.placementStatus = status || null;
   }
 
+  setTowerHover(tower) {
+    this.hoverTower = tower || null;
+  }
+
   _writeWinSummary(world = null) {
     const drops = this.rewardSummary?.drops || [];
     const dropText = drops.length ? ` Recovered ${drops.length} relic${drops.length === 1 ? "" : "s"}.` : "";
@@ -290,7 +295,18 @@ export class HUD {
     this.wardBar.style.background = wardRatio <= 0.34 ? CSS.blood : CSS.plague;
     this.elMarrow.textContent = `${Math.floor(world.marrow)}`;
     if (this.elBuildTitle) {
-      if (world.phase !== "prep") {
+      if (this.hoverTower && this.hoverTower.alive) {
+        const t = this.hoverTower;
+        const def = TOWERS[t.type] || {};
+        const hpText = t.maxHp > 0 ? `HP ${Math.ceil(t.hp)} / ${Math.ceil(t.maxHp)}` : t.defenseType === "trap" ? `Charges ${t.charges ?? 0} / ${t.maxCharges ?? t.charges ?? 0}` : t.defenseType === "aura" ? `Duration ${Math.max(0, Math.ceil(t.remainingDuration ?? 0))}s` : "Field defense";
+        const upgradeText = t.level >= (t.maxLevel || 3) ? "Max level" : `Upgrade ${t.upgradeCost} Marrow`;
+        const repairText = t.physical && t.maxHp > 0 ? `Repair ${t.repairCost} Marrow` : "Repair n/a";
+        this.elBuildTitle.textContent = `${def.name || t.type}  L${t.level || 1}`.toUpperCase();
+        this.elBuildTitle.style.color = CSS.plague;
+        this.elBuildMeta.textContent = `${hpText}  |  ${upgradeText}  |  Sell +${t.sellRefund}`;
+        this.elBuildMeta.style.color = CSS.gold;
+        this.elBuildControls.textContent = `[U] Upgrade  [F] Repair (${repairText})  [X] Sell`;
+      } else if (world.phase !== "prep") {
         this.elBuildTitle.textContent = "COMBAT PHASE";
         this.elBuildTitle.style.color = CSS.gold;
         this.elBuildMeta.textContent = "Building locked";
@@ -316,7 +332,7 @@ export class HUD {
         this.elBuildTitle.style.color = CSS.plague;
         this.elBuildMeta.textContent = `${Math.floor(world.marrow)} Marrow available`;
         this.elBuildMeta.style.color = CSS.gold;
-        this.elBuildControls.textContent = "Select defense [1]/[2] or click a card. Enter starts wave.";
+        this.elBuildControls.textContent = "Select defense [1]/[2] or click a card. Hover a defense: U/F/X manages it. Enter starts wave.";
       }
     }
     // phase banner
@@ -406,6 +422,7 @@ export class HUD {
     this.rewardSummary = null;
     this.selectedTowerId = null;
     this.placementStatus = null;
+    this.hoverTower = null;
     this.overlay.style.display = "none";
   }
 }
