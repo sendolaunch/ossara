@@ -8,6 +8,9 @@ import { TOWERS } from "../config/towers.js";
 
 const ROTATE_RATE = 1.9; // rad/sec (arrow left/right)
 const ZOOM_RATE = 12; // units/sec (arrow up/down)
+const WHEEL_ZOOM_STEP = 2.25;
+const MOUSE_ORBIT_RATE = 0.008;
+const MOUSE_PITCH_RATE = 0.004;
 
 export class Input {
   constructor(renderer, getWorld) {
@@ -15,11 +18,13 @@ export class Input {
     this.getWorld = getWorld;
     this.keys = new Set();
     this.pendingSlam = false;
+    this.pendingAttack = null;
     this.pendingStart = false;
     this.selected = null;
     this.rotation = 0;
     this.hoverCell = null;
     this._mouse = null;
+    this._orbitDrag = null;
     this.onPlaceResult = null;
     this.onSelectChange = null;
     this.onBuildBlocked = null;
@@ -48,20 +53,37 @@ export class Input {
     canvas.addEventListener("mouseleave", () => {
       this._mouse = null;
       this.hoverCell = null;
+      this._orbitDrag = null;
     });
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       this.cancelBuild();
     });
-    canvas.addEventListener("click", () => this._tryPlace());
-    canvas.addEventListener(
+    canvas.addEventListener("click", (e) => this._handleClick(e));
+    window.addEventListener(
       "wheel",
       (e) => {
         e.preventDefault();
-        this.renderer.zoomBy(e.deltaY > 0 ? 1.4 : -1.4);
+        this.renderer.zoomBy(e.deltaY > 0 ? WHEEL_ZOOM_STEP : -WHEEL_ZOOM_STEP);
       },
       { passive: false }
     );
+    window.addEventListener("mousedown", (e) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      this._orbitDrag = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!this._orbitDrag) return;
+      const dx = e.clientX - this._orbitDrag.x;
+      const dy = e.clientY - this._orbitDrag.y;
+      this._orbitDrag = { x: e.clientX, y: e.clientY };
+      this.renderer.orbit(-dx * MOUSE_ORBIT_RATE);
+      if (typeof this.renderer.pitchBy === "function") this.renderer.pitchBy(dy * MOUSE_PITCH_RATE);
+    });
+    window.addEventListener("mouseup", (e) => {
+      if (e.button === 1) this._orbitDrag = null;
+    });
   }
 
   select(id) {
@@ -96,6 +118,20 @@ export class Input {
 
   requestStart() {
     this.pendingStart = true;
+  }
+
+  _handleClick(e = {}) {
+    if (this.selected) {
+      this._tryPlace();
+      return;
+    }
+    const world = this.getWorld();
+    const hit = world && this.renderer.pointerToCell
+      ? this.renderer.pointerToCell(e.clientX, e.clientY, world.level)
+      : null;
+    this.pendingAttack = hit && Number.isFinite(hit.x) && Number.isFinite(hit.z)
+      ? { x: hit.x, z: hit.z }
+      : { x: null, z: null };
   }
 
   _tryPlace() {
@@ -154,14 +190,29 @@ export class Input {
     });
   }
 
-  consume() {
+  movementIntent() {
     const basis = this.renderer.getBasis();
     const sFwd = (this.keys.has("w") ? 1 : 0) - (this.keys.has("s") ? 1 : 0);
     const sRight = (this.keys.has("d") ? 1 : 0) - (this.keys.has("a") ? 1 : 0);
     const moveX = sFwd * basis.fwd.x + sRight * basis.right.x;
     const moveZ = sFwd * basis.fwd.z + sRight * basis.right.z;
-    const out = { moveX, moveZ, slam: this.pendingSlam, startWave: this.pendingStart };
+    return { moveX, moveZ, moving: Math.hypot(moveX, moveZ) > 0.05, running: this.keys.has("shift") };
+  }
+
+  consume() {
+    const { moveX, moveZ } = this.movementIntent();
+    const pendingAttack = this.pendingAttack;
+    const out = {
+      moveX,
+      moveZ,
+      slam: this.pendingSlam,
+      startWave: this.pendingStart,
+      attack: !!pendingAttack,
+      attackX: pendingAttack?.x,
+      attackZ: pendingAttack?.z,
+    };
     this.pendingSlam = false;
+    this.pendingAttack = null;
     this.pendingStart = false;
     return out;
   }

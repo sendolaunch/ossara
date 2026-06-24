@@ -71,7 +71,7 @@ export class HUD {
 
   _build() {
     // ---- top-left objective panel ----
-    const tl = el("div", { position: "absolute", top: "12px", left: "12px", ...panel(), padding: "10px 14px", minWidth: "200px" });
+    const tl = el("div", { position: "absolute", top: "12px", left: "12px", pointerEvents: "auto", ...panel(), padding: "10px 14px", minWidth: "200px" });
     this.elMission = el("div", { font: "700 12px 'Cinzel',serif", letterSpacing: "1px", color: CSS.gold, marginBottom: "6px" }, "THE FIRST SEAL");
     this.elDifficulty = el("div", { color: CSS.ash, fontSize: "11px", margin: "-4px 0 6px" }, "Initiate");
     const statRow = (iconHtml, label) => {
@@ -96,7 +96,7 @@ export class HUD {
     this.root.appendChild(tl);
 
     // ---- phase banner (top center) ----
-    const banner = el("div", { position: "absolute", top: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
+    const banner = el("div", { position: "absolute", top: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", pointerEvents: "auto" });
     this.elPhase = el("div", { ...panel(), padding: "8px 20px", font: "700 15px 'Cinzel', ui-monospace, monospace", letterSpacing: "3px" });
     this.elStart = el("button", { cursor: "pointer", padding: "7px 18px", borderRadius: "9px", border: "none", background: CSS.plague, color: CSS.void, font: "700 13px ui-monospace, monospace", letterSpacing: "1px" });
     this.elStart.textContent = "START WAVE ▸";
@@ -105,7 +105,7 @@ export class HUD {
     this.root.appendChild(banner);
 
     // ---- hero panel (top-right) ----
-    const hr = el("div", { position: "absolute", top: "12px", right: "12px", ...panel(), padding: "10px 12px", display: "flex", gap: "10px", alignItems: "center", minWidth: "210px" });
+    const hr = el("div", { position: "absolute", top: "12px", right: "12px", pointerEvents: "auto", ...panel(), padding: "10px 12px", display: "flex", gap: "10px", alignItems: "center", minWidth: "210px" });
     this.heroIcon = el("div", { width: "44px", height: "44px", borderRadius: "50%", overflow: "hidden", flexShrink: "0", border: `2px solid ${CSS.plague}`, background: "#0c0e09", display: "flex", alignItems: "center", justifyContent: "center", font: "800 18px 'Cinzel',serif", color: CSS.plague });
     const hrInfo = el("div", { flex: "1" });
     this.elHeroName = el("div", { font: "700 12px 'Cinzel',serif", letterSpacing: "1px" }, "WARDEN");
@@ -135,6 +135,7 @@ export class HUD {
       alignItems: "center",
       justifyContent: "center",
       zIndex: "3",
+      pointerEvents: "auto",
     });
     this.towerRow = el("div", { display: "flex", gap: "8px", alignItems: "stretch", flexShrink: "0" });
     this.elBuildInfo = el("div", {
@@ -178,7 +179,7 @@ export class HUD {
     this.root.appendChild(this.elToast);
 
     // ---- end overlay ----
-    this.overlay = el("div", { position: "absolute", inset: "0", display: "none", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", background: "rgba(7,8,6,0.82)" });
+    this.overlay = el("div", { position: "absolute", inset: "0", display: "none", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", background: "rgba(7,8,6,0.82)", pointerEvents: "auto" });
     this.elEndTitle = el("div", { font: "800 42px 'Cinzel',ui-monospace,monospace", letterSpacing: "4px" });
     this.elEndSub = el("div", { color: CSS.ash, font: "14px ui-monospace, monospace" });
     const btnRow = el("div", { display: "flex", gap: "12px", marginTop: "6px" });

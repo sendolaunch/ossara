@@ -243,21 +243,31 @@ section("a tower kills enemies and grants marrow");
 }
 
 // ---------------------------------------------------------------------------
-section("hero auto-attacks and slam damages");
+section("manual hero attack and slam damages");
 {
   const w = new World(LEVEL);
-  // place hero right on an early lane tile
-  const wp = buildLanePath(LEVEL);
-  const p = pointAtDistance(wp, 1.0);
-  w.hero.x = p.x;
-  w.hero.z = p.z;
-  w.startWave();
-  run(w, 600, 0.05, {});
-  ok(w.stats.kills > 0, "hero killed enemies walking past it");
-  // slam should be usable and damage; track a kill count with slam spam
-  const killsBefore = w.stats.kills;
-  run(w, 600, 0.05, { slam: true });
-  ok(w.stats.kills >= killsBefore, "slam runs without error and adds kills");
+  w._spawnEnemy("husk", w.defaultLaneId);
+  const en = w.enemies[0];
+  en.speed = 0;
+  en.hp = 40;
+  const laneStart = pointAtDistance(w.lane, 0);
+  w.hero.x = laneStart.x;
+  w.hero.z = laneStart.z - 0.8;
+  const hpBefore = en.hp;
+  run(w, 20, 0.05, {});
+  ok(en.alive && en.hp === hpBefore, "hero does not damage enemies without a click");
+
+  w.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
+  ok(en.hp < hpBefore, "manual attack damages an enemy in the aimed arc");
+  const hpAfterAttack = en.hp;
+  const cdAfterAttack = w.hero.attackCd;
+  w.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
+  ok(en.hp === hpAfterAttack && w.hero.attackCd < cdAfterAttack, "attack cooldown blocks immediate click-spam damage");
+
+  w.hero.attackCd = 0;
+  w.hero.abilityCd = 0;
+  w.update(0.05, { slam: true });
+  ok(en.hp < hpAfterAttack || !en.alive, "slam still runs without error and damages nearby enemies");
 }
 
 // ---------------------------------------------------------------------------

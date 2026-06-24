@@ -255,6 +255,55 @@ export class World {
     return best;
   }
 
+  _enemyInHeroAttackArc(h, aimX, aimZ) {
+    const hasAim = Number.isFinite(aimX) && Number.isFinite(aimZ);
+    let fx = Math.sin(h.facing);
+    let fz = Math.cos(h.facing);
+    if (hasAim) {
+      const ax = aimX - h.x;
+      const az = aimZ - h.z;
+      const am = Math.hypot(ax, az);
+      if (am > 1e-4) {
+        fx = ax / am;
+        fz = az / am;
+        h.facing = Math.atan2(fx, fz);
+      }
+    }
+
+    let best = null;
+    let bestScore = Infinity;
+    const reach = h.attackRange + 0.35;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const dx = e.x - h.x;
+      const dz = e.z - h.z;
+      const d = Math.hypot(dx, dz);
+      if (d > reach + e.radius || d < 1e-5) continue;
+      const dot = (dx / d) * fx + (dz / d) * fz;
+      if (dot < 0.35) continue;
+      const aimBias = hasAim ? Math.hypot(e.x - aimX, e.z - aimZ) * 0.2 : 0;
+      const score = d + aimBias;
+      if (score < bestScore) {
+        bestScore = score;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  _heroAttack(h, input) {
+    if (h.attackCd > 0) return false;
+    const target = this._enemyInHeroAttackArc(h, input.attackX, input.attackZ);
+    if (target) {
+      this._damageEnemy(target, h.attackDamage);
+      this.events.push({ kind: "heroHit", x: target.x, z: target.z });
+    } else {
+      this.events.push({ kind: "heroSwing", x: h.x, z: h.z });
+    }
+    h.attackCd = 1 / h.attackRate;
+    return true;
+  }
+
   _enemyById(id) {
     for (const e of this.enemies) if (e.id === id && e.alive) return e;
     return null;
@@ -289,17 +338,9 @@ export class World {
       h.facing = Math.atan2(mx, mz);
     }
 
-    // Auto-attack nearest enemy in melee range.
+    // Manual hero attack. The click command comes from input; no click means no swing.
     h.attackCd -= dt;
-    if (h.attackCd <= 0) {
-      const target = this._nearestEnemyWithin(h.x, h.z, h.attackRange + 0.3);
-      if (target) {
-        this._damageEnemy(target, h.attackDamage);
-        h.attackCd = 1 / h.attackRate;
-        h.facing = Math.atan2(target.x - h.x, target.z - h.z);
-        this.events.push({ kind: "heroHit", x: target.x, z: target.z });
-      }
-    }
+    if (input.attack) this._heroAttack(h, input);
 
     // Signature ability (Q) — behaviour depends on the class kit.
     h.abilityCd -= dt;

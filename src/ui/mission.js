@@ -28,6 +28,7 @@ export class Mission {
     this.hudRoot = document.createElement("div");
     this.hudRoot.style.position = "absolute";
     this.hudRoot.style.inset = "0";
+    this.hudRoot.style.pointerEvents = "none";
     uiEl.appendChild(this.hudRoot);
 
     this.hud = new HUD(this.hudRoot, {
@@ -63,6 +64,7 @@ export class Mission {
       zIndex: "3",
       padding: "9px 14px",
       fontSize: "12px",
+      pointerEvents: "auto",
     });
     this.exitBtn.onclick = () => this._exit();
     this.hudRoot.appendChild(this.exitBtn);
@@ -156,6 +158,7 @@ export class Mission {
     this.input.updateCamera(dt);
     this.input.refreshHover();
 
+    const heroMoveIntent = this.input.movementIntent ? this.input.movementIntent() : { moving: false, running: false };
     this.acc += dt;
     let first = true;
     let guard = 0;
@@ -176,7 +179,7 @@ export class Mission {
       if (reward && this.hud.setRewardSummary) this.hud.setRewardSummary(reward);
     }
 
-    this.renderer.update(this.world, Math.min(dt, 0.05));
+    this.renderer.update(this.world, Math.min(dt, 0.05), heroMoveIntent);
     this.hud.update(this.world);
     requestAnimationFrame(this._frame);
   }

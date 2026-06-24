@@ -24,11 +24,14 @@ const oldWindow = globalThis.window;
   globalThis.window = fakeWindow;
   const canvas = target();
   const calls = [];
+  const camera = [];
   const renderer = {
     domElement: canvas,
     setHover: (...args) => calls.push(args),
     getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
-    zoomBy: () => {},
+    zoomBy: (d) => camera.push(["zoom", d]),
+    orbit: (d) => camera.push(["orbit", d]),
+    pitchBy: (d) => camera.push(["pitch", d]),
   };
   const world = {
     phase: "prep",
@@ -39,12 +42,30 @@ const oldWindow = globalThis.window;
     tryPlaceTower: () => ({ ok: true }),
   };
   const input = new Input(renderer, () => world);
+  ok(!input.movementIntent().moving, "movement intent is idle before movement keys");
+  fakeWindow.dispatch("keydown", { key: "w", preventDefault() {} });
+  const intent = input.movementIntent();
+  ok(intent.moving && intent.moveZ === -1, "movement intent reflects held movement keys");
+  fakeWindow.dispatch("keydown", { key: "Shift", preventDefault() {} });
+  ok(input.movementIntent().running, "movement intent exposes shift as run gait for animation");
+  fakeWindow.dispatch("keyup", { key: "Shift" });
+  fakeWindow.dispatch("keyup", { key: "w" });
   input.select("barricade");
   input.hoverCell = { col: 2, row: 3 };
   input.cancelBuild();
   ok(input.selected === null, "cancel clears selected tower");
   ok(input.hoverCell === null, "cancel clears hover cell");
   ok(calls.at(-1)?.[0] === null, "cancel clears renderer preview");
+
+  let prevented = false;
+  fakeWindow.dispatch("wheel", { deltaY: -120, preventDefault() {} });
+  ok(camera.some((c) => c[0] === "zoom" && c[1] < 0), "window wheel zooms camera in over HUD");
+  fakeWindow.dispatch("mousedown", { button: 1, clientX: 100, clientY: 100, preventDefault() { prevented = true; } });
+  fakeWindow.dispatch("mousemove", { clientX: 125, clientY: 90 });
+  fakeWindow.dispatch("mouseup", { button: 1 });
+  ok(prevented, "middle mouse orbit prevents browser default");
+  ok(camera.some((c) => c[0] === "orbit" && Math.abs(c[1]) > 0), "middle mouse drag orbits camera");
+  ok(camera.some((c) => c[0] === "pitch" && Math.abs(c[1]) > 0), "middle mouse drag pitches camera");
 }
 
 {
@@ -58,6 +79,7 @@ const oldWindow = globalThis.window;
     setHover: (...args) => calls.push(args),
     getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
     zoomBy: () => {},
+    orbit: () => {},
   };
   const world = {
     phase: "active",
@@ -87,6 +109,7 @@ const oldWindow = globalThis.window;
     pointerToCell: () => ({ col: 4, row: 5, x: 0, z: 0 }),
     getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
     zoomBy: () => {},
+    orbit: () => {},
   };
   const world = {
     phase: "prep",
@@ -100,6 +123,9 @@ const oldWindow = globalThis.window;
     },
   };
   const input = new Input(renderer, () => world);
+  canvas.dispatch("click", { clientX: 10, clientY: 20 });
+  const attack = input.consume();
+  ok(attack.attack && attack.attackX === 0 && attack.attackZ === 0, "normal left-click queues a manual hero attack");
   input.select("barricade");
   canvas.dispatch("mousemove", { clientX: 10, clientY: 20 });
   fakeWindow.dispatch("keydown", { key: "r", preventDefault() {} });
@@ -109,6 +135,7 @@ const oldWindow = globalThis.window;
   canvas.dispatch("click");
   ok(placed?.id === "barricade" && placed.col === 4 && placed.row === 5, "click places selected tower at hover cell");
   ok(Math.abs(placed?.opts?.facing - Math.PI / 2) < 1e-9, "placement sends rotated facing to sim");
+  ok(!input.consume().attack, "build-mode left-click places tower instead of queuing hero attack");
 }
 
 globalThis.window = oldWindow;

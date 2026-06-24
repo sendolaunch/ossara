@@ -51,14 +51,16 @@ const ENEMY_LOOK = {
 
 const MISSION_CAMERA = {
   yaw: Math.PI / 2,
-  pitch: 0.86,
-  dist: 15.5,
-  minDist: 11,
-  maxDist: 22,
-  targetY: 0.65,
-  laneLead: 2.0,
+  pitch: 0.78,
+  minPitch: 0.54,
+  maxPitch: 1.04,
+  dist: 14,
+  minDist: 6.5,
+  maxDist: 34,
+  targetY: 0.8,
+  laneLead: 0.8,
   followSharpness: 0.01,
-  fov: 50,
+  fov: 52,
 };
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -109,6 +111,7 @@ export class PCRenderer {
     this.heroCtl = null;
     this._heroFoot = 0;
     this._heroLoadToken = 0;
+    this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
 
     this.app.start();
   }
@@ -337,6 +340,7 @@ export class PCRenderer {
       this._heroFoot = 0;
       this.app.root.addChild(e);
       this.heroEntity = e;
+      this.heroAnimation = { loaded: false, fallback: true, moving: false, running: false, dead: false };
       console.warn(`[pcRenderer] using primitive mission hero fallback for ${classId}`);
       return;
     }
@@ -365,6 +369,7 @@ export class PCRenderer {
       console.warn("[pcRenderer] hero auto-fit skipped", err);
     }
     this.heroEntity = wrap;
+    this.heroAnimation = { loaded: false, fallback: true, moving: false, running: false, dead: false };
     console.warn(`[pcRenderer] using static mission hero fallback for ${classId}`);
   }
 
@@ -375,6 +380,7 @@ export class PCRenderer {
     this._heroFoot = 0;
     this._prevHero = null;
     this._prevAtkCd = null;
+    this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     let ctl = null;
     try {
       ctl = await loadCharacter(this.app, classId);
@@ -392,6 +398,7 @@ export class PCRenderer {
       this.heroEntity = ctl.wrap;
       this.heroCtl.setMoving(false);
       this.heroCtl.setDead(false);
+      this.heroAnimation = { loaded: true, fallback: false, moving: false, running: false, dead: false };
       this.app.root.addChild(ctl.wrap);
       return true;
     }
@@ -403,6 +410,9 @@ export class PCRenderer {
   // ---- camera --------------------------------------------------------------
   orbit(d) {
     this.camYaw += d;
+  }
+  pitchBy(d) {
+    this.camPitch = clamp(this.camPitch + d, MISSION_CAMERA.minPitch, MISSION_CAMERA.maxPitch);
   }
   zoomBy(d) {
     this.camDist = Math.max(this.camMinDist, Math.min(this.camMaxDist, this.camDist + d));
@@ -495,12 +505,12 @@ export class PCRenderer {
   }
 
   // ---- per-frame sync ------------------------------------------------------
-  update(world, dt) {
+  update(world, dt, heroAnim = {}) {
     this._followCamera(world.hero, dt);
     this._syncEnemies(world);
     this._syncProjectiles(world);
     this._syncTowers(world);
-    this._syncHero(world);
+    this._syncHero(world, heroAnim);
     // PlayCanvas auto-renders on its own loop.
   }
 
@@ -572,19 +582,25 @@ export class PCRenderer {
     }
   }
 
-  _syncHero(world) {
+  _syncHero(world, heroAnim = {}) {
     const h = world.hero;
     if (!this.heroEntity) return;
     this.heroEntity.enabled = h.alive;
     this.heroEntity.setPosition(h.x, this._heroFoot || 0, h.z);
     this.heroEntity.setLocalEulerAngles(0, (h.facing * 180) / Math.PI, 0);
     if (this.heroCtl) {
-      const moving = this._prevHero ? Math.hypot(h.x - this._prevHero.x, h.z - this._prevHero.z) > 0.002 : false;
+      const moved = this._prevHero ? Math.hypot(h.x - this._prevHero.x, h.z - this._prevHero.z) > 0.002 : false;
+      const moving = heroAnim.moving ?? moved;
+      const running = !!heroAnim.running;
+      if (typeof this.heroCtl.setGait === "function") this.heroCtl.setGait(running);
       this.heroCtl.setMoving(moving && h.alive);
       this.heroCtl.setDead(!h.alive);
+      this.heroAnimation = { loaded: true, fallback: false, moving: moving && h.alive, running: running && moving && h.alive, dead: !h.alive };
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) this.heroCtl.playAttack();
       this._prevAtkCd = h.attackCd;
       this._prevHero = { x: h.x, z: h.z };
+    } else {
+      this.heroAnimation = { ...this.heroAnimation, moving: false, running: false, dead: !h.alive };
     }
   }
 

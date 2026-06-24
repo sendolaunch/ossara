@@ -8,7 +8,7 @@ export const HERO = {
   speed: 4.2, // world units / sec (WASD)
   radius: 0.32,
 
-  // Auto-attack: swings at the nearest enemy in melee range on a cooldown.
+  // Manual attack: player-clicked melee swing on a cooldown.
   attackRange: 1.2,
   attackDamage: 22,
   attackRate: 1.8, // swings / sec
