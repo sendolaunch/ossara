@@ -217,6 +217,7 @@ const oldWindow = globalThis.window;
   ok(input.commandTargetMode === "upgrade", "U directly enters upgrade target mode");
   fakeWindow.dispatch("keydown", { key: "Escape", preventDefault() {} });
   ok(input.commandTargetMode === null && input.commandTarget === null, "Esc cancels command target mode");
+  ok(commandTargets.some((t) => t[0] === null && t[1] === null), "cancel clears command target highlight");
   input.chooseActionMenuAction("repair");
   fakeWindow.dispatch("keydown", { key: "Enter", preventDefault() {} });
   input.updateCommandCast(0.5);

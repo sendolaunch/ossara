@@ -29,6 +29,33 @@ const REPAIR_COST = (baseCost, hp, maxHp) => {
   if (!maxHp || hp >= maxHp) return 0;
   return Math.max(1, Math.ceil(baseCost * 0.35 * ((maxHp - hp) / maxHp)));
 };
+const SPAWN_SPREAD_PATTERN = [-0.5, 0.5, -0.25, 0.25, 0, -0.4, 0.4];
+
+function lanePerpAtDistance(lane, dist) {
+  if (!lane?.pts?.length || lane.pts.length < 2) return { x: 1, z: 0 };
+  let d = Math.max(0, dist);
+  for (let i = 0; i < lane.segLen.length; i++) {
+    const seg = lane.segLen[i];
+    if (d <= seg || i === lane.segLen.length - 1) {
+      const a = lane.pts[i];
+      const b = lane.pts[i + 1];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len = Math.hypot(dx, dz) || 1;
+      return { x: -dz / len, z: dx / len };
+    }
+    d -= seg;
+  }
+  return { x: 1, z: 0 };
+}
+
+function pointAtDistanceWithOffset(lane, dist, offset = 0, fade = 12) {
+  const p = pointAtDistance(lane, dist);
+  if (!offset || p.done) return p;
+  const perp = lanePerpAtDistance(lane, dist);
+  const k = Math.max(0, 1 - Math.max(0, dist) / Math.max(1, fade));
+  return { ...p, x: p.x + perp.x * offset * k, z: p.z + perp.z * offset * k };
+}
 
 export class World {
   constructor(level, waves = WAVES, opts = {}) {
@@ -289,8 +316,13 @@ export class World {
   _spawnEnemy(typeId, laneId = this.defaultLaneId) {
     const def = ENEMIES[typeId];
     const path = this.lanePaths[laneId] || this.lane;
-    const start = pointAtDistance(path, 0);
-    this.enemyPool.acquire(def, this._nextId++, start, path.id || laneId || this.defaultLaneId);
+    const id = this._nextId++;
+    const lane = path.lane || {};
+    const width = lane.spawnWidth ?? this.level.spawnWidth ?? 1.8;
+    const offset = SPAWN_SPREAD_PATTERN[id % SPAWN_SPREAD_PATTERN.length] * width;
+    const fade = lane.spawnSpreadFade ?? this.level.spawnSpreadFade ?? 14;
+    const start = pointAtDistanceWithOffset(path, 0, offset, fade);
+    this.enemyPool.acquire(def, id, start, path.id || laneId || this.defaultLaneId, { laneOffset: offset, laneOffsetFade: fade });
   }
 
   // ---- main tick ------------------------------------------------------------
@@ -331,6 +363,8 @@ export class World {
   _updateEnemies(dt) {
     for (const e of this.enemies) {
       if (!e.alive) continue;
+      e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
+      e.hpBarTimer = Math.max(0, (e.hpBarTimer || 0) - dt);
       e.attackCd -= dt;
       const blocker = this._findBlockingDefense(e);
       if (blocker) {
@@ -344,7 +378,7 @@ export class World {
       e.blockingTargetId = 0;
       e.dist += e.speed * dt;
       const lane = this.lanePaths[e.laneId] || this.lane;
-      const p = pointAtDistance(lane, e.dist);
+      const p = pointAtDistanceWithOffset(lane, e.dist, e.laneOffset || 0, e.laneOffsetFade || 12);
       e.x = p.x;
       e.z = p.z;
       if (p.done && !e.counted) {
@@ -394,6 +428,9 @@ export class World {
   _damageEnemy(e, dmg) {
     if (!e.alive) return;
     e.hp -= dmg;
+    e.lastDamage = dmg;
+    e.hitFlash = 0.35;
+    e.hpBarTimer = 2.4;
     if (e.hp <= 0) this._killEnemy(e);
   }
 

@@ -38,11 +38,31 @@ export function spawnIndicatorSpecs(level) {
       silhouette: lane.silhouette || "gate",
       col: marker.col,
       row: marker.row,
+      y: 0.72,
       x: w.x,
       z: w.z,
       facing: Math.atan2(forward.col, forward.row || 0.0001),
     };
   });
+}
+
+export function activeSpawnLaneIds(world) {
+  const lanes = world?.level?.lanes || [];
+  const valid = new Set(lanes.map((lane) => lane.id));
+  const fallback = world?.defaultLaneId || lanes[0]?.id || "legacy";
+  const wave = world?.phase === "prep"
+    ? world?.waves?.[Math.min(world.waveIndex || 0, Math.max(0, (world.totalWaves || world.waves?.length || 1) - 1))]
+    : null;
+  if (!wave || !Array.isArray(wave.groups) || !wave.groups.length) return new Set([fallback]);
+  const ids = new Set();
+  let missingLaneData = false;
+  for (const group of wave.groups) {
+    if (group.laneId && valid.has(group.laneId)) ids.add(group.laneId);
+    else missingLaneData = true;
+  }
+  if (ids.size) return ids;
+  // Safe fallback for old wave data: show the default lane, not all lanes.
+  return new Set([fallback || (missingLaneData ? "legacy" : "")]);
 }
 
 export function spawnIndicatorsVisible(world, enabled = true) {

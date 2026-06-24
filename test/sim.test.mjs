@@ -21,6 +21,7 @@ const ok = (cond, msg) => {
   }
 };
 const approx = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
+const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 const section = (s) => console.log("\n" + s);
 
 // Fixed-step driver. Returns number of steps taken.
@@ -405,11 +406,18 @@ section("multi-lane spawning");
     const path = w.lanePaths[laneDef.id];
     const start = pointAtDistance(path, 0);
     ok(e && e.laneId === laneDef.id, `${laneDef.id} enemy records its lane id`);
-    ok(approx(e.x, start.x) && approx(e.z, start.z), `${laneDef.id} enemy starts on its lane spawn`);
+    ok(dist(e.x, e.z, start.x, start.z) > 0.05 && dist(e.x, e.z, start.x, start.z) <= 1.2, `${laneDef.id} enemy starts with slight lane-mouth spread`);
     w._updateEnemies(1);
     const progressed = pointAtDistance(path, e.speed);
-    ok(approx(e.x, progressed.x) && approx(e.z, progressed.z), `${laneDef.id} enemy follows its lane path`);
+    ok(dist(e.x, e.z, progressed.x, progressed.z) <= 1.8, `${laneDef.id} enemy follows near its lane path`);
   }
+
+  const spreadWorld = new World(LEVEL);
+  for (let i = 0; i < 4; i++) spreadWorld._spawnEnemy("husk", "north-gate");
+  const positions = spreadWorld.enemies.map((e) => `${e.x.toFixed(2)},${e.z.toFixed(2)}`);
+  ok(new Set(positions).size > 1, "enemies from the same gate do not spawn on one exact point");
+  run(spreadWorld, 120, 0.25);
+  ok(spreadWorld.stats.leaked > 0, "spread enemies still converge and can reach the crystal");
 
   const laneIds = new Set(LEVEL.lanes.map((lane) => lane.id));
   ok(WAVES.every((wave) => wave.groups.every((group) => !group.laneId || laneIds.has(group.laneId))), "wave lane ids resolve against level lanes");
@@ -424,6 +432,25 @@ section("multi-lane spawning");
   w.startWave();
   w.update(0.1, {});
   ok(w.enemies[0]?.laneId === "southeast-garden", "wave groups can spawn on a requested lane");
+}
+
+// ---------------------------------------------------------------------------
+section("enemy hit feedback state");
+{
+  const w = new World(LEVEL);
+  w._spawnEnemy("husk", w.defaultLaneId);
+  const e = w.enemies[0];
+  const hpBefore = e.hp;
+  w._damageEnemy(e, 1);
+  ok(e.hp === hpBefore - 1, "damage lowers enemy HP");
+  ok(e.lastDamage === 1, "enemy records recent damage amount");
+  ok(e.hitFlash > 0 && e.hpBarTimer > 0, "enemy exposes hit flash and HP bar timers");
+  const flash = e.hitFlash;
+  const bar = e.hpBarTimer;
+  w._updateEnemies(0.2);
+  ok(e.hitFlash < flash && e.hpBarTimer < bar, "damage feedback timers expire over time");
+  w._damageEnemy(e, 9999);
+  ok(!e.alive, "lethal damage kills enemy");
 }
 
 // ---------------------------------------------------------------------------

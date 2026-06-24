@@ -23,13 +23,18 @@ export function createEnemy() {
     color: "ash",
     boss: false,
     laneId: "",
+    laneOffset: 0,
+    laneOffsetFade: 12,
+    hitFlash: 0,
+    hpBarTimer: 0,
+    lastDamage: 0,
     alive: false,
     counted: false, // bounty/leak resolved exactly once
     reachedCore: false,
   };
 }
 
-export function resetEnemy(e, def, id, startPos, laneId = "") {
+export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.id = id;
   e.type = def.id;
   e.x = startPos.x;
@@ -49,6 +54,11 @@ export function resetEnemy(e, def, id, startPos, laneId = "") {
   e.color = def.color;
   e.boss = !!def.boss;
   e.laneId = laneId;
+  e.laneOffset = opts.laneOffset || 0;
+  e.laneOffsetFade = opts.laneOffsetFade || 12;
+  e.hitFlash = 0;
+  e.hpBarTimer = 0;
+  e.lastDamage = 0;
   e.alive = true;
   e.counted = false;
   e.reachedCore = false;
