@@ -209,6 +209,10 @@ section("building rules");
   const rTrapPath = laneTrap.tryPlaceTower("trapstake", 24, 11);
   ok(rTrapPath.ok, "traps can be placed on valid lane path cells without blocking them");
 
+  const laneAura = new World(LEVEL);
+  const rAuraPath = laneAura.tryPlaceTower("censer", 24, 11);
+  ok(rAuraPath.ok, "auras can be placed on valid lane path cells without blocking them");
+
   const rBlocked = w.tryPlaceTower("ballista", 16, 17);
   ok(!rBlocked.ok && rBlocked.reason === "blocked", "cannot place on blocked ruins");
 
@@ -443,7 +447,7 @@ section("turret behavior cleanup");
     const placed = w.tryPlaceTower(towerId, cell.col, cell.row);
     ok(placed.ok, `${towerId} can be placed for non-turret targeting smoke`);
     const defense = placed.tower;
-    defense.damage = 99;
+    defense.damage = defense.defenseType === "aura" ? 0 : 99;
     defense.range = 100;
     defense.attackRate = 20;
     defense.cooldown = 0;
@@ -533,6 +537,77 @@ section("trap behavior");
   ok(first.hp === firstHp - trap.damage, "trap damages the triggering enemy");
   ok(second.hp === secondHp - trap.damage, "trap damages other enemies inside trigger radius");
   ok(far.hp === farHp, "trap does not damage enemies outside trigger radius");
+}
+
+// ---------------------------------------------------------------------------
+section("aura behavior");
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("censer", 24, 11);
+  ok(placed.ok, "aura can be placed on a valid lane path cell");
+  const aura = placed.tower;
+  aura.damage = 0;
+  aura.remainingDuration = 5;
+  aura.tickRate = 1;
+  w._spawnEnemy("husk", w.defaultLaneId);
+  const enemy = w.enemies[0];
+  enemy.dist = 10.4;
+  const p = pointAtDistance(w.lane, enemy.dist);
+  enemy.x = p.x;
+  enemy.z = p.z;
+  const distBefore = enemy.dist;
+  w.update(0.2, {});
+  ok(enemy.dist > distBefore, "aura does not block enemy movement");
+  ok(enemy.blockingTargetId !== aura.id, "aura is not targeted by enemies");
+  ok(aura.targetId === 0, "aura does not use turret targeting");
+  ok(aura.charges === null && aura.resetCd === 0, "aura does not use trap charges or reset cooldown");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("censer", 24, 11);
+  ok(placed.ok, "aura damage test can place censer");
+  const aura = placed.tower;
+  aura.damage = 3;
+  aura.range = 1.5;
+  aura.remainingDuration = 5;
+  aura.tickRate = 1;
+  aura.tickCd = 0;
+  const inside = spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  const outside = spawnEnemyAt(w, "husk", w.defaultLaneId, 2);
+  const insideHp = inside.hp;
+  const outsideHp = outside.hp;
+  w.update(0.1, {});
+  ok(inside.hp === insideHp - aura.damage, "enemy inside aura radius takes tick damage");
+  ok(outside.hp === outsideHp, "enemy outside aura radius is unaffected");
+
+  const hpAfterTick = inside.hp;
+  w.update(0.2, {});
+  ok(inside.hp === hpAfterTick, "aura respects tickRate before ticking again");
+  w.update(0.8, {});
+  ok(inside.hp === hpAfterTick - aura.damage, "aura ticks again after tick interval");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  const placed = w.tryPlaceTower("brazier", 24, 11);
+  ok(placed.ok, "aura expiry test can place brazier");
+  const aura = placed.tower;
+  aura.damage = 0;
+  aura.remainingDuration = 0.25;
+  aura.tickRate = 1;
+  spawnEnemyAt(w, "husk", w.defaultLaneId, 10.4);
+  w.update(0.1, {});
+  ok(aura.alive, "aura remains alive before duration reaches zero");
+  w.update(0.2, {});
+  ok(!aura.alive, "aura expires when duration reaches zero");
+  ok(w.placementStatus("brazier", aura.col, aura.row, { ignoreCost: true }).ok, "expired aura releases its occupied cell");
 }
 
 // ---------------------------------------------------------------------------
