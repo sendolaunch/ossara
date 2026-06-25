@@ -96,6 +96,20 @@ export const STARTER_LOOT_ITEMS = [
   },
 ];
 
+export const FIXED_REWARD_ITEMS = [
+  {
+    id: "reward-first-breach-wardforged-blade",
+    name: "Wardforged Breach Blade",
+    slot: "weapon",
+    rarity: "uncommon",
+    itemLevel: 2,
+    levelRequirement: 1,
+    stats: { heroDamage: 2, defenseDamage: 1, abilityPower: 1 },
+  },
+];
+
+export const FIXED_REWARD_ITEMS_BY_ID = Object.fromEntries(FIXED_REWARD_ITEMS.map((item) => [item.id, item]));
+
 export const LOOT_ITEM_SETS = {
   plagueguard: {
     id: "plagueguard",

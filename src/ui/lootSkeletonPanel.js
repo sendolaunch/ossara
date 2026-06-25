@@ -17,13 +17,16 @@ const el = (tag, styles = {}, text = "") => {
 };
 
 export class LootSkeletonPanel {
-  constructor(root, { getState, onChange, getHero } = {}) {
+  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward } = {}) {
     this.getState = getState || (() => this.state);
     this.onChange = onChange || (() => {});
     this.state = createLootState(this.getState?.());
     this.getHero = getHero || (() => null);
+    this.getRewards = getRewards || (() => ({ claimedCount: 0, recent: [] }));
+    this.onDebugReward = onDebugReward || null;
     this.selectedForgeItemId = null;
     this.forgeMessage = "";
+    this.rewardMessage = "";
     this.root = el("div", {
       position: "absolute",
       right: "14px",
@@ -73,6 +76,15 @@ export class LootSkeletonPanel {
     this.render();
   }
 
+  claimDebugReward() {
+    if (!this.onDebugReward) return;
+    const summary = this.onDebugReward();
+    this.state = createLootState(this.getState?.());
+    const itemText = summary?.items?.length ? ` + ${summary.items.map((item) => item.name).join(", ")}` : "";
+    this.rewardMessage = summary ? `Claimed +${summary.goldGranted || 0} Gold${itemText}.` : "Reward claim failed.";
+    this.render();
+  }
+
   selectForgeItem(itemId) {
     this.selectedForgeItemId = itemId;
     this.forgeMessage = "";
@@ -108,6 +120,34 @@ export class LootSkeletonPanel {
     }, label);
     button.onclick = onClick;
     return button;
+  }
+
+  renderRewards() {
+    const rewards = this.getRewards?.() || { claimedCount: 0, recent: [] };
+    const wrap = el("div", {
+      marginTop: "10px",
+      padding: "8px",
+      borderRadius: "7px",
+      border: "1px solid rgba(110,230,90,0.28)",
+      background: "rgba(110,230,90,0.055)",
+    });
+    wrap.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Reward Log v1"));
+    wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
+      `${rewards.claimedCount || 0} reward claim${rewards.claimedCount === 1 ? "" : "s"} recorded. Common rewards auto-claim; world drops come later.`));
+    if (this.onDebugReward) wrap.appendChild(this.button("Dev reward claim", () => this.claimDebugReward()));
+    if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
+    const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
+    if (!recent.length) {
+      wrap.appendChild(el("div", { color: CSS.ash, marginTop: "6px" }, "No mission rewards claimed yet."));
+      return wrap;
+    }
+    for (const summary of recent) {
+      const itemText = summary.items?.length ? ` | ${summary.items.map((item) => item.name).join(", ")}` : "";
+      const goldText = summary.goldGranted ? `+${summary.goldGranted} Gold` : "No Gold";
+      wrap.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" },
+        `${summary.sourceType}: ${goldText}${itemText}`));
+    }
+    return wrap;
   }
 
   renderForge() {
@@ -190,6 +230,7 @@ export class LootSkeletonPanel {
       ? data.activeSetBonuses.map((bonus) => `${bonus.setName} ${bonus.label}`).join(" | ")
       : "No active set bonuses.";
     this.root.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, setLines));
+    this.root.appendChild(this.renderRewards());
     this.root.appendChild(this.renderForge());
 
     const equipped = el("div", { marginTop: "10px" });

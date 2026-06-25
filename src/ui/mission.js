@@ -133,6 +133,7 @@ export class Mission {
     this._bonuses = opts.bonuses || {};
     this._equipmentStats = opts.equipmentStats || {};
     this.onWin = opts.onWin || null;
+    this.onWaveReward = opts.onWaveReward || null;
     this._wonFired = false;
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     await this.renderer.setHeroClass(this.classId);
@@ -212,6 +213,7 @@ export class Mission {
         cmd.startWave = false;
       }
       this.world.update(this.STEP, cmd);
+      this._handleWorldEvents();
       this.acc -= this.STEP;
       first = false;
       guard++;
@@ -225,5 +227,14 @@ export class Mission {
     this.renderer.update(this.world, Math.min(dt, 0.05), heroMoveIntent);
     this.hud.update(this.world);
     requestAnimationFrame(this._frame);
+  }
+
+  _handleWorldEvents() {
+    if (!this.onWaveReward || !this.world?.events?.length) return;
+    for (const event of this.world.events) {
+      if (event.kind !== "waveCleared") continue;
+      const summary = this.onWaveReward(event);
+      if (summary?.goldGranted) this.hud.toast(`+${summary.goldGranted} Gold`, CSS.gold);
+    }
   }
 }

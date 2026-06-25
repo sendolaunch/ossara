@@ -13,6 +13,14 @@ import { loadProfile, saveProfile, addItem, getActiveHero, getBonuses, setActive
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
 import { createLootState, getAppliedLootStats } from "./sim/lootModel.js";
+import {
+  ensureRewardState,
+  FIRST_BREACH_ITEM_REWARD_ID,
+  getRewardViewerData,
+  grantReward,
+  missionClearRewardDefinition,
+  waveClearRewardDefinition,
+} from "./sim/rewardModel.js";
 import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
 import { Inventory } from "./ui/inventory.js";
 import { LootSkeletonPanel } from "./ui/lootSkeletonPanel.js";
@@ -28,6 +36,7 @@ const app = document.getElementById("app");
 const ui = document.getElementById("ui");
 const profile = loadProfile();
 profile.lootSkeleton = createLootState(profile.lootSkeleton);
+ensureRewardState(profile);
 let inventoryUI = null;
 let account = null;
 function persist() { saveProfile(profile); if (account) saveRemoteProfile(profile, account); }
@@ -103,6 +112,7 @@ function startMission(missionId = "first-breach", selection = {}) {
   }
   const missionCfg = selection.mission || getMission(missionId || selection.missionId || "first-breach");
   const difficultyCfg = selection.difficulty || getDifficulty(selection.difficultyId || "initiate");
+  const rewardRunId = `${missionCfg.id}:${difficultyCfg.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
   screensRoot.style.display = "none";
   if (mapSelect) mapSelect.hide();
   if (heroSelect) heroSelect.hide();
@@ -118,13 +128,29 @@ function startMission(missionId = "first-breach", selection = {}) {
     waves: missionCfg.waves,
     bonuses: getBonuses(profile, profile.activeClass),
     equipmentStats: getAppliedLootStats(profile.lootSkeleton).totalStats,
+    onWaveReward: (event) => {
+      const res = grantReward(profile, profile.lootSkeleton, waveClearRewardDefinition({
+        rewardId: `wave:${rewardRunId}:${event.wave}`,
+        missionId: missionCfg.id,
+        wave: event.wave,
+      }));
+      if (res.lootState) profile.lootSkeleton = createLootState(res.lootState);
+      if (res.ok) persist();
+      return res.summary;
+    },
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), difficultyCfg.loot);
       drops.forEach((d) => addItem(profile, d));
+      const reward = grantReward(profile, profile.lootSkeleton, missionClearRewardDefinition({
+        rewardId: `mission:${rewardRunId}:clear`,
+        missionId: missionCfg.id,
+        difficultyId: difficultyCfg.id,
+      }));
+      if (reward.lootState) profile.lootSkeleton = createLootState(reward.lootState);
       const difficultyId = difficultyCfg.id === "initiate" ? "normal" : difficultyCfg.id;
       recordBreachClear(profile, { breachId: missionCfg.id, bossId: missionCfg.bossId, difficulty: difficultyId });
       persist();
-      return { drops, mission: missionCfg, difficulty: difficultyCfg };
+      return { drops, reward: reward.summary, mission: missionCfg, difficulty: difficultyCfg };
     },
   });
 }
@@ -191,6 +217,7 @@ const flow = new ScreenFlow(screensRoot, {
     const remote = await loadRemoteProfile(address);
     adoptRemote(profile, remote);
     profile.lootSkeleton = createLootState(profile.lootSkeleton);
+    ensureRewardState(profile);
     saveProfile(profile);
     await saveRemoteProfile(profile, account);
   },
@@ -225,8 +252,25 @@ if (devLoot) {
   window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui, {
     getState: () => profile.lootSkeleton,
     getHero: () => getActiveHero(profile),
+    getRewards: () => getRewardViewerData(profile),
+    onDebugReward: () => {
+      const res = grantReward(profile, profile.lootSkeleton, {
+        rewardId: `debug:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+        sourceType: "debug",
+        sourceId: "devLoot",
+        gold: 8,
+        itemId: FIRST_BREACH_ITEM_REWARD_ID,
+        rarity: "uncommon",
+        shouldSpawnWorldDrop: false,
+        label: "Dev reward",
+      });
+      if (res.lootState) profile.lootSkeleton = createLootState(res.lootState);
+      if (res.ok) persist();
+      return res.summary;
+    },
     onChange: (state) => {
       profile.lootSkeleton = createLootState(state);
+      ensureRewardState(profile);
       persist();
     },
   });
