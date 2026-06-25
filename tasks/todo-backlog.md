@@ -134,6 +134,10 @@ rules: NO pay-to-win / staking / token-grind / burn. Platform: BAGS.
 - **[P2]** Save system: single versioned save (progress, inventory, settings), migration path.
 - **[P2]** Settings/options (audio, graphics, controls).
 - **[P3]** Onboarding/tutorial (first-time flow).
+- **[P3]** Warden animation polish: attacking while moving currently plays the real
+  KayKit 1H attack pose while the hero glides across the floor. Accepted for now;
+  revisit later with locomotion/attack blending instead of changing damage,
+  cooldown, range, or hitboxes.
 - **[P3]** Performance pass on mid-range hardware (60fps target; pool in hot loops; cap entities).
 - **[P3]** Asset pipeline: import the Skeletons + any extra packs via `tools/import-kit.mjs`
   (extend the `packs` array), LFS-track, commit.
