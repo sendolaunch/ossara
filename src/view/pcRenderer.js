@@ -1230,10 +1230,10 @@ export class PCRenderer {
   _spawnEventFx(events = []) {
     for (const ev of events) {
       if (ev.kind === "heroHit") {
-        this._slash(ev.heroX ?? ev.x, ev.heroZ ?? ev.z, ev.facing || 0, ev.range || 1.2, "plague");
+        this._heroSwordSwing(ev.heroX ?? ev.x, ev.heroZ ?? ev.z, ev.facing || 0, ev.range || 1.2, true);
         this._spark(ev.x, ev.z, "gold", 0.4);
       } else if (ev.kind === "heroSwing") {
-        this._slash(ev.x, ev.z, ev.facing || 0, ev.range || 1.2, "bone");
+        this._heroSwordSwing(ev.x, ev.z, ev.facing || 0, ev.range || 1.2, false);
       }
       else if (ev.kind === "heroDash") this._ring(ev.x, ev.z, ev.range || 1.1, "plague", 0.28);
       else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
@@ -1256,6 +1256,42 @@ export class PCRenderer {
     e.setPosition(x, 0.65, z);
     this.app.root.addChild(e);
     this.fx.push({ ent: e, kind: "spark", life, maxLife: life, vy: 1.25 });
+  }
+
+  _heroSwordSwing(x, z, facing, range, hit = false) {
+    const root = new pc.Entity("hero-sword-swing");
+    const blade = prim("box", mat("bone", 1.4));
+    blade.name = "sword-blade";
+    blade.setLocalScale(0.9, 0.07, 0.09);
+    root.addChild(blade);
+    const hilt = prim("box", mat("gold", 1.1));
+    hilt.name = "sword-hilt";
+    hilt.setLocalScale(0.18, 0.1, 0.18);
+    root.addChild(hilt);
+    const trailMat = mat(hit ? "plague" : "ash", hit ? 1.2 : 0.7);
+    const trails = [];
+    for (let i = 0; i < 4; i++) {
+      const t = prim("box", trailMat);
+      t.name = `sword-trail-${i}`;
+      t.setLocalScale(0.55 - i * 0.08, 0.035, 0.05);
+      root.addChild(t);
+      trails.push(t);
+    }
+    this.app.root.addChild(root);
+    this.fx.push({ ent: root, kind: "heroSwordSwing", life: 0.35, maxLife: 0.35, x, z, facing, range, blade, hilt, trails });
+  }
+
+  _positionHeroSwingPart(part, fx, t, sideScale = 1, yOff = 0) {
+    const swing = clamp(t, 0, 1);
+    const fwdX = Math.sin(fx.facing);
+    const fwdZ = Math.cos(fx.facing);
+    const rightX = Math.cos(fx.facing);
+    const rightZ = -Math.sin(fx.facing);
+    const side = (-0.62 + 1.24 * swing) * sideScale;
+    const reach = fx.range * (0.52 + 0.16 * Math.sin(Math.PI * swing));
+    const y = 0.86 + yOff + Math.sin(Math.PI * swing) * 0.12;
+    part.setPosition(fx.x + fwdX * reach + rightX * side, y, fx.z + fwdZ * reach + rightZ * side);
+    part.setLocalEulerAngles(8 - 18 * swing, (fx.facing * 180) / Math.PI - 58 + 116 * swing, -24 + 48 * swing);
   }
 
   _slash(x, z, facing, range, colorKey) {
@@ -1283,6 +1319,19 @@ export class PCRenderer {
       } else if (fx.kind === "slash") {
         const s = 1 + t * 0.22;
         fx.ent.setLocalScale(fx.base * s, 0.08, 0.12);
+      } else if (fx.kind === "heroSwordSwing") {
+        const slashT = t < 0.22 ? t * 1.15 : t < 0.62 ? 0.25 + (t - 0.22) * 1.65 : 0.91 + (t - 0.62) * 0.24;
+        this._positionHeroSwingPart(fx.blade, fx, slashT, 1, 0);
+        this._positionHeroSwingPart(fx.hilt, fx, Math.max(0, slashT - 0.05), 0.72, -0.04);
+        fx.blade.enabled = t < 0.9;
+        fx.hilt.enabled = t < 0.9;
+        fx.trails.forEach((trail, i) => {
+          const trailT = Math.max(0, slashT - 0.09 * (i + 1));
+          this._positionHeroSwingPart(trail, fx, trailT, 1, -0.02 - i * 0.01);
+          trail.enabled = t > 0.18 && t < 0.78;
+          const s = Math.max(0.1, 1 - i * 0.12 - t * 0.35);
+          trail.setLocalScale((0.65 - i * 0.08) * s, 0.035, 0.05);
+        });
       }
       if (fx.life <= 0) {
         fx.ent.destroy();

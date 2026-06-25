@@ -36,8 +36,13 @@ for (const lib of CHAR_ANIM_LIBS) {
   for (const n of animNames(glbJson(p))) clipBank.add(n);
 }
 for (const [role, clip] of Object.entries(CHAR_CLIPS)) {
+  if (!clip) {
+    ok(role === "attack", `clip "${role}" is intentionally unset when no readable source animation exists`);
+    continue;
+  }
   ok(clipBank.has(clip), `clip "${clip}" (${role}) exists in the anim libraries`);
 }
+ok(!CHAR_CLIPS.attack, "Warden basic attack uses procedural sword-swing feedback instead of the Throw placeholder");
 
 // 2) Every class: model present, has both handslots, weapon/offhand present.
 for (const [cls, def] of Object.entries(CHARACTERS)) {

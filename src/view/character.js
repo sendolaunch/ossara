@@ -126,14 +126,20 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     const assign = (state, clip, loop = true) => {
       const t = tracks[clip];
       if (t) {
-        try { inner.anim.assignAnimation(state, t, undefined, 1, loop); } catch (e) { console.warn("[character] assign", state, e); }
+        try {
+          inner.anim.assignAnimation(state, t, undefined, 1, loop);
+          return true;
+        } catch (e) {
+          console.warn("[character] assign", state, e);
+        }
       }
+      return false;
     };
     assign("Idle", CHAR_CLIPS.idle, true);
     assign("Walk", CHAR_CLIPS.walk, true);
     assign("Run", CHAR_CLIPS.run, true);
     assign("Death", CHAR_CLIPS.death, false);
-    assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping
+    const hasAttack = assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping when a real clip exists
     layer = inner.anim.baseLayer || null;
     goto(layer, "Idle", 0);
   } catch (e) {
@@ -186,10 +192,11 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       goto(layer, b ? "Death" : "Idle", b ? 0.1 : 0.15);
     },
     playAttack() {
-      if (!layer || st.dead) return;
+      if (!layer || st.dead || !hasAttack) return false;
       goto(layer, "Attack", 0.05);
       clearTimeout(st._atk);
       st._atk = setTimeout(() => { if (!st.dead) goto(layer, st.moving ? "Walk" : "Idle", 0.12); }, 520);
+      return true;
     },
     playOnce(state) {
       goto(layer, state, 0.08);

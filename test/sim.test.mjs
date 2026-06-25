@@ -1033,10 +1033,12 @@ section("manual hero attack and slam damages");
 
   w.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
   ok(en.hp < hpBefore, "manual attack damages an enemy in the aimed arc");
+  ok(w.events.some((ev) => ev.kind === "heroHit"), "successful manual attack emits one hero-hit visual event");
   const hpAfterAttack = en.hp;
   const cdAfterAttack = w.hero.attackCd;
   w.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
   ok(en.hp === hpAfterAttack && w.hero.attackCd < cdAfterAttack, "attack cooldown blocks immediate click-spam damage");
+  ok(!w.events.some((ev) => ev.kind === "heroHit" || ev.kind === "heroSwing"), "attack cooldown does not emit fake swing visuals");
 
   w.hero.attackCd = 0;
   en.hp = hpAfterAttack;
@@ -1052,6 +1054,7 @@ section("manual hero attack and slam damages");
   en.z = w.hero.z + 10;
   w._heroAttack(w.hero, { attackX: en.x, attackZ: en.z });
   ok(en.hp === hpAfterAttack, "out-of-range manual attack does not damage enemies");
+  ok(w.events.some((ev) => ev.kind === "heroSwing"), "missed but valid manual attack emits a swing visual event");
   en.x = nearX;
   en.z = nearZ;
 

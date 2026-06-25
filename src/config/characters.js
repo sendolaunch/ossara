@@ -26,7 +26,9 @@ export const CHAR_CLIPS = {
   death: "Death_A",
   interact: "Interact",
   pickup: "PickUp",
-  attack: "Throw",   // FREE pack has no melee swing; Throw is the placeholder
+  // The free Adventurers pack has Throw/Hit/Use_Item, but no readable sword swing.
+  // Warden melee uses a procedural mission swing visual instead of a bad clip.
+  attack: null,
 };
 
 // Rig attachment bones (verified present in every character GLB).
