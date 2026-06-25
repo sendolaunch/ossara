@@ -195,6 +195,7 @@ export class HeroAttackLab {
   _debugText() {
     const d = this.ctl?.getAttackDebug?.() || {};
     const queuedVariant = HERO_ATTACK_VARIANTS[this.variantIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
+    const boneDriven = !!(d.rightHandFound && d.lowerArmFound && d.upperArmFound && d.swordFound);
     const rows = [
       `class: ${this.classId}`,
       `last action: ${this.lastAction}`,
@@ -202,6 +203,7 @@ export class HeroAttackLab {
       `active variant: ${d.variantId || "-"} ${d.variantLabel || ""}`,
       `attack phase: ${d.phase || "-"}`,
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
+      `pose driver: ${boneDriven ? "sword + right-arm bones" : "sword/proxy fallback"}`,
       `current animation clip: ${d.currentClip || "-"}`,
       `right hand entity found: ${d.rightHandFound ? "yes" : "no"}`,
       `lowerarm.r entity found: ${d.lowerArmFound ? "yes" : "no"}`,

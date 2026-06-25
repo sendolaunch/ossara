@@ -9,7 +9,7 @@ import { TOWERS } from "../config/towers.js";
 import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
-import { HERO_ATTACK_VARIANTS, loadCharacter } from "./character.js";
+import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 
@@ -194,6 +194,16 @@ const MISSION_CAMERA = {
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const lerp = (a, b, t) => a + (b - a) * t;
+const easeOut = (v) => 1 - Math.pow(1 - clamp(v, 0, 1), 3);
+const easeInOut = (v) => {
+  const t = clamp(v, 0, 1);
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+};
+const lerpPose = (a = {}, b = {}, t = 0) => ({
+  yaw: lerp(a.yaw || 0, b.yaw || 0, t),
+  roll: lerp(a.roll || 0, b.roll || 0, t),
+  pitch: lerp(a.pitch || 0, b.pitch || 0, t),
+});
 const angleDeltaDeg = (from, to) => ((((to - from) % 360) + 540) % 360) - 180;
 const approachAngleDeg = (from, to, t) => from + angleDeltaDeg(from, to) * t;
 const smoothFactor = (value, dt) => 1 - Math.pow(1 - clamp(value, 0, 1), Math.max(1, dt * 60));
@@ -1288,7 +1298,22 @@ export class PCRenderer {
       trails.push(t);
     }
     this.app.root.addChild(root);
-    this.fx.push({ ent: root, kind: "heroSwordSwing", life: 0.35, maxLife: 0.35, x, z, facing, range, blade, hilt, guard, trails, variant: swingVariant, variantId: swingVariant.id });
+    this.fx.push({
+      ent: root,
+      kind: "heroSwordSwing",
+      life: HERO_ATTACK_TIMING.total,
+      maxLife: HERO_ATTACK_TIMING.total,
+      x,
+      z,
+      facing,
+      range,
+      blade,
+      hilt,
+      guard,
+      trails,
+      variant: swingVariant,
+      variantId: swingVariant.id,
+    });
   }
 
   _positionHeroSwingPart(part, fx, t, sideScale = 1, yOff = 0) {
@@ -1320,19 +1345,29 @@ export class PCRenderer {
       return;
     }
     const elapsed = this._heroAttackVisualTime() - this.heroBodySwing.startedAt;
-    const duration = this.heroBodySwing.duration || 0.35;
+    const duration = this.heroBodySwing.duration || HERO_ATTACK_TIMING.total;
     if (elapsed >= duration) {
       this.heroBodySwing = null;
       this.heroEntity.setLocalEulerAngles(0, baseYawDeg, 0);
       return;
     }
-    const t = clamp(elapsed / duration, 0, 1);
+    // Torso starts a hair before the arm/sword so the slash reads body-driven.
+    const t = Math.min(duration, elapsed + 0.035);
     const cfg = this.heroBodySwing.variant?.body || HERO_ATTACK_VARIANTS[0].body;
-    const strength = t < 0.23 ? t / 0.23 : t < 0.58 ? 1 : 1 - (t - 0.58) / 0.42;
-    const sweep = t < 0.23 ? 0 : t < 0.58 ? (t - 0.23) / 0.35 : 1;
-    const yaw = lerp(cfg.yaw0, cfg.yaw1, sweep) * strength;
-    const roll = lerp(cfg.roll0, cfg.roll1, sweep) * strength;
-    const pitch = lerp(cfg.pitch0, cfg.pitch1, sweep) * strength;
+    const windupEnd = HERO_ATTACK_TIMING.windup;
+    const strikeEnd = windupEnd + HERO_ATTACK_TIMING.strike;
+    const followEnd = strikeEnd + HERO_ATTACK_TIMING.followThrough;
+    const rest = { yaw: 0, roll: 0, pitch: 0 };
+    const pose = t < windupEnd
+      ? lerpPose(rest, cfg.windup, easeOut(t / HERO_ATTACK_TIMING.windup))
+      : t < strikeEnd
+        ? lerpPose(cfg.windup, cfg.strike, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike))
+        : t < followEnd
+          ? lerpPose(cfg.strike, cfg.followThrough, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough))
+          : lerpPose(cfg.followThrough, rest, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover));
+    const yaw = pose.yaw;
+    const roll = pose.roll;
+    const pitch = pose.pitch;
     this.heroEntity.setLocalEulerAngles(pitch, baseYawDeg + yaw, roll);
   }
 
@@ -1362,7 +1397,11 @@ export class PCRenderer {
         const s = 1 + t * 0.22;
         fx.ent.setLocalScale(fx.base * s, 0.08, 0.12);
       } else if (fx.kind === "heroSwordSwing") {
-        const slashT = t < 0.22 ? t * 1.15 : t < 0.62 ? 0.25 + (t - 0.22) * 1.65 : 0.91 + (t - 0.62) * 0.24;
+        const slashT = t < 0.3
+          ? easeOut(t / 0.3) * 0.25
+          : t < 0.58
+            ? 0.25 + easeInOut((t - 0.3) / 0.28) * 0.6
+            : 0.85 + easeOut((t - 0.58) / 0.42) * 0.15;
         this._positionHeroSwingPart(fx.blade, fx, slashT, 1, 0);
         this._positionHeroSwingPart(fx.hilt, fx, Math.max(0, slashT - 0.05), 0.72, -0.04);
         if (fx.guard) this._positionHeroSwingPart(fx.guard, fx, Math.max(0, slashT - 0.04), 0.78, -0.02);
@@ -1646,7 +1685,7 @@ export class PCRenderer {
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
         const variant = HERO_ATTACK_VARIANTS[this.heroAttackComboIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
         this.heroAttackComboIndex = (this.heroAttackComboIndex + 1) % HERO_ATTACK_VARIANTS.length;
-        this.heroBodySwing = { variant, startedAt: this._heroAttackVisualTime(), duration: 0.35 };
+        this.heroBodySwing = { variant, startedAt: this._heroAttackVisualTime(), duration: HERO_ATTACK_TIMING.total };
         this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true, variant);
         try {
           const usedClip = this.heroCtl.playAttack?.();

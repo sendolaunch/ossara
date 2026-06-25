@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   CHARACTERS, CHAR_ANIM_LIBS, CHAR_CLIPS, HANDSLOT_R, HANDSLOT_L,
 } from "../src/config/characters.js";
-import { HERO_ATTACK_VARIANTS } from "../src/view/character.js";
+import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS } from "../src/view/character.js";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
@@ -56,12 +56,18 @@ ok(characterSource.includes("playExtremePose"), "character control exposes dev e
 ok(characterSource.includes("getAttackDebug"), "character control exposes attack visual diagnostics");
 ok(characterSource.includes("updateProceduralAttackPose"), "character control can reapply attack pose after animation sync");
 ok(characterSource.includes("lowerarm.r") && characterSource.includes("upperarm.r"), "procedural attack pose can target right arm bones");
+ok(characterSource.includes("phase: \"windup\"") && characterSource.includes("phase: \"strike\""), "procedural attack exposes windup and strike phases");
+ok(characterSource.includes("phase: \"followThrough\"") && characterSource.includes("phase: \"recover\""), "procedural attack exposes follow-through and recovery phases");
+ok(HERO_ATTACK_TIMING.total >= 0.5, "Warden attack timing leaves room for anticipation and recovery");
 ok(HERO_ATTACK_VARIANTS.length === 3, "Warden has three procedural attack variants");
-ok(HERO_ATTACK_VARIANTS.map((v) => v.id).join(",") === "diag-right,diag-left,wide-sweep", "Warden attack variants have stable ids");
+ok(HERO_ATTACK_VARIANTS.map((v) => v.id).join(",") === "overhead-diag-right,diag-left,wide-sweep", "Warden attack variants have stable ids");
 for (const variant of HERO_ATTACK_VARIANTS) {
+  ok(variant.windup && variant.strike && variant.followThrough, `${variant.id}: variant includes key attack poses`);
   ok(variant.proxy.y0 >= 1 && variant.proxy.y1 >= 1, `${variant.id}: proxy slash stays above ground`);
   ok(Math.abs(variant.proxy.yaw1 - variant.proxy.yaw0) >= 100, `${variant.id}: proxy slash crosses the hero front`);
   ok(variant.arm && variant.body, `${variant.id}: variant includes arm and body visual offsets`);
+  ok(variant.arm.windup && variant.arm.strike && variant.arm.followThrough, `${variant.id}: arm offsets follow attack phases`);
+  ok(variant.body.windup && variant.body.strike && variant.body.followThrough, `${variant.id}: body offsets follow attack phases`);
 }
 const rendererSource = readFileSync(src("view/pcRenderer.js"), "utf8");
 ok(rendererSource.includes("heroAttackComboIndex"), "mission renderer tracks visual-only attack combo index");
@@ -69,8 +75,10 @@ ok(rendererSource.includes("variantId: swingVariant.id"), "hero sword proxy stor
 ok(rendererSource.includes("playProceduralAttack?.({ variant: variant.id })"), "mission renderer passes combo variant to procedural sword pose");
 ok(rendererSource.includes("heroBodySwing"), "mission renderer applies visual-only body recoil during Warden attacks");
 ok(rendererSource.includes("updateProceduralAttackPose?.()"), "mission renderer reapplies procedural arm/sword pose after animation sync");
+ok(rendererSource.includes("HERO_ATTACK_TIMING.total"), "mission renderer syncs sword/body FX duration to attack timing");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
+ok(labSource.includes("pose driver:"), "hero attack lab reports bone/proxy driver state");
 
 // 2) Every class: model present, has both handslots, weapon/offhand present.
 for (const [cls, def] of Object.entries(CHARACTERS)) {

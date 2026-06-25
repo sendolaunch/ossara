@@ -66,41 +66,68 @@ const lerpVec = (a, b, t) => ({
   z: lerpNum(a.z || 0, b.z || 0, t),
 });
 
+export const HERO_ATTACK_TIMING = {
+  windup: 0.16,
+  strike: 0.1,
+  followThrough: 0.11,
+  recover: 0.16,
+  total: 0.53,
+  slowTotal: 1.35,
+};
+
 export const HERO_ATTACK_VARIANTS = [
   {
-    id: "diag-right",
-    label: "Diagonal slash down-right",
-    windup: { pos: { x: -0.16, y: 0.3, z: -0.1 }, rot: { x: 12, y: -46, z: 46 } },
-    slash: { pos: { x: 0.24, y: 0.22, z: -0.18 }, rot: { x: 4, y: 44, z: -42 } },
+    id: "overhead-diag-right",
+    label: "Overhead right-shoulder diagonal slash",
+    windup: { pos: { x: 0.34, y: 0.58, z: -0.24 }, rot: { x: 44, y: -78, z: 72 } },
+    strike: { pos: { x: -0.12, y: 0.34, z: -0.22 }, rot: { x: 12, y: 36, z: -44 } },
+    followThrough: { pos: { x: -0.34, y: 0.18, z: -0.12 }, rot: { x: 0, y: 58, z: -58 } },
     arm: {
-      windup: { upper: { x: -6, y: -10, z: 16 }, lower: { x: -2, y: 0, z: 12 }, hand: { x: 6, y: -8, z: 18 } },
-      slash: { upper: { x: -14, y: 14, z: -22 }, lower: { x: -8, y: 0, z: -20 }, hand: { x: 10, y: 12, z: -30 } },
+      windup: { upper: { x: -26, y: -30, z: 36 }, lower: { x: -18, y: -6, z: 48 }, hand: { x: 24, y: -22, z: 48 } },
+      strike: { upper: { x: -18, y: 18, z: -28 }, lower: { x: -12, y: 0, z: -24 }, hand: { x: 10, y: 18, z: -34 } },
+      followThrough: { upper: { x: -8, y: 24, z: -36 }, lower: { x: -6, y: 0, z: -28 }, hand: { x: 4, y: 22, z: -40 } },
     },
-    body: { yaw0: -14, yaw1: 18, roll0: 7, roll1: -9, pitch0: -4, pitch1: 2 },
-    proxy: { side0: -0.78, side1: 0.72, y0: 1.32, y1: 1.02, yaw0: -62, yaw1: 52, roll0: 42, roll1: -38, pitch0: 8, pitch1: -8, reach: 0.55 },
+    body: {
+      windup: { yaw: 18, roll: -8, pitch: -5 },
+      strike: { yaw: -18, roll: 10, pitch: 3 },
+      followThrough: { yaw: -24, roll: 12, pitch: 4 },
+    },
+    proxy: { side0: 0.82, side1: -0.74, y0: 1.48, y1: 1.08, yaw0: 68, yaw1: -58, roll0: -52, roll1: 42, pitch0: 16, pitch1: -10, reach: 0.55 },
   },
   {
     id: "diag-left",
     label: "Diagonal slash down-left",
-    windup: { pos: { x: 0.16, y: 0.3, z: -0.1 }, rot: { x: 12, y: 46, z: -46 } },
-    slash: { pos: { x: -0.24, y: 0.22, z: -0.18 }, rot: { x: 4, y: -44, z: 42 } },
+    windup: { pos: { x: -0.28, y: 0.42, z: -0.16 }, rot: { x: 26, y: 58, z: -54 } },
+    strike: { pos: { x: 0.24, y: 0.26, z: -0.2 }, rot: { x: 6, y: -46, z: 44 } },
+    followThrough: { pos: { x: 0.34, y: 0.18, z: -0.1 }, rot: { x: 0, y: -58, z: 50 } },
     arm: {
-      windup: { upper: { x: -6, y: 10, z: -16 }, lower: { x: -2, y: 0, z: -12 }, hand: { x: 6, y: 8, z: -18 } },
-      slash: { upper: { x: -14, y: -14, z: 22 }, lower: { x: -8, y: 0, z: 20 }, hand: { x: 10, y: -12, z: 30 } },
+      windup: { upper: { x: -16, y: 24, z: -28 }, lower: { x: -12, y: 0, z: -24 }, hand: { x: 14, y: 18, z: -30 } },
+      strike: { upper: { x: -16, y: -18, z: 26 }, lower: { x: -10, y: 0, z: 22 }, hand: { x: 10, y: -16, z: 32 } },
+      followThrough: { upper: { x: -6, y: -24, z: 34 }, lower: { x: -5, y: 0, z: 26 }, hand: { x: 4, y: -20, z: 38 } },
     },
-    body: { yaw0: 14, yaw1: -18, roll0: -7, roll1: 9, pitch0: -4, pitch1: 2 },
-    proxy: { side0: 0.78, side1: -0.72, y0: 1.32, y1: 1.02, yaw0: 62, yaw1: -52, roll0: -42, roll1: 38, pitch0: 8, pitch1: -8, reach: 0.55 },
+    body: {
+      windup: { yaw: -14, roll: 7, pitch: -4 },
+      strike: { yaw: 16, roll: -8, pitch: 3 },
+      followThrough: { yaw: 20, roll: -10, pitch: 3 },
+    },
+    proxy: { side0: -0.76, side1: 0.76, y0: 1.36, y1: 1.06, yaw0: -62, yaw1: 58, roll0: 46, roll1: -40, pitch0: 12, pitch1: -8, reach: 0.55 },
   },
   {
     id: "wide-sweep",
     label: "Wide horizontal sweep",
-    windup: { pos: { x: -0.28, y: 0.22, z: -0.14 }, rot: { x: 4, y: -68, z: 16 } },
-    slash: { pos: { x: 0.3, y: 0.18, z: -0.16 }, rot: { x: 2, y: 68, z: -14 } },
+    windup: { pos: { x: -0.32, y: 0.28, z: -0.16 }, rot: { x: 8, y: -76, z: 22 } },
+    strike: { pos: { x: 0.34, y: 0.2, z: -0.17 }, rot: { x: 3, y: 70, z: -18 } },
+    followThrough: { pos: { x: 0.42, y: 0.16, z: -0.08 }, rot: { x: 0, y: 82, z: -18 } },
     arm: {
-      windup: { upper: { x: -3, y: -16, z: 8 }, lower: { x: -4, y: 0, z: 8 }, hand: { x: 4, y: -14, z: 12 } },
-      slash: { upper: { x: -8, y: 18, z: -10 }, lower: { x: -7, y: 0, z: -10 }, hand: { x: 6, y: 16, z: -16 } },
+      windup: { upper: { x: -8, y: -24, z: 14 }, lower: { x: -8, y: 0, z: 16 }, hand: { x: 8, y: -18, z: 20 } },
+      strike: { upper: { x: -10, y: 24, z: -14 }, lower: { x: -8, y: 0, z: -14 }, hand: { x: 8, y: 20, z: -20 } },
+      followThrough: { upper: { x: -4, y: 30, z: -18 }, lower: { x: -4, y: 0, z: -16 }, hand: { x: 3, y: 24, z: -22 } },
     },
-    body: { yaw0: -18, yaw1: 20, roll0: 4, roll1: -6, pitch0: -3, pitch1: 2 },
+    body: {
+      windup: { yaw: -18, roll: 4, pitch: -3 },
+      strike: { yaw: 20, roll: -6, pitch: 2 },
+      followThrough: { yaw: 24, roll: -7, pitch: 2 },
+    },
     proxy: { side0: -0.96, side1: 0.96, y0: 1.16, y1: 1.08, yaw0: -78, yaw1: 78, roll0: 12, roll1: -12, pitch0: 2, pitch1: -4, reach: 0.62 },
   },
 ];
@@ -346,41 +373,55 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
 
   const applyAttackPose = (t) => {
     if (!attackPose.target || !attackPose.basePos || !attackPose.baseRot) return false;
-    const windup = clamp01(t / 0.08);
-    const slash = clamp01((t - 0.08) / 0.12);
-    const recovery = clamp01((t - 0.2) / 0.15);
-    attackPose.phase = t < 0.08 ? "windup" : t < 0.2 ? "slash" : "recovery";
     const variant = attackPose.variant || HERO_ATTACK_VARIANTS[0];
     const arm = variant.arm || HERO_ATTACK_VARIANTS[0].arm;
-    const pose = t < 0.08
+    const windupEnd = HERO_ATTACK_TIMING.windup;
+    const strikeEnd = windupEnd + HERO_ATTACK_TIMING.strike;
+    const followEnd = strikeEnd + HERO_ATTACK_TIMING.followThrough;
+    const pose = t < windupEnd
       ? {
-          pos: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.pos, easeOut(windup)),
-          rot: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.rot, easeOut(windup)),
+          phase: "windup",
+          pos: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.pos, easeOut(t / windupEnd)),
+          rot: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.rot, easeOut(t / windupEnd)),
           arm: {
-            upper: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.upper, easeOut(windup)),
-            lower: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.lower, easeOut(windup)),
-            hand: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.hand, easeOut(windup)),
+            upper: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.upper, easeOut(t / windupEnd)),
+            lower: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.lower, easeOut(t / windupEnd)),
+            hand: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.hand, easeOut(t / windupEnd)),
           },
         }
-      : t < 0.2
+      : t < strikeEnd
         ? {
-            pos: lerpVec(variant.windup.pos, variant.slash.pos, easeInOut(slash)),
-            rot: lerpVec(variant.windup.rot, variant.slash.rot, easeInOut(slash)),
+            phase: "strike",
+            pos: lerpVec(variant.windup.pos, variant.strike.pos, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
+            rot: lerpVec(variant.windup.rot, variant.strike.rot, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
             arm: {
-              upper: lerpVec(arm.windup.upper, arm.slash.upper, easeInOut(slash)),
-              lower: lerpVec(arm.windup.lower, arm.slash.lower, easeInOut(slash)),
-              hand: lerpVec(arm.windup.hand, arm.slash.hand, easeInOut(slash)),
+              upper: lerpVec(arm.windup.upper, arm.strike.upper, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
+              lower: lerpVec(arm.windup.lower, arm.strike.lower, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
+              hand: lerpVec(arm.windup.hand, arm.strike.hand, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
             },
           }
+        : t < followEnd
+          ? {
+              phase: "followThrough",
+              pos: lerpVec(variant.strike.pos, variant.followThrough.pos, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
+              rot: lerpVec(variant.strike.rot, variant.followThrough.rot, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
+              arm: {
+                upper: lerpVec(arm.strike.upper, arm.followThrough.upper, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
+                lower: lerpVec(arm.strike.lower, arm.followThrough.lower, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
+                hand: lerpVec(arm.strike.hand, arm.followThrough.hand, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
+              },
+            }
         : {
-            pos: lerpVec(variant.slash.pos, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
-            rot: lerpVec(variant.slash.rot, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+            phase: "recover",
+            pos: lerpVec(variant.followThrough.pos, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
+            rot: lerpVec(variant.followThrough.rot, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
             arm: {
-              upper: lerpVec(arm.slash.upper, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
-              lower: lerpVec(arm.slash.lower, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
-              hand: lerpVec(arm.slash.hand, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+              upper: lerpVec(arm.followThrough.upper, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
+              lower: lerpVec(arm.followThrough.lower, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
+              hand: lerpVec(arm.followThrough.hand, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
             },
           };
+    attackPose.phase = pose.phase;
     applyBoneOffset("upper", attackPose.upperArm, pose.arm.upper);
     applyBoneOffset("lower", attackPose.lowerArm, pose.arm.lower);
     applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
@@ -417,12 +458,13 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.lastLocalRot = localRotSnapshot(target);
       attackPose.variant = resolveAttackVariant(opts.variant ?? opts.variantId ?? 0);
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
-      attackPose.duration = 0.35;
+      attackPose.duration = HERO_ATTACK_TIMING.total;
+      attackPose.playbackScale = opts.slow ? HERO_ATTACK_TIMING.total / HERO_ATTACK_TIMING.slowTotal : 1;
       attackPose.active = true;
       const step = () => {
         const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
         const elapsed = now - attackPose.startedAt;
-        const t = elapsed * (opts.slow ? 0.35 / 1.2 : 1);
+        const t = elapsed * attackPose.playbackScale;
         if (!updateProceduralAttackPose(t)) return;
         if (typeof requestAnimationFrame === "function") attackPose.raf = requestAnimationFrame(step);
       };
@@ -438,7 +480,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const updateProceduralAttackPose = (overrideT = null) => {
     if (!attackPose.active) return false;
     const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
-    const t = overrideT == null ? (now - attackPose.startedAt) : overrideT;
+    const t = overrideT == null ? (now - attackPose.startedAt) * (attackPose.playbackScale || 1) : overrideT;
     if (t >= attackPose.duration) {
       resetAttackPose();
       return false;
