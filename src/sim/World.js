@@ -16,11 +16,8 @@ import {
   chooseBlockadeAttackSlot,
   computeLanePosition,
   computeSpawnSpreadOffset,
-  isBlockerNearLane,
   isEnemyInBlockerAttackContact,
   isEnemyInBlockerContact,
-  isEnemyInBlockerPhysicalContact,
-  isEnemyNearBlocker,
   moveToward,
   releaseAttackSlot,
 } from "./enemyMovement.js";
@@ -42,6 +39,15 @@ import {
   createPlacementSets,
   placementStatus as checkPlacementStatus,
 } from "./placementRules.js";
+import {
+  applyBlockadeContactDamage,
+  applyDefenseHit,
+  bestTurretTarget,
+  damageDefense,
+  findBlockingDefense,
+  updateAuraDefense,
+  updateTrapDefense,
+} from "./defenseBehavior.js";
 
 const dist2 = (ax, az, bx, bz) => {
   const dx = ax - bx;
@@ -362,20 +368,7 @@ export class World {
   }
 
   _findBlockingDefense(e) {
-    let best = null;
-    let bestD = Infinity;
-    const lane = this.lanePaths[e.laneId] || this.lane;
-    for (const t of this.towers) {
-      if (!t.alive || t.defenseType !== "blockade" || !t.blocksEnemies || !t.targetableByEnemies || t.hp <= 0) continue;
-      if (!isBlockerNearLane(e, t, lane)) continue;
-      if (!isEnemyNearBlocker(e, t)) continue;
-      const d = dist2(e.x, e.z, t.x, t.z);
-      if (d < bestD) {
-        bestD = d;
-        best = t;
-      }
-    }
-    return best;
+    return findBlockingDefense(e, this.towers, this.lanePaths[e.laneId] || this.lane);
   }
 
   _enemyInBlockerContact(e, t) {
@@ -391,22 +384,11 @@ export class World {
   }
 
   _applyBlockadeContactDamage(t, e, dt) {
-    if (!t.contactDamage || t.contactDamage <= 0 || !e.alive) return;
-    if (!isEnemyInBlockerPhysicalContact(e, t)) return;
-    t.contactCd = Math.max(0, (t.contactCd || 0) - dt);
-    if (t.contactCd > 0) return;
-    this._damageEnemy(e, t.contactDamage);
-    t.contactCd = 1 / Math.max(0.01, t.contactTickRate || 1);
-    this.events.push({ kind: "contactDamage", id: t.id, x: e.x, z: e.z, targetId: e.id, amount: t.contactDamage });
+    return applyBlockadeContactDamage(t, e, dt, this._defenseBehaviorHooks());
   }
 
   _damageTower(t, dmg, source = null) {
-    if (!t || !t.alive || t.hp <= 0) return;
-    t.hp -= dmg;
-    this.events.push({ kind: "towerHit", id: t.id, x: t.x, z: t.z, amount: dmg, sourceId: source?.id || 0 });
-    if (t.hp <= 0) {
-      this._disableDefense(t, "towerDown");
-    }
+    return damageDefense(t, dmg, source, this._defenseBehaviorHooks());
   }
 
   _killEnemy(e) {
@@ -428,84 +410,27 @@ export class World {
   }
 
   _bestTurretTarget(t) {
-    let best = null;
-    let bestProgress = -Infinity;
-    let bestD = Infinity;
-    const r2 = t.range * t.range;
-    for (const e of this.enemies) {
-      if (!e.alive) continue;
-      const d = dist2(t.x, t.z, e.x, e.z);
-      if (d > r2) continue;
-      const lane = this.lanePaths[e.laneId] || this.lane;
-      const progress = lane && lane.total > 0 ? e.dist / lane.total : e.dist;
-      if (progress > bestProgress || (progress === bestProgress && d < bestD)) {
-        best = e;
-        bestProgress = progress;
-        bestD = d;
-      }
-    }
-    return best;
+    return bestTurretTarget(t, this.enemies, (enemy) => this.lanePaths[enemy.laneId] || this.lane);
   }
 
   _updateTraps(dt) {
     for (const t of this.towers) {
-      if (!t.alive || t.defenseType !== "trap") continue;
-      if (t.charges !== null && t.charges <= 0) {
-        this._disableDefense(t, "trapExpired");
-        continue;
-      }
-      t.resetCd = Math.max(0, (t.resetCd || 0) - dt);
-      if (t.resetCd > 0) continue;
-
-      const radius = t.triggerRadius || t.range || 0;
-      if (radius <= 0) continue;
-      const r2 = radius * radius;
-      let triggered = false;
-      for (const e of this.enemies) {
-        if (e.alive && dist2(t.x, t.z, e.x, e.z) <= r2) {
-          triggered = true;
-          break;
-        }
-      }
-      if (!triggered) continue;
-
-      for (const e of this.enemies) {
-        if (e.alive && dist2(t.x, t.z, e.x, e.z) <= r2) this._damageEnemy(e, t.damage);
-      }
-      if (t.charges !== null) t.charges--;
-      t.resetCd = t.resetTime || 0;
-      this.events.push({ kind: "trapTrigger", id: t.id, x: t.x, z: t.z, range: radius, charges: t.charges });
-      if (t.charges !== null && t.charges <= 0) this._disableDefense(t, "trapExpired");
+      updateTrapDefense(t, this.enemies, dt, this._defenseBehaviorHooks());
     }
   }
 
   _updateAuras(dt) {
     for (const t of this.towers) {
-      if (!t.alive || t.defenseType !== "aura") continue;
-
-      if (t.remainingDuration !== null) {
-        t.remainingDuration -= dt;
-        if (t.remainingDuration <= 0) {
-          this._disableDefense(t, "auraExpired");
-          continue;
-        }
-      }
-
-      t.tickCd = Math.max(0, (t.tickCd || 0) - dt);
-      if (t.tickCd > 0) continue;
-
-      const radius = t.radius || t.range || 0;
-      if (radius <= 0) continue;
-      const r2 = radius * radius;
-      let hit = false;
-      for (const e of this.enemies) {
-        if (!e.alive || dist2(t.x, t.z, e.x, e.z) > r2) continue;
-        this._damageEnemy(e, t.damage);
-        hit = true;
-      }
-      t.tickCd = 1 / Math.max(0.01, t.tickRate || 1);
-      if (hit) this.events.push({ kind: "auraTick", id: t.id, x: t.x, z: t.z, range: radius });
+      updateAuraDefense(t, this.enemies, dt, this._defenseBehaviorHooks());
     }
+  }
+
+  _defenseBehaviorHooks() {
+    return {
+      damageEnemy: (enemy, amount) => this._damageEnemy(enemy, amount),
+      disableDefense: (tower, reason) => this._disableDefense(tower, reason),
+      pushEvent: (event) => this.events.push(event),
+    };
   }
 
   _disableDefense(t, eventKind = "towerDown") {
@@ -721,19 +646,7 @@ export class World {
   }
 
   _applyHit(target, ix, iz, dmg, splash) {
-    if (splash > 0) {
-      const r2 = splash * splash;
-      // impact centred on the target's position
-      const cx = target ? target.x : ix;
-      const cz = target ? target.z : iz;
-      for (const e of this.enemies) {
-        if (e.alive && dist2(cx, cz, e.x, e.z) <= r2) this._damageEnemy(e, dmg);
-      }
-      this.events.push({ kind: "splash", x: cx, z: cz, range: splash });
-    } else if (target) {
-      this._damageEnemy(target, dmg);
-      this.events.push({ kind: "impact", x: target.x, z: target.z });
-    }
+    applyDefenseHit(target, ix, iz, dmg, splash, this.enemies, this._defenseBehaviorHooks());
   }
 
   _updateProjectiles(dt) {
