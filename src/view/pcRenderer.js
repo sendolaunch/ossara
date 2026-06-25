@@ -9,7 +9,7 @@ import { TOWERS } from "../config/towers.js";
 import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
-import { loadCharacter } from "./character.js";
+import { HERO_ATTACK_VARIANTS, loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 
@@ -251,6 +251,7 @@ export class PCRenderer {
     this.heroCtl = null;
     this._heroFoot = 0;
     this._heroLoadToken = 0;
+    this.heroAttackComboIndex = 0;
     this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     this.enemyAnimDebugEnabled = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devAnimDebug") === "1");
     this.enemyAnimDebugEl = null;
@@ -696,6 +697,7 @@ export class PCRenderer {
     this._heroFoot = 0;
     this._prevHero = null;
     this._prevAtkCd = null;
+    this.heroAttackComboIndex = 0;
     this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     let ctl = null;
     try {
@@ -1256,7 +1258,10 @@ export class PCRenderer {
     this.fx.push({ ent: e, kind: "spark", life, maxLife: life, vy: 1.25 });
   }
 
-  _heroSwordSwing(x, z, facing, range, hit = false) {
+  _heroSwordSwing(x, z, facing, range, hit = false, variant = HERO_ATTACK_VARIANTS[0]) {
+    const swingVariant = typeof variant === "string"
+      ? HERO_ATTACK_VARIANTS.find((v) => v.id === variant) || HERO_ATTACK_VARIANTS[0]
+      : variant || HERO_ATTACK_VARIANTS[0];
     const root = new pc.Entity("hero-sword-swing");
     root.name = "hero-visible-sword-proxy";
     const blade = prim("box", mat("bone", 1.4));
@@ -1281,20 +1286,25 @@ export class PCRenderer {
       trails.push(t);
     }
     this.app.root.addChild(root);
-    this.fx.push({ ent: root, kind: "heroSwordSwing", life: 0.35, maxLife: 0.35, x, z, facing, range, blade, hilt, guard, trails });
+    this.fx.push({ ent: root, kind: "heroSwordSwing", life: 0.35, maxLife: 0.35, x, z, facing, range, blade, hilt, guard, trails, variant: swingVariant, variantId: swingVariant.id });
   }
 
   _positionHeroSwingPart(part, fx, t, sideScale = 1, yOff = 0) {
     const swing = clamp(t, 0, 1);
+    const cfg = fx.variant?.proxy || HERO_ATTACK_VARIANTS[0].proxy;
     const fwdX = Math.sin(fx.facing);
     const fwdZ = Math.cos(fx.facing);
     const rightX = Math.cos(fx.facing);
     const rightZ = -Math.sin(fx.facing);
-    const side = (-0.62 + 1.24 * swing) * sideScale;
-    const reach = fx.range * (0.46 + 0.22 * Math.sin(Math.PI * swing));
-    const y = 1.03 + yOff + Math.sin(Math.PI * swing) * 0.18;
+    const side = lerp(cfg.side0, cfg.side1, swing) * sideScale;
+    const reach = fx.range * (cfg.reach + 0.08 * Math.sin(Math.PI * swing));
+    const y = lerp(cfg.y0, cfg.y1, swing) + yOff + Math.sin(Math.PI * swing) * 0.08;
     part.setPosition(fx.x + fwdX * reach + rightX * side, y, fx.z + fwdZ * reach + rightZ * side);
-    part.setLocalEulerAngles(16 - 32 * swing, (fx.facing * 180) / Math.PI - 72 + 144 * swing, -36 + 72 * swing);
+    part.setLocalEulerAngles(
+      lerp(cfg.pitch0, cfg.pitch1, swing),
+      (fx.facing * 180) / Math.PI + lerp(cfg.yaw0, cfg.yaw1, swing),
+      lerp(cfg.roll0, cfg.roll1, swing),
+    );
   }
 
   _slash(x, z, facing, range, colorKey) {
@@ -1604,10 +1614,12 @@ export class PCRenderer {
       this.heroCtl.setDead(!h.alive);
       this.heroAnimation = { loaded: true, fallback: false, moving: moving && h.alive, running: running && moving && h.alive, dead: !h.alive };
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
-        this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true);
+        const variant = HERO_ATTACK_VARIANTS[this.heroAttackComboIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
+        this.heroAttackComboIndex = (this.heroAttackComboIndex + 1) % HERO_ATTACK_VARIANTS.length;
+        this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true, variant);
         try {
           const usedClip = this.heroCtl.playAttack?.();
-          if (!usedClip) this.heroCtl.playProceduralAttack?.();
+          if (!usedClip) this.heroCtl.playProceduralAttack?.({ variant: variant.id });
         } catch (err) {
           if (!this._warnedHeroAttackVisual) {
             console.warn("[mission] hero attack animation failed; continuing with procedural FX", err);
@@ -1639,6 +1651,7 @@ export class PCRenderer {
     this.fx = [];
     this._prevHero = null;
     this._prevAtkCd = null;
+    this.heroAttackComboIndex = 0;
     this._cameraPrimed = false;
     if (this.heroCtl) {
       this.heroCtl.resetAttackPose?.();

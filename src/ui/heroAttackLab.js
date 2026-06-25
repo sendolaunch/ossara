@@ -1,6 +1,6 @@
 import * as pc from "playcanvas";
 import { CSS } from "../config/palette.js";
-import { loadCharacter } from "../view/character.js";
+import { HERO_ATTACK_VARIANTS, loadCharacter } from "../view/character.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -45,6 +45,7 @@ export class HeroAttackLab {
     this.ctl = null;
     this.running = false;
     this.slow = false;
+    this.variantIndex = 0;
     this.lastAction = "loading";
     this._frame = this._frame.bind(this);
     this._onKey = this._onKey.bind(this);
@@ -94,6 +95,9 @@ export class HeroAttackLab {
       <div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto">
         <button data-action="attack">Attack / Space</button>
         <button data-action="slow">Slow Attack / S</button>
+        <button data-action="variant-0">Variant A / 1</button>
+        <button data-action="variant-1">Variant B / 2</button>
+        <button data-action="variant-2">Variant C / 3</button>
         <button data-action="extreme-sword">Extreme sword / E</button>
         <button data-action="extreme-slot">Extreme handslot / H</button>
         <button data-action="extreme-hand">Extreme hand.r / J</button>
@@ -125,8 +129,16 @@ export class HeroAttackLab {
   }
 
   _triggerAttack(slow = false) {
-    const ok = this.ctl?.playProceduralAttack?.({ slow });
-    this.lastAction = ok ? (slow ? "slow procedural sword attack" : "procedural sword attack") : "attack visual unavailable";
+    const variant = HERO_ATTACK_VARIANTS[this.variantIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
+    const ok = this.ctl?.playProceduralAttack?.({ slow, variant: variant.id });
+    this.lastAction = ok ? `${slow ? "slow " : ""}${variant.label}` : "attack visual unavailable";
+    if (ok) this.variantIndex = (this.variantIndex + 1) % HERO_ATTACK_VARIANTS.length;
+  }
+
+  _forceVariant(index) {
+    this.variantIndex = ((index % HERO_ATTACK_VARIANTS.length) + HERO_ATTACK_VARIANTS.length) % HERO_ATTACK_VARIANTS.length;
+    const variant = HERO_ATTACK_VARIANTS[this.variantIndex];
+    this.lastAction = `forced ${variant.label}`;
   }
 
   _extreme(target) {
@@ -141,6 +153,9 @@ export class HeroAttackLab {
     const action = btn.dataset.action;
     if (action === "attack") this._triggerAttack(false);
     else if (action === "slow") this._triggerAttack(true);
+    else if (action === "variant-0") this._forceVariant(0);
+    else if (action === "variant-1") this._forceVariant(1);
+    else if (action === "variant-2") this._forceVariant(2);
     else if (action === "extreme-sword") this._extreme("sword_1handed");
     else if (action === "extreme-slot") this._extreme("handslot.r");
     else if (action === "extreme-hand") this._extreme("hand.r");
@@ -171,14 +186,20 @@ export class HeroAttackLab {
       ev.preventDefault();
       this.ctl?.resetAttackPose?.();
       this.lastAction = "reset";
+    } else if (["1", "2", "3"].includes(k)) {
+      ev.preventDefault();
+      this._forceVariant(Number(k) - 1);
     }
   }
 
   _debugText() {
     const d = this.ctl?.getAttackDebug?.() || {};
+    const queuedVariant = HERO_ATTACK_VARIANTS[this.variantIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
     const rows = [
       `class: ${this.classId}`,
       `last action: ${this.lastAction}`,
+      `queued variant: ${this.variantIndex + 1} ${queuedVariant.label}`,
+      `active variant: ${d.variantId || "-"} ${d.variantLabel || ""}`,
       `attack phase: ${d.phase || "-"}`,
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
       `current animation clip: ${d.currentClip || "-"}`,

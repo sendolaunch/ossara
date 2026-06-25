@@ -59,6 +59,43 @@ const easeInOut = (v) => {
   v = clamp01(v);
   return v < 0.5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2;
 };
+const lerpNum = (a, b, t) => a + (b - a) * t;
+const lerpVec = (a, b, t) => ({
+  x: lerpNum(a.x || 0, b.x || 0, t),
+  y: lerpNum(a.y || 0, b.y || 0, t),
+  z: lerpNum(a.z || 0, b.z || 0, t),
+});
+
+export const HERO_ATTACK_VARIANTS = [
+  {
+    id: "diag-right",
+    label: "Diagonal slash down-right",
+    windup: { pos: { x: -0.16, y: 0.22, z: -0.1 }, rot: { x: 12, y: -46, z: 46 } },
+    slash: { pos: { x: 0.24, y: 0.08, z: -0.18 }, rot: { x: 4, y: 44, z: -42 } },
+    proxy: { side0: -0.78, side1: 0.72, y0: 1.32, y1: 1.02, yaw0: -62, yaw1: 52, roll0: 42, roll1: -38, pitch0: 8, pitch1: -8, reach: 0.55 },
+  },
+  {
+    id: "diag-left",
+    label: "Diagonal slash down-left",
+    windup: { pos: { x: 0.16, y: 0.22, z: -0.1 }, rot: { x: 12, y: 46, z: -46 } },
+    slash: { pos: { x: -0.24, y: 0.08, z: -0.18 }, rot: { x: 4, y: -44, z: 42 } },
+    proxy: { side0: 0.78, side1: -0.72, y0: 1.32, y1: 1.02, yaw0: 62, yaw1: -52, roll0: -42, roll1: 38, pitch0: 8, pitch1: -8, reach: 0.55 },
+  },
+  {
+    id: "wide-sweep",
+    label: "Wide horizontal sweep",
+    windup: { pos: { x: -0.28, y: 0.14, z: -0.14 }, rot: { x: 4, y: -68, z: 16 } },
+    slash: { pos: { x: 0.3, y: 0.1, z: -0.16 }, rot: { x: 2, y: 68, z: -14 } },
+    proxy: { side0: -0.96, side1: 0.96, y0: 1.16, y1: 1.08, yaw0: -78, yaw1: 78, roll0: 12, roll1: -12, pitch0: 2, pitch1: -4, reach: 0.62 },
+  },
+];
+
+export const HERO_ATTACK_VARIANT_IDS = HERO_ATTACK_VARIANTS.map((v) => v.id);
+
+function resolveAttackVariant(idOrIndex = 0) {
+  if (typeof idOrIndex === "string") return HERO_ATTACK_VARIANTS.find((v) => v.id === idOrIndex) || HERO_ATTACK_VARIANTS[0];
+  return HERO_ATTACK_VARIANTS[((Number(idOrIndex) || 0) % HERO_ATTACK_VARIANTS.length + HERO_ATTACK_VARIANTS.length) % HERO_ATTACK_VARIANTS.length];
+}
 
 // Scale `inner` to def.targetHeight and plant its feet at y=0. Returns foot offset.
 function autoFit(inner, def) {
@@ -174,6 +211,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     beforeWorld: null,
     lastWorld: null,
     lastLocalRot: null,
+    variant: HERO_ATTACK_VARIANTS[0],
     phase: "idle",
     basePos: null,
     baseRot: null,
@@ -249,20 +287,30 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     const slash = clamp01((t - 0.08) / 0.12);
     const recovery = clamp01((t - 0.2) / 0.15);
     attackPose.phase = t < 0.08 ? "windup" : t < 0.2 ? "slash" : "recovery";
-    const swing = t < 0.08 ? -0.38 * easeOut(windup)
-      : t < 0.2 ? -0.38 + 1.55 * easeInOut(slash)
-        : 1.17 * (1 - easeOut(recovery));
-    const lift = Math.sin(Math.PI * clamp01(t / 0.2));
-    const settle = t > 0.2 ? 1 - easeOut(recovery) : 1;
+    const variant = attackPose.variant || HERO_ATTACK_VARIANTS[0];
+    const pose = t < 0.08
+      ? {
+          pos: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.pos, easeOut(windup)),
+          rot: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.rot, easeOut(windup)),
+        }
+      : t < 0.2
+        ? {
+            pos: lerpVec(variant.windup.pos, variant.slash.pos, easeInOut(slash)),
+            rot: lerpVec(variant.windup.rot, variant.slash.rot, easeInOut(slash)),
+          }
+        : {
+            pos: lerpVec(variant.slash.pos, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+            rot: lerpVec(variant.slash.rot, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+          };
     attackPose.target.setLocalPosition(
-      attackPose.basePos.x + 0.12 * Math.sin(swing) * settle,
-      attackPose.basePos.y + 0.16 * lift,
-      attackPose.basePos.z - 0.1 * Math.cos(swing) * settle,
+      attackPose.basePos.x + pose.pos.x,
+      attackPose.basePos.y + pose.pos.y,
+      attackPose.basePos.z + pose.pos.z,
     );
     attackPose.target.setLocalEulerAngles(
-      attackPose.baseRot.x - 62 * lift + 18 * recovery,
-      attackPose.baseRot.y + swing * 96,
-      attackPose.baseRot.z - 128 * swing,
+      attackPose.baseRot.x + pose.rot.x,
+      attackPose.baseRot.y + pose.rot.y,
+      attackPose.baseRot.z + pose.rot.z,
     );
     attackPose.lastWorld = worldSnapshot(attackPose.target);
     attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
@@ -281,6 +329,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.beforeWorld = worldSnapshot(target);
       attackPose.lastWorld = attackPose.beforeWorld;
       attackPose.lastLocalRot = localRotSnapshot(target);
+      attackPose.variant = resolveAttackVariant(opts.variant ?? opts.variantId ?? 0);
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
       attackPose.duration = 0.35;
       attackPose.active = true;
@@ -353,6 +402,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     return {
       phase: attackPose.phase,
       time: attackPose.active ? Math.max(0, now - attackPose.startedAt) : 0,
+      variantId: attackPose.variant?.id || "",
+      variantLabel: attackPose.variant?.label || "",
       currentClip: st.currentClip || "Idle",
       rightHandFound: !!attackPose.hand,
       handSlotFound: !!attackPose.handSlot,
