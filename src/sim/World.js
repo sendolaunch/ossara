@@ -59,6 +59,14 @@ import {
   tryUseHeroAbility,
   useHeroAbility,
 } from "./heroCombat.js";
+import {
+  advancePrepTimer,
+  advanceWaveSpawns,
+  buildWaveSchedule,
+  completeWave,
+  isWaveCleared,
+  shouldStartWave,
+} from "./waveSpawner.js";
 
 const UPGRADE_MAX_LEVEL = COMMAND_MAX_LEVEL;
 export class World {
@@ -275,13 +283,7 @@ export class World {
   startWave() {
     if (this.phase !== "prep") return false;
     const wave = this.waves[this.waveIndex];
-    this.schedule = [];
-    for (const g of wave.groups) {
-      for (let i = 0; i < g.count; i++) {
-        this.schedule.push({ type: g.type, laneId: g.laneId || this.defaultLaneId, time: g.delay + i * g.interval });
-      }
-    }
-    this.schedule.sort((a, b) => a.time - b.time);
+    this.schedule = buildWaveSchedule(wave, this.defaultLaneId);
     this.spawnCursor = 0;
     this.waveElapsed = 0;
     this.phase = "active";
@@ -307,16 +309,16 @@ export class World {
     this.events.length = 0;
 
     if (this.phase === "prep") {
-      this.prepTimer -= dt;
-      if (input.startWave || this.prepTimer <= 0) this.startWave();
+      this.prepTimer = advancePrepTimer(this.prepTimer, dt);
+      if (shouldStartWave(this.phase, this.prepTimer, input.startWave)) this.startWave();
     }
 
     if (this.phase === "active") {
-      this.waveElapsed += dt;
-      while (this.spawnCursor < this.schedule.length && this.schedule[this.spawnCursor].time <= this.waveElapsed) {
-        const spawn = this.schedule[this.spawnCursor];
+      const next = advanceWaveSpawns(this.schedule, this.spawnCursor, this.waveElapsed, dt);
+      this.waveElapsed = next.waveElapsed;
+      this.spawnCursor = next.spawnCursor;
+      for (const spawn of next.spawns) {
         this._spawnEnemy(spawn.type, spawn.laneId);
-        this.spawnCursor++;
       }
     }
 
@@ -585,21 +587,14 @@ export class World {
   }
 
   _checkWaveProgress() {
-    if (this.phase !== "active") return;
-    const allSpawned = this.spawnCursor >= this.schedule.length;
-    const noneLive = this.enemyPool.liveCount === 0;
-    if (allSpawned && noneLive) {
-      this.marrow += this.waves[this.waveIndex].reward;
-      this.events.push({ kind: "waveCleared", wave: this.waveIndex + 1, reward: this.waves[this.waveIndex].reward });
-      this.waveIndex++;
-      if (this.waveIndex >= this.waves.length) {
-        this.phase = "won";
-        this.status = "won";
-      } else {
-        this.phase = "prep";
-        this.prepTimer = this.waves[this.waveIndex].prepTime;
-      }
-    }
+    if (!isWaveCleared(this.phase, this.spawnCursor, this.schedule, this.enemyPool.liveCount)) return;
+    const next = completeWave(this.waves, this.waveIndex);
+    this.marrow += next.reward;
+    this.events.push({ kind: "waveCleared", wave: next.clearedWaveNumber, reward: next.reward });
+    this.waveIndex = next.waveIndex;
+    this.phase = next.phase;
+    this.status = next.status;
+    this.prepTimer = next.prepTimer;
   }
 
   _checkEndStates() {
