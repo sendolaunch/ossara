@@ -63,9 +63,13 @@ for (const id of Object.keys(ENEMIES)) {
     ok(Number.isFinite(speed) && speed > 0, `${id} ${state} animation speed is positive`);
   }
   ok(visual.useProceduralLocomotionFallback === true, `${id} opts into procedural locomotion fallback`);
-  ok(Number.isFinite(visual.proceduralLocomotion?.bob) && visual.proceduralLocomotion.bob > 0, `${id} procedural bob is configured`);
-  ok(Number.isFinite(visual.proceduralLocomotion?.sway) && visual.proceduralLocomotion.sway > 0, `${id} procedural sway is configured`);
-  ok(Number.isFinite(visual.proceduralLocomotion?.lean) && visual.proceduralLocomotion.lean > 0, `${id} procedural lean is configured`);
+  ok(Number.isFinite(visual.proceduralLocomotion?.bobAmplitude) && visual.proceduralLocomotion.bobAmplitude > 0, `${id} procedural bob amplitude is configured`);
+  ok(Number.isFinite(visual.proceduralLocomotion?.swayAmplitude) && visual.proceduralLocomotion.swayAmplitude > 0, `${id} procedural sway amplitude is configured`);
+  ok(Number.isFinite(visual.proceduralLocomotion?.leanAmount) && visual.proceduralLocomotion.leanAmount > 0, `${id} procedural lean amount is configured`);
+  ok(visual.proceduralLocomotion.proceduralStrength > 0 && visual.proceduralLocomotion.proceduralStrength <= 0.5, `${id} full-body procedural strength stays subtle`);
+  ok(visual.proceduralLocomotion.fallbackStrength >= visual.proceduralLocomotion.proceduralStrength, `${id} weak-animation fallback is at least as strong as full-body enhancement`);
+  ok(visual.proceduralLocomotion.visualSmooth > 0 && visual.proceduralLocomotion.visualSmooth <= 1, `${id} procedural visual smoothing is configured`);
+  ok(visual.proceduralLocomotion.rotationSmooth > 0 && visual.proceduralLocomotion.rotationSmooth <= 1, `${id} visual rotation smoothing is configured`);
   const url = enemyModelUrl(visual);
   ok(url.startsWith("models/skeletons/"), `${id} resolves to skeleton model URL`);
   ok(existsSync(join("public", url)), `${id} model file exists locally`);

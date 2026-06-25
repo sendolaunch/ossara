@@ -193,6 +193,10 @@ const MISSION_CAMERA = {
 };
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const angleDeltaDeg = (from, to) => ((((to - from) % 360) + 540) % 360) - 180;
+const approachAngleDeg = (from, to, t) => from + angleDeltaDeg(from, to) * t;
+const smoothFactor = (value, dt) => 1 - Math.pow(1 - clamp(value, 0, 1), Math.max(1, dt * 60));
 
 export class PCRenderer {
   constructor(container) {
@@ -283,7 +287,7 @@ export class PCRenderer {
     const states = this.enemyDebugStates().slice(0, 7);
     this.enemyAnimDebugEl.textContent = [
       "ENEMY ANIM DEBUG",
-      ...states.map((s) => `${s.id || "?"} ${s.type || "?"} desired=${s.desiredState || "?"} state=${s.currentState || "?"} clip=${s.currentClip || "?"} speed=${Number(s.playbackSpeed || 1).toFixed(2)} t=${Number(s.currentTime || 0).toFixed(2)} moving=${s.isMoving ? "Y" : "N"} full=${s.fullBodyAnimated ? "Y" : "N"} legOnly=${s.legOnlyAnimation ? "Y" : "N"} proc=${s.proceduralLocomotionActive ? "Y" : "N"} risk=${s.staticPoseRisk ? "Y" : "N"} groups=${s.animatedBoneGroups || 0} root=${Number(s.fullBodyDeltas?.root || 0).toFixed(3)} torso=${Number(s.fullBodyDeltas?.torso || 0).toFixed(3)} head=${Number(s.fullBodyDeltas?.head || 0).toFixed(3)} arms=${Number(s.fullBodyDeltas?.arms || 0).toFixed(3)} legs=${Number(s.fullBodyDeltas?.legs || 0).toFixed(3)} fallback=${s.fallbackUsed ? "Y" : "N"}`),
+      ...states.map((s) => `${s.id || "?"} ${s.type || "?"} desired=${s.desiredState || "?"} state=${s.currentState || "?"} clip=${s.currentClip || "?"} speed=${Number(s.playbackSpeed || 1).toFixed(2)} t=${Number(s.currentTime || 0).toFixed(2)} moving=${s.isMoving ? "Y" : "N"} full=${s.fullBodyAnimated ? "Y" : "N"} legOnly=${s.legOnlyAnimation ? "Y" : "N"} proc=${s.proceduralLocomotionActive ? "Y" : "N"} pStr=${Number(s.proceduralStrength || 0).toFixed(2)} bob=${Number(s.proceduralTuning?.bobAmplitude || 0).toFixed(3)} sway=${Number(s.proceduralTuning?.swayAmplitude || 0).toFixed(2)} lean=${Number(s.proceduralTuning?.leanAmount || 0).toFixed(2)} smooth=${Number(s.proceduralTuning?.visualSmooth || 0).toFixed(2)} risk=${s.staticPoseRisk ? "Y" : "N"} groups=${s.animatedBoneGroups || 0} root=${Number(s.fullBodyDeltas?.root || 0).toFixed(3)} torso=${Number(s.fullBodyDeltas?.torso || 0).toFixed(3)} head=${Number(s.fullBodyDeltas?.head || 0).toFixed(3)} arms=${Number(s.fullBodyDeltas?.arms || 0).toFixed(3)} legs=${Number(s.fullBodyDeltas?.legs || 0).toFixed(3)} fallback=${s.fallbackUsed ? "Y" : "N"}`),
     ].join("\n");
   }
 
@@ -1033,30 +1037,55 @@ export class PCRenderer {
     };
   }
 
-  _syncEnemyProceduralLocomotion(ent, enemy, moving, forcedState = "", forcedClip = "", dt = 0) {
+  _syncEnemyProceduralLocomotion(ent, enemy, moving, forcedState = "", forcedClip = "", dt = 0, animState = null) {
     const visual = ent?._ossaraVisual || {};
     const wrap = ent?._ossaraVisualWrap;
     if (!wrap) return false;
+    const cfg = visual.proceduralLocomotion || {};
+    const bobAmplitude = cfg.bobAmplitude ?? cfg.bob ?? 0.04;
+    const swayAmplitude = cfg.swayAmplitude ?? cfg.sway ?? 3.5;
+    const leanAmount = cfg.leanAmount ?? cfg.lean ?? 4;
+    const visualSmooth = cfg.visualSmooth ?? 0.18;
+    ent._ossaraProceduralTuning = { bobAmplitude, swayAmplitude, leanAmount, visualSmooth, rotationSmooth: cfg.rotationSmooth ?? 0.16 };
     const clipLooksLikeMove = !forcedClip || /walk|run|move|movement|locomotion/i.test(forcedClip);
     const stateLooksLikeMove = !forcedState || forcedState === "walk" || forcedState === "run";
     const active = !!visual.useProceduralLocomotionFallback && !!moving && !enemy.attackingBlocker && clipLooksLikeMove && stateLooksLikeMove;
+    const blend = smoothFactor(visualSmooth, dt);
+    const pose = ent._ossaraProcPose || { bob: 0, sway: 0, lean: 0 };
     if (!active) {
-      wrap.setLocalPosition(0, 0, 0);
-      wrap.setLocalEulerAngles(0, 0, 0);
-      ent._ossaraProceduralLocomotionActive = false;
-      return false;
+      pose.bob = lerp(pose.bob, 0, blend);
+      pose.sway = lerp(pose.sway, 0, blend);
+      pose.lean = lerp(pose.lean, 0, blend);
+      ent._ossaraProcPose = pose;
+      const settled = Math.abs(pose.bob) < 0.0005 && Math.abs(pose.sway) < 0.05 && Math.abs(pose.lean) < 0.05;
+      if (settled) {
+        wrap.setLocalPosition(0, 0, 0);
+        wrap.setLocalEulerAngles(0, 0, 0);
+        ent._ossaraProceduralLocomotionActive = false;
+        ent._ossaraProceduralStrength = 0;
+        return false;
+      }
+      wrap.setLocalPosition(0, pose.bob, 0);
+      wrap.setLocalEulerAngles(pose.lean, 0, pose.sway);
+      ent._ossaraProceduralLocomotionActive = true;
+      ent._ossaraProceduralStrength = 0;
+      return true;
     }
-    const cfg = visual.proceduralLocomotion || {};
+    const fullBody = !!animState?.fullBodyAnimated;
+    const weakAnimation = !!animState?.legOnlyAnimation || !!animState?.staticPoseRisk || animState?.animBound === false || animState?.failed;
+    const strength = fullBody ? (cfg.proceduralStrength ?? 0.25) : weakAnimation ? (cfg.fallbackStrength ?? 1) : (cfg.proceduralStrength ?? 0.35);
     const runMul = enemy.speed >= 2.25 || forcedState === "run" || /run/i.test(forcedClip) ? 1.2 : 1;
     const rate = (cfg.rate || Math.max(3, enemy.speed * 2.6)) * runMul;
-    ent._ossaraProcT = (ent._ossaraProcT || enemy.id * 0.37) + dt * rate;
+    ent._ossaraProcT = (Number.isFinite(ent._ossaraProcT) ? ent._ossaraProcT : enemy.id * 0.37) + dt * rate;
     const t = ent._ossaraProcT;
-    const bob = Math.abs(Math.sin(t)) * (cfg.bob ?? 0.04);
-    const sway = Math.sin(t) * (cfg.sway ?? 3.5);
-    const lean = cfg.lean ?? 4;
-    wrap.setLocalPosition(0, bob, 0);
-    wrap.setLocalEulerAngles(lean, 0, sway);
+    pose.bob = lerp(pose.bob, Math.abs(Math.sin(t)) * bobAmplitude * strength, blend);
+    pose.sway = lerp(pose.sway, Math.sin(t) * swayAmplitude * strength, blend);
+    pose.lean = lerp(pose.lean, leanAmount * strength, blend);
+    ent._ossaraProcPose = pose;
+    wrap.setLocalPosition(0, pose.bob, 0);
+    wrap.setLocalEulerAngles(pose.lean, 0, pose.sway);
     ent._ossaraProceduralLocomotionActive = true;
+    ent._ossaraProceduralStrength = strength;
     return true;
   }
 
@@ -1372,8 +1401,17 @@ export class PCRenderer {
       const progressed = Math.abs((e.dist || 0) - (prev.dist || 0));
       const forcedState = e.previewAnimState || "";
       const forcedClip = e.previewAnimClip || "";
-      const moving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.002 || progressed > 0.002) && !e.attackingBlocker;
-      if (movedDist > 0.001) ent.setLocalEulerAngles(0, (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI, 0);
+      const rawMoving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.003 || progressed > 0.003) && !e.attackingBlocker;
+      if (rawMoving) ent._ossaraMoveHold = 0.14;
+      else ent._ossaraMoveHold = Math.max(0, (ent._ossaraMoveHold || 0) - dt);
+      const moving = forcedState ? rawMoving : (rawMoving || (ent._ossaraMoveHold || 0) > 0) && !e.attackingBlocker;
+      if (movedDist > 0.001) {
+        const yaw = (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI;
+        const cfg = ent._ossaraVisual?.proceduralLocomotion || {};
+        const turnBlend = smoothFactor(cfg.rotationSmooth ?? 0.16, dt);
+        ent._ossaraYaw = Number.isFinite(ent._ossaraYaw) ? approachAngleDeg(ent._ossaraYaw, yaw, turnBlend) : yaw;
+        ent.setLocalEulerAngles(0, ent._ossaraYaw, 0);
+      }
       if (forcedClip) ent._ossaraAnim?.playClip?.(forcedClip, true);
       else if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
       else {
@@ -1381,9 +1419,9 @@ export class PCRenderer {
         ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
       }
       ent._ossaraAnim?.update(dt);
-      const proceduralActive = this._syncEnemyProceduralLocomotion(ent, e, moving, forcedState, forcedClip, dt);
+      const animState = ent._ossaraAnim?.state?.();
+      const proceduralActive = this._syncEnemyProceduralLocomotion(ent, e, moving, forcedState, forcedClip, dt, animState);
       if (ent._ossaraDebug) {
-        const animState = ent._ossaraAnim?.state?.();
         ent._ossaraDebug.currentClip = animState?.currentClip || ent._ossaraDebug.currentClip;
         ent._ossaraDebug.currentState = animState?.currentState || "";
         ent._ossaraDebug.currentTime = animState?.currentTime ?? 0;
@@ -1406,6 +1444,9 @@ export class PCRenderer {
         ent._ossaraDebug.staticPoseRisk = !!animState?.staticPoseRisk && !proceduralActive;
         ent._ossaraDebug.animatedBoneGroups = animState?.animatedBoneGroups || 0;
         ent._ossaraDebug.proceduralLocomotionActive = proceduralActive;
+        ent._ossaraDebug.proceduralStrength = ent._ossaraProceduralStrength || 0;
+        ent._ossaraDebug.proceduralTuning = ent._ossaraProceduralTuning || {};
+        ent._ossaraDebug.rotationSmooth = ent._ossaraProceduralTuning?.rotationSmooth || 0;
         if (animState?.failed && moving) this._useEnemyPrimitiveFallback(ent, "static-animation");
       }
       ent._ossaraPrevPos = { x: e.x, z: e.z, dist: e.dist || 0 };

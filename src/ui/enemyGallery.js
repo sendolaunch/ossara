@@ -177,7 +177,8 @@ moving: ${state.isMoving ? "yes" : "no"} d:${Number(state.movementDelta || 0).to
 bone: ${state.boneProbeName || "-"} delta:${Number(state.boneDelta || 0).toFixed(4)} bound:${state.animBound === null ? "?" : state.animBound ? "yes" : "no"}
 fullBody: ${state.fullBodyAnimated ? "YES" : "NO"} legOnly: ${state.legOnlyAnimation ? "YES" : "NO"} staticRisk: ${state.staticPoseRisk ? "YES" : "NO"}
 groups: ${state.animatedBoneGroups || 0} root:${Number(state.fullBodyDeltas?.root || 0).toFixed(3)} torso:${Number(state.fullBodyDeltas?.torso || 0).toFixed(3)} head:${Number(state.fullBodyDeltas?.head || 0).toFixed(3)} arms:${Number(state.fullBodyDeltas?.arms || 0).toFixed(3)} legs:${Number(state.fullBodyDeltas?.legs || 0).toFixed(3)}
-procedural: ${state.proceduralLocomotionActive ? "YES" : "NO"}
+procedural: ${state.proceduralLocomotionActive ? "YES" : "NO"} strength:${Number(state.proceduralStrength || 0).toFixed(2)}
+proc cfg: bob:${Number(state.proceduralTuning?.bobAmplitude || 0).toFixed(3)} sway:${Number(state.proceduralTuning?.swayAmplitude || 0).toFixed(2)} lean:${Number(state.proceduralTuning?.leanAmount || 0).toFixed(2)} smooth:${Number(state.proceduralTuning?.visualSmooth || 0).toFixed(2)} rot:${Number(state.proceduralTuning?.rotationSmooth || 0).toFixed(2)}
 blocker: ${state.attackingBlocker ? "yes" : "no"}
 fallbackReason: ${state.fallbackReason || "-"}
 clips: ${(state.availableClips || []).join(", ") || "pending"}`;
