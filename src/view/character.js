@@ -70,22 +70,37 @@ export const HERO_ATTACK_VARIANTS = [
   {
     id: "diag-right",
     label: "Diagonal slash down-right",
-    windup: { pos: { x: -0.16, y: 0.22, z: -0.1 }, rot: { x: 12, y: -46, z: 46 } },
-    slash: { pos: { x: 0.24, y: 0.08, z: -0.18 }, rot: { x: 4, y: 44, z: -42 } },
+    windup: { pos: { x: -0.16, y: 0.3, z: -0.1 }, rot: { x: 12, y: -46, z: 46 } },
+    slash: { pos: { x: 0.24, y: 0.22, z: -0.18 }, rot: { x: 4, y: 44, z: -42 } },
+    arm: {
+      windup: { upper: { x: -6, y: -10, z: 16 }, lower: { x: -2, y: 0, z: 12 }, hand: { x: 6, y: -8, z: 18 } },
+      slash: { upper: { x: -14, y: 14, z: -22 }, lower: { x: -8, y: 0, z: -20 }, hand: { x: 10, y: 12, z: -30 } },
+    },
+    body: { yaw0: -14, yaw1: 18, roll0: 7, roll1: -9, pitch0: -4, pitch1: 2 },
     proxy: { side0: -0.78, side1: 0.72, y0: 1.32, y1: 1.02, yaw0: -62, yaw1: 52, roll0: 42, roll1: -38, pitch0: 8, pitch1: -8, reach: 0.55 },
   },
   {
     id: "diag-left",
     label: "Diagonal slash down-left",
-    windup: { pos: { x: 0.16, y: 0.22, z: -0.1 }, rot: { x: 12, y: 46, z: -46 } },
-    slash: { pos: { x: -0.24, y: 0.08, z: -0.18 }, rot: { x: 4, y: -44, z: 42 } },
+    windup: { pos: { x: 0.16, y: 0.3, z: -0.1 }, rot: { x: 12, y: 46, z: -46 } },
+    slash: { pos: { x: -0.24, y: 0.22, z: -0.18 }, rot: { x: 4, y: -44, z: 42 } },
+    arm: {
+      windup: { upper: { x: -6, y: 10, z: -16 }, lower: { x: -2, y: 0, z: -12 }, hand: { x: 6, y: 8, z: -18 } },
+      slash: { upper: { x: -14, y: -14, z: 22 }, lower: { x: -8, y: 0, z: 20 }, hand: { x: 10, y: -12, z: 30 } },
+    },
+    body: { yaw0: 14, yaw1: -18, roll0: -7, roll1: 9, pitch0: -4, pitch1: 2 },
     proxy: { side0: 0.78, side1: -0.72, y0: 1.32, y1: 1.02, yaw0: 62, yaw1: -52, roll0: -42, roll1: 38, pitch0: 8, pitch1: -8, reach: 0.55 },
   },
   {
     id: "wide-sweep",
     label: "Wide horizontal sweep",
-    windup: { pos: { x: -0.28, y: 0.14, z: -0.14 }, rot: { x: 4, y: -68, z: 16 } },
-    slash: { pos: { x: 0.3, y: 0.1, z: -0.16 }, rot: { x: 2, y: 68, z: -14 } },
+    windup: { pos: { x: -0.28, y: 0.22, z: -0.14 }, rot: { x: 4, y: -68, z: 16 } },
+    slash: { pos: { x: 0.3, y: 0.18, z: -0.16 }, rot: { x: 2, y: 68, z: -14 } },
+    arm: {
+      windup: { upper: { x: -3, y: -16, z: 8 }, lower: { x: -4, y: 0, z: 8 }, hand: { x: 4, y: -14, z: 12 } },
+      slash: { upper: { x: -8, y: 18, z: -10 }, lower: { x: -7, y: 0, z: -10 }, hand: { x: 6, y: 16, z: -16 } },
+    },
+    body: { yaw0: -18, yaw1: 20, roll0: 4, roll1: -6, pitch0: -3, pitch1: 2 },
     proxy: { side0: -0.96, side1: 0.96, y0: 1.16, y1: 1.08, yaw0: -78, yaw1: 78, roll0: 12, roll1: -12, pitch0: 2, pitch1: -4, reach: 0.62 },
   },
 ];
@@ -198,6 +213,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const wrap = new pc.Entity("hero");
   wrap.addChild(inner);
   const rightHand = inner.findByName("hand.r");
+  const rightLowerArm = inner.findByName("lowerarm.r");
+  const rightUpperArm = inner.findByName("upperarm.r");
   const rightHandSlot = inner.findByName(HANDSLOT_R);
   const leftHandSlot = inner.findByName(HANDSLOT_L);
   const attackPose = {
@@ -206,8 +223,11 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     target: null,
     targetName: "",
     hand: rightHand || null,
+    lowerArm: rightLowerArm || null,
+    upperArm: rightUpperArm || null,
     handSlot: rightHandSlot || null,
     sword: null,
+    boneBases: {},
     beforeWorld: null,
     lastWorld: null,
     lastLocalRot: null,
@@ -222,6 +242,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     app._charHandSlotLogged = true;
     console.debug("[character] hand/weapon slots", {
       rightHand: rightHand?.name || null,
+      rightLowerArm: rightLowerArm?.name || null,
+      rightUpperArm: rightUpperArm?.name || null,
       rightHandSlot: rightHandSlot?.name || null,
       leftHandSlot: leftHandSlot?.name || null,
     });
@@ -256,6 +278,44 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     }
   };
 
+  const captureBoneBase = (key, entity) => {
+    if (!entity) return;
+    try {
+      attackPose.boneBases[key] = {
+        pos: entity.getLocalPosition().clone(),
+        rot: entity.getLocalEulerAngles().clone(),
+      };
+    } catch (_) {
+      attackPose.boneBases[key] = null;
+    }
+  };
+
+  const resetBone = (key, entity) => {
+    const base = attackPose.boneBases[key];
+    if (!entity || !base) return;
+    try {
+      entity.setLocalPosition(base.pos);
+      entity.setLocalEulerAngles(base.rot.x, base.rot.y, base.rot.z);
+    } catch (_) {
+      /* visual reset best-effort only */
+    }
+  };
+
+  const applyBoneOffset = (key, entity, offset) => {
+    const base = attackPose.boneBases[key];
+    if (!entity || !base || !offset) return;
+    try {
+      entity.setLocalPosition(base.pos);
+      entity.setLocalEulerAngles(
+        base.rot.x + (offset.x || 0),
+        base.rot.y + (offset.y || 0),
+        base.rot.z + (offset.z || 0),
+      );
+    } catch (_) {
+      /* procedural arm pose is non-critical */
+    }
+  };
+
   const resolveAttackTarget = (preferred = "") => {
     if (preferred === "hand.r") return attackPose.hand;
     if (preferred === HANDSLOT_R) return attackPose.handSlot;
@@ -269,6 +329,9 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     attackPose.raf = 0;
     attackPose.active = false;
     attackPose.phase = "idle";
+    resetBone("upper", attackPose.upperArm);
+    resetBone("lower", attackPose.lowerArm);
+    resetBone("hand", attackPose.hand);
     if (attackPose.target && attackPose.basePos && attackPose.baseRot) {
       try {
         attackPose.target.setLocalPosition(attackPose.basePos);
@@ -288,20 +351,39 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     const recovery = clamp01((t - 0.2) / 0.15);
     attackPose.phase = t < 0.08 ? "windup" : t < 0.2 ? "slash" : "recovery";
     const variant = attackPose.variant || HERO_ATTACK_VARIANTS[0];
+    const arm = variant.arm || HERO_ATTACK_VARIANTS[0].arm;
     const pose = t < 0.08
       ? {
           pos: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.pos, easeOut(windup)),
           rot: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.rot, easeOut(windup)),
+          arm: {
+            upper: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.upper, easeOut(windup)),
+            lower: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.lower, easeOut(windup)),
+            hand: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.hand, easeOut(windup)),
+          },
         }
       : t < 0.2
         ? {
             pos: lerpVec(variant.windup.pos, variant.slash.pos, easeInOut(slash)),
             rot: lerpVec(variant.windup.rot, variant.slash.rot, easeInOut(slash)),
+            arm: {
+              upper: lerpVec(arm.windup.upper, arm.slash.upper, easeInOut(slash)),
+              lower: lerpVec(arm.windup.lower, arm.slash.lower, easeInOut(slash)),
+              hand: lerpVec(arm.windup.hand, arm.slash.hand, easeInOut(slash)),
+            },
           }
         : {
             pos: lerpVec(variant.slash.pos, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
             rot: lerpVec(variant.slash.rot, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+            arm: {
+              upper: lerpVec(arm.slash.upper, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+              lower: lerpVec(arm.slash.lower, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+              hand: lerpVec(arm.slash.hand, { x: 0, y: 0, z: 0 }, easeOut(recovery)),
+            },
           };
+    applyBoneOffset("upper", attackPose.upperArm, pose.arm.upper);
+    applyBoneOffset("lower", attackPose.lowerArm, pose.arm.lower);
+    applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
     attackPose.target.setLocalPosition(
       attackPose.basePos.x + pose.pos.x,
       attackPose.basePos.y + pose.pos.y,
@@ -326,6 +408,10 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.targetName = target.name || opts.target || "(unnamed)";
       attackPose.basePos = target.getLocalPosition().clone();
       attackPose.baseRot = target.getLocalEulerAngles().clone();
+      attackPose.boneBases = {};
+      captureBoneBase("upper", attackPose.upperArm);
+      captureBoneBase("lower", attackPose.lowerArm);
+      captureBoneBase("hand", attackPose.hand);
       attackPose.beforeWorld = worldSnapshot(target);
       attackPose.lastWorld = attackPose.beforeWorld;
       attackPose.lastLocalRot = localRotSnapshot(target);
@@ -337,14 +423,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
         const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
         const elapsed = now - attackPose.startedAt;
         const t = elapsed * (opts.slow ? 0.35 / 1.2 : 1);
-        if (t >= attackPose.duration) {
-          resetAttackPose();
-          return;
-        }
-        if (!applyAttackPose(t)) {
-          resetAttackPose();
-          return;
-        }
+        if (!updateProceduralAttackPose(t)) return;
         if (typeof requestAnimationFrame === "function") attackPose.raf = requestAnimationFrame(step);
       };
       step();
@@ -354,6 +433,21 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       resetAttackPose();
       return false;
     }
+  };
+
+  const updateProceduralAttackPose = (overrideT = null) => {
+    if (!attackPose.active) return false;
+    const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+    const t = overrideT == null ? (now - attackPose.startedAt) : overrideT;
+    if (t >= attackPose.duration) {
+      resetAttackPose();
+      return false;
+    }
+    if (!applyAttackPose(t)) {
+      resetAttackPose();
+      return false;
+    }
+    return true;
   };
 
   const playExtremePose = (targetName = "sword_1handed", duration = 2) => {
@@ -407,6 +501,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       currentClip: st.currentClip || "Idle",
       rightHandFound: !!attackPose.hand,
       handSlotFound: !!attackPose.handSlot,
+      lowerArmFound: !!attackPose.lowerArm,
+      upperArmFound: !!attackPose.upperArm,
       swordFound: !!(attackPose.sword || inner.findByName("sword_1handed")),
       animatedEntity: attackPose.targetName || "",
       beforeWorld: attackPose.beforeWorld,
@@ -477,6 +573,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       return true;
     },
     playProceduralAttack,
+    updateProceduralAttackPose,
     playExtremePose,
     resetAttackPose,
     getAttackDebug: collectAttackDebug,

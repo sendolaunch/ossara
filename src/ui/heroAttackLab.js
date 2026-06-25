@@ -204,6 +204,8 @@ export class HeroAttackLab {
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
       `current animation clip: ${d.currentClip || "-"}`,
       `right hand entity found: ${d.rightHandFound ? "yes" : "no"}`,
+      `lowerarm.r entity found: ${d.lowerArmFound ? "yes" : "no"}`,
+      `upperarm.r entity found: ${d.upperArmFound ? "yes" : "no"}`,
       `handslot.r entity found: ${d.handSlotFound ? "yes" : "no"}`,
       `sword_1handed entity found: ${d.swordFound ? "yes" : "no"}`,
       `animated entity: ${d.animatedEntity || "-"}`,

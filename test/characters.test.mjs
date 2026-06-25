@@ -54,16 +54,21 @@ ok(characterSource.includes("inner.findByName(HANDSLOT_R)"), "procedural attack 
 ok(characterSource.includes("sword_1handed"), "procedural attack pose can target the visible attached sword entity");
 ok(characterSource.includes("playExtremePose"), "character control exposes dev extreme-pose proof support");
 ok(characterSource.includes("getAttackDebug"), "character control exposes attack visual diagnostics");
+ok(characterSource.includes("updateProceduralAttackPose"), "character control can reapply attack pose after animation sync");
+ok(characterSource.includes("lowerarm.r") && characterSource.includes("upperarm.r"), "procedural attack pose can target right arm bones");
 ok(HERO_ATTACK_VARIANTS.length === 3, "Warden has three procedural attack variants");
 ok(HERO_ATTACK_VARIANTS.map((v) => v.id).join(",") === "diag-right,diag-left,wide-sweep", "Warden attack variants have stable ids");
 for (const variant of HERO_ATTACK_VARIANTS) {
   ok(variant.proxy.y0 >= 1 && variant.proxy.y1 >= 1, `${variant.id}: proxy slash stays above ground`);
   ok(Math.abs(variant.proxy.yaw1 - variant.proxy.yaw0) >= 100, `${variant.id}: proxy slash crosses the hero front`);
+  ok(variant.arm && variant.body, `${variant.id}: variant includes arm and body visual offsets`);
 }
 const rendererSource = readFileSync(src("view/pcRenderer.js"), "utf8");
 ok(rendererSource.includes("heroAttackComboIndex"), "mission renderer tracks visual-only attack combo index");
 ok(rendererSource.includes("variantId: swingVariant.id"), "hero sword proxy stores the visual variant id");
 ok(rendererSource.includes("playProceduralAttack?.({ variant: variant.id })"), "mission renderer passes combo variant to procedural sword pose");
+ok(rendererSource.includes("heroBodySwing"), "mission renderer applies visual-only body recoil during Warden attacks");
+ok(rendererSource.includes("updateProceduralAttackPose?.()"), "mission renderer reapplies procedural arm/sword pose after animation sync");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
 

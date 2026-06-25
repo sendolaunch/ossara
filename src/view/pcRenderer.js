@@ -252,6 +252,7 @@ export class PCRenderer {
     this._heroFoot = 0;
     this._heroLoadToken = 0;
     this.heroAttackComboIndex = 0;
+    this.heroBodySwing = null;
     this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     this.enemyAnimDebugEnabled = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devAnimDebug") === "1");
     this.enemyAnimDebugEl = null;
@@ -698,6 +699,7 @@ export class PCRenderer {
     this._prevHero = null;
     this._prevAtkCd = null;
     this.heroAttackComboIndex = 0;
+    this.heroBodySwing = null;
     this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     let ctl = null;
     try {
@@ -1307,6 +1309,33 @@ export class PCRenderer {
     );
   }
 
+  _heroAttackVisualTime() {
+    return (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+  }
+
+  _applyHeroBodySwing(baseYawDeg) {
+    if (!this.heroEntity) return;
+    if (!this.heroBodySwing) {
+      this.heroEntity.setLocalEulerAngles(0, baseYawDeg, 0);
+      return;
+    }
+    const elapsed = this._heroAttackVisualTime() - this.heroBodySwing.startedAt;
+    const duration = this.heroBodySwing.duration || 0.35;
+    if (elapsed >= duration) {
+      this.heroBodySwing = null;
+      this.heroEntity.setLocalEulerAngles(0, baseYawDeg, 0);
+      return;
+    }
+    const t = clamp(elapsed / duration, 0, 1);
+    const cfg = this.heroBodySwing.variant?.body || HERO_ATTACK_VARIANTS[0].body;
+    const strength = t < 0.23 ? t / 0.23 : t < 0.58 ? 1 : 1 - (t - 0.58) / 0.42;
+    const sweep = t < 0.23 ? 0 : t < 0.58 ? (t - 0.23) / 0.35 : 1;
+    const yaw = lerp(cfg.yaw0, cfg.yaw1, sweep) * strength;
+    const roll = lerp(cfg.roll0, cfg.roll1, sweep) * strength;
+    const pitch = lerp(cfg.pitch0, cfg.pitch1, sweep) * strength;
+    this.heroEntity.setLocalEulerAngles(pitch, baseYawDeg + yaw, roll);
+  }
+
   _slash(x, z, facing, range, colorKey) {
     const fx = Math.sin(facing);
     const fz = Math.cos(facing);
@@ -1604,7 +1633,8 @@ export class PCRenderer {
     if (!this.heroEntity) return;
     this.heroEntity.enabled = h.alive;
     this.heroEntity.setPosition(h.x, this._heroFoot || 0, h.z);
-    this.heroEntity.setLocalEulerAngles(0, (h.facing * 180) / Math.PI, 0);
+    const baseYawDeg = (h.facing * 180) / Math.PI;
+    this.heroEntity.setLocalEulerAngles(0, baseYawDeg, 0);
     if (this.heroCtl) {
       const moved = this._prevHero ? Math.hypot(h.x - this._prevHero.x, h.z - this._prevHero.z) > 0.002 : false;
       const moving = heroAnim.moving ?? moved;
@@ -1616,6 +1646,7 @@ export class PCRenderer {
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
         const variant = HERO_ATTACK_VARIANTS[this.heroAttackComboIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
         this.heroAttackComboIndex = (this.heroAttackComboIndex + 1) % HERO_ATTACK_VARIANTS.length;
+        this.heroBodySwing = { variant, startedAt: this._heroAttackVisualTime(), duration: 0.35 };
         this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true, variant);
         try {
           const usedClip = this.heroCtl.playAttack?.();
@@ -1627,9 +1658,12 @@ export class PCRenderer {
           }
         }
       }
+      this.heroCtl.updateProceduralAttackPose?.();
+      this._applyHeroBodySwing(baseYawDeg);
       this._prevAtkCd = h.attackCd;
       this._prevHero = { x: h.x, z: h.z };
     } else {
+      this._applyHeroBodySwing(baseYawDeg);
       this.heroAnimation = { ...this.heroAnimation, moving: false, running: false, dead: !h.alive };
     }
   }
@@ -1652,6 +1686,7 @@ export class PCRenderer {
     this._prevHero = null;
     this._prevAtkCd = null;
     this.heroAttackComboIndex = 0;
+    this.heroBodySwing = null;
     this._cameraPrimed = false;
     if (this.heroCtl) {
       this.heroCtl.resetAttackPose?.();
