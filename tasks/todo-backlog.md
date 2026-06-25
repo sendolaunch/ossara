@@ -115,6 +115,15 @@ level-gated breaches, 2% marketplace fee→treasury, creator-fee-funded prizes/l
 rules: NO pay-to-win / staking / token-grind / burn. Platform: BAGS.
 
 - **[P2]** Gold economy: sinks (forge/upgrade costs), level-gated breach unlocks.
+- **[P2]** Future spendable currency naming pass: replace generic "gold/coins" naming with a
+  more world-specific OSSARA currency name while keeping it distinct from Marrow, which is
+  already used for build/command systems. Preferred working name: `Wardmarks`. Other candidates:
+  `Crownmarks`, `Hollow Crowns`, `Ossarins`, `Marrowmarks`. Goal: standard spendable in-game
+  money that still fits the dark plague / ossuary / warded fantasy identity.
+- **[P2]** Future currency UI/icon asset: create a final UI-ready icon for economy, inventory,
+  and HUD counts. Direction: aged gold coin with an engraved cracked hollow crown, subtle
+  plague-green inlay/accent, worn ancient feel, transparent background, readable at small sizes
+  on dark UI. Need one clean single-coin icon; optional stacked-coin version for menus/rewards.
 - **[P3]** Marketplace (player trading, 2% fee).
 - **[P3]** On-chain: Solana wallet connect, $OSSA mint (public mint addr OK in client; NO
   private keys / paid RPC keys in `src/` — use a serverless proxy). Smart contracts. **Test
