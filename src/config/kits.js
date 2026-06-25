@@ -17,7 +17,7 @@ export const CLASS_KITS = {
     hero: {
       ...base, id: "warden", name: "Warden",
       maxHp: 240, speed: 4.0, attackRange: 2.0, attackDamage: 26, attackRate: 1.8,
-      ability: { id: "slam", name: "Ward-slam", type: "radial", damage: 60, range: 2.6, cooldown: 6 },
+      ability: { id: "slam", name: "Ward Slam", type: "radial", damage: 55, range: 2.35, cooldown: 5, centerOffset: 0.55 },
     },
     towers: ["barricade", "spikegate"],
   },

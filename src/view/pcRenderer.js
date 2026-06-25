@@ -1245,9 +1245,38 @@ export class PCRenderer {
         this._spark(ev.x, ev.z, "gold", 0.4);
       }
       else if (ev.kind === "heroDash") this._ring(ev.x, ev.z, ev.range || 1.1, "plague", 0.28);
+      else if (ev.kind === "slam") this._wardSlamPulse(ev.x, ev.z, ev.range || 2.25);
       else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
       else if (ev.kind === "towerSold") this._ring(ev.x, ev.z, 0.85, "ash", 0.22);
     }
+  }
+
+  _wardSlamPulse(x, z, range) {
+    this._slamDisc(x, z, range, 0.36);
+    this._ring(x, z, range * 1.05, "plague", 0.46);
+    this._ring(x, z, Math.max(0.75, range * 0.52), "gold", 0.32);
+    this._spark(x, z, "plague", 0.26);
+  }
+
+  _slamDisc(x, z, range, life) {
+    const c = col(PALETTE.plague);
+    const m = new pc.StandardMaterial();
+    m.diffuse = c;
+    m.emissive = c;
+    m.emissiveIntensity = 0.65;
+    m.opacity = 0.34;
+    m.blendType = pc.BLEND_NORMAL;
+    m.depthWrite = false;
+    m.cull = pc.CULLFACE_NONE;
+    m.update();
+    const e = prim("cylinder", m);
+    e.name = "ward-slam-ground-pulse";
+    e.render.castShadows = false;
+    e.render.receiveShadows = false;
+    e.setLocalScale(0.22, 0.018, 0.22);
+    e.setPosition(x, 0.055, z);
+    this.app.root.addChild(e);
+    this.fx.push({ ent: e, kind: "wardSlamDisc", life, maxLife: life, targetScale: Math.max(0.7, range * 1.14), material: m });
   }
 
   _ring(x, z, range, colorKey, life) {
@@ -1390,6 +1419,13 @@ export class PCRenderer {
       } else if (fx.kind === "slash") {
         const s = 1 + t * 0.22;
         fx.ent.setLocalScale(fx.base * s, 0.08, 0.12);
+      } else if (fx.kind === "wardSlamDisc") {
+        const s = 0.22 + (fx.targetScale - 0.22) * easeOut(t);
+        fx.ent.setLocalScale(s, 0.018, s);
+        if (fx.material) {
+          fx.material.opacity = Math.max(0, 0.34 * (1 - t));
+          fx.material.update();
+        }
       } else if (fx.kind === "heroSwordSwing") {
         const slashT = t < 0.3
           ? easeOut(t / 0.3) * 0.25

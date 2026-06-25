@@ -688,6 +688,9 @@ export class World {
 
   _useAbility(h) {
     const ab = h.ability;
+    const offset = ab.centerOffset || 0;
+    const cx = h.x + Math.sin(h.facing) * offset;
+    const cz = h.z + Math.cos(h.facing) * offset;
     const r2 = ab.range * ab.range;
     if (ab.type === "cone") {
       // forward arc in the hero's facing
@@ -695,26 +698,26 @@ export class World {
       const fz = Math.cos(h.facing);
       for (const e of this.enemies) {
         if (!e.alive) continue;
-        const dx = e.x - h.x;
-        const dz = e.z - h.z;
+        const dx = e.x - cx;
+        const dz = e.z - cz;
         const d2 = dx * dx + dz * dz;
         if (d2 > r2 || d2 < 1e-6) continue;
         const d = Math.sqrt(d2);
         if ((dx / d) * fx + (dz / d) * fz > 0.5) this._damageEnemy(e, ab.damage); // ~60° cone
       }
     } else if (ab.type === "chain") {
-      const inRange = this.enemies.filter((e) => e.alive && dist2(h.x, h.z, e.x, e.z) <= r2);
-      inRange.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+      const inRange = this.enemies.filter((e) => e.alive && dist2(cx, cz, e.x, e.z) <= r2);
+      inRange.sort((a, b) => dist2(cx, cz, a.x, a.z) - dist2(cx, cz, b.x, b.z));
       const n = Math.min(ab.chain || 5, inRange.length);
       for (let i = 0; i < n; i++) this._damageEnemy(inRange[i], ab.damage);
     } else {
       // radial / cloud — burst around the hero
       for (const e of this.enemies) {
-        if (e.alive && dist2(h.x, h.z, e.x, e.z) <= r2) this._damageEnemy(e, ab.damage);
+        if (e.alive && dist2(cx, cz, e.x, e.z) <= r2) this._damageEnemy(e, ab.damage);
       }
       if (ab.type === "cloud" && ab.heal) h.hp = Math.min(h.maxHp, h.hp + ab.heal);
     }
-    this.events.push({ kind: "slam", x: h.x, z: h.z, range: ab.range });
+    this.events.push({ kind: "slam", abilityId: ab.id, x: cx, z: cz, heroX: h.x, heroZ: h.z, range: ab.range });
   }
 
   _updateTowers(dt) {

@@ -185,16 +185,24 @@ const oldWindow = globalThis.window;
   const input = new Input(renderer, () => world);
   fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
   ok(input.consume().dash, "dash key queues a hero dash in normal mode");
+  fakeWindow.dispatch("keydown", { key: "q", preventDefault() {} });
+  ok(input.consume().slam, "Q queues Ward Slam in normal mode");
   input.select("barricade");
   fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
   ok(!input.consume().dash, "dash key is ignored in build mode");
+  fakeWindow.dispatch("keydown", { key: "q", preventDefault() {} });
+  ok(!input.consume().slam, "Q is ignored in build mode");
   input.cancelBuild();
   input.enterCommandTargetMode("upgrade");
   fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
   ok(!input.consume().dash, "dash key is ignored in command target mode");
+  fakeWindow.dispatch("keydown", { key: "q", preventDefault() {} });
+  ok(!input.consume().slam, "Q is ignored in command target mode");
   input.confirmCommandTarget();
   fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
   ok(!input.consume().dash, "dash key is ignored during command casts");
+  fakeWindow.dispatch("keydown", { key: "q", preventDefault() {} });
+  ok(!input.consume().slam, "Q is ignored during command casts");
 }
 
 {

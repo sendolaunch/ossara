@@ -1,4 +1,4 @@
-import { commandCastPanelData, commandTargetPanelData, dashPanelData, defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
+import { abilityPanelData, commandCastPanelData, commandTargetPanelData, dashPanelData, defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
 
 let pass = 0;
 let fail = 0;
@@ -68,6 +68,11 @@ const dashReady = dashPanelData({ alive: true, dashCd: 0 });
 ok(dashReady.ready && dashReady.ratio === 1 && dashReady.text.includes("ready"), "dash HUD data reports ready state");
 const dashCooling = dashPanelData({ alive: true, dashCd: 1.2 });
 ok(!dashCooling.ready && dashCooling.ratio > 0 && dashCooling.ratio < 1 && dashCooling.text.includes("1.2s"), "dash HUD data reports cooldown state");
+
+const abilityReady = abilityPanelData({ alive: true, abilityCd: 0, ability: { name: "Ward Slam", cooldown: 5 } });
+ok(abilityReady.ready && abilityReady.ratio === 1 && abilityReady.text === "Q: Ward Slam ready", "ability HUD data reports Q ready state");
+const abilityCooling = abilityPanelData({ alive: true, abilityCd: 2.4, ability: { name: "Ward Slam", cooldown: 5 } });
+ok(!abilityCooling.ready && abilityCooling.ratio > 0 && abilityCooling.ratio < 1 && abilityCooling.text.includes("2.4s"), "ability HUD data reports Q cooldown state");
 
 console.log(`hudData: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

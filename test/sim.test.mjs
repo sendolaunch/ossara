@@ -1084,6 +1084,54 @@ section("manual hero attack and slam damages");
 }
 
 // ---------------------------------------------------------------------------
+section("warden ward slam ability");
+{
+  const ab = CLASS_KITS.warden.hero.ability;
+  ok(ab.name === "Ward Slam", "Warden Q ability is named Ward Slam");
+  ok(ab.damage > CLASS_KITS.warden.hero.attackDamage && ab.damage < CLASS_KITS.warden.hero.attackDamage * 3, "Ward Slam damage is stronger than a basic attack without being a wave delete");
+  ok(ab.range >= 2.0 && ab.range <= 2.5, "Ward Slam radius is short-range");
+  ok(ab.cooldown === 5, "Ward Slam cooldown is tuned to 5 seconds");
+  ok(ab.centerOffset > 0, "Ward Slam is centered slightly in front of the Warden");
+
+  const w = new World(LEVEL);
+  const inside = spawnEnemyAt(w, "husk", w.defaultLaneId, 0);
+  inside.hp = 100;
+  const outside = spawnEnemyAt(w, "husk", w.defaultLaneId, 10);
+  outside.hp = 100;
+  w.hero.x = inside.x;
+  w.hero.z = inside.z - 1.0;
+  w.hero.facing = 0;
+  w.hero.abilityCd = 0;
+  const centerZ = w.hero.z + ab.centerOffset;
+  w.update(0.05, { slam: true });
+  ok(inside.hp === 100 - ab.damage, "Ward Slam damages enemies inside radius");
+  ok(outside.hp === 100, "Ward Slam does not damage enemies outside radius");
+  ok(w.hero.abilityCd === ab.cooldown, "Ward Slam starts cooldown when used");
+  ok(w.events.some((ev) => ev.kind === "slam" && ev.abilityId === "slam" && approx(ev.x, w.hero.x) && approx(ev.z, centerZ)), "Ward Slam emits a front-centered visual event");
+  const hpAfterSlam = inside.hp;
+  w.update(0.05, { slam: true });
+  ok(inside.hp === hpAfterSlam && w.hero.abilityCd < ab.cooldown, "Ward Slam cannot spam during cooldown");
+
+  const actions = new World(LEVEL);
+  actions.hero.abilityCd = 0;
+  actions.update(0.05, { slam: true });
+  const afterQX = actions.hero.x;
+  actions.update(0.1, { moveX: 1, moveZ: 0 });
+  ok(actions.hero.x !== afterQX, "movement still works after Ward Slam");
+  actions.update(0.05, { moveX: 1, moveZ: 0, dash: true });
+  ok(actions.hero.dashCd > 0, "dash still works after Ward Slam");
+  const attackTarget = spawnEnemyAt(actions, "husk", actions.defaultLaneId, 0);
+  attackTarget.hp = 100;
+  actions.hero.x = attackTarget.x;
+  actions.hero.z = attackTarget.z - 0.9;
+  actions.hero.facing = 0;
+  actions.hero.attackCd = 0;
+  const hpBeforeAttack = attackTarget.hp;
+  actions.update(0.05, { attack: true, attackX: attackTarget.x, attackZ: attackTarget.z });
+  ok(attackTarget.hp < hpBeforeAttack, "basic attack still works after Ward Slam");
+}
+
+// ---------------------------------------------------------------------------
 section("mission dash moves and respects cooldown");
 {
   const w = new World(LEVEL);

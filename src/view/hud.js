@@ -158,6 +158,19 @@ export function dashPanelData(hero) {
   };
 }
 
+export function abilityPanelData(hero) {
+  const ability = hero?.ability || { name: "Ability", cooldown: 1 };
+  const cooldown = ability.cooldown || 1;
+  const cd = Math.max(0, hero?.abilityCd || 0);
+  const ready = cd <= 0;
+  return {
+    ability,
+    ready,
+    ratio: ready ? 1 : Math.max(0, 1 - cd / cooldown),
+    text: !hero?.alive ? `down â€” reviving ${Math.ceil(hero?.respawnTimer || 0)}s` : ready ? `Q: ${ability.name} ready` : `Q: ${ability.name} ${cd.toFixed(1)}s`,
+  };
+}
+
 export class HUD {
   constructor(root, cb) {
     this.cb = cb;
