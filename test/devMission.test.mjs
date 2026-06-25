@@ -1,4 +1,11 @@
-import { canUseDevMissionRoute, devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devMissionIdFromLocation, isLocalDevHost } from "../src/dev/missionSmoke.js";
+import {
+  canUseDevMissionRoute,
+  devEnemyGalleryEnabled,
+  devHeroAttackClassFromLocation,
+  devLootEnabled,
+  devMissionIdFromLocation,
+  isLocalDevHost,
+} from "../src/dev/missionSmoke.js";
 
 let pass = 0;
 let fail = 0;
@@ -56,6 +63,18 @@ ok(
 ok(
   devHeroAttackClassFromLocation({ hostname: "ossara.vercel.app", search: "?devHeroAttack=warden" }, { DEV: true }) === null,
   "non-local host ignores hero attack lab route",
+);
+ok(
+  devLootEnabled({ hostname: "localhost", search: "?devLoot=1" }, { DEV: true }),
+  "local dev loot viewer route is enabled",
+);
+ok(
+  !devLootEnabled({ hostname: "localhost", search: "?devLoot=1" }, { DEV: false }),
+  "production build ignores loot viewer route",
+);
+ok(
+  !devLootEnabled({ hostname: "ossara.vercel.app", search: "?devLoot=1" }, { DEV: true }),
+  "non-local host ignores loot viewer route",
 );
 
 console.log(`devMission: ${pass}/${pass + fail} checks passed`);

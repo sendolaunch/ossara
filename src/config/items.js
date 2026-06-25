@@ -36,3 +36,30 @@ export const NAME_NOUN = {
   head: "Visage", chest: "Carapace", legs: "Greaves", feet: "Tread", hands: "Grasp",
   cape: "Shroud", pet: "Familiar", weapon: "Edge", accessory: "Charm",
 };
+
+// Loot Skeleton v1: a small, theme-neutral equipment surface for early class
+// testing. This does not replace the older relic roll pipeline above yet.
+export const LOOT_MODEL_VERSION = 1;
+export const LOOT_EQUIPMENT_SLOTS = ["weapon", "helm", "chest", "gloves", "boots"];
+export const LOOT_STAT_KEYS = ["heroDamage", "heroHealth", "defenseHealth", "defenseDamage", "abilityPower"];
+
+export const STARTER_LOOT_ITEMS = [
+  {
+    id: "starter-warden-oath-blade",
+    name: "Oathworn Training Blade",
+    slot: "weapon",
+    rarity: "common",
+    itemLevel: 1,
+    levelRequirement: 1,
+    stats: { heroDamage: 3, abilityPower: 1 },
+  },
+  {
+    id: "starter-warded-helm",
+    name: "Warded Recruit Helm",
+    slot: "helm",
+    rarity: "common",
+    itemLevel: 1,
+    levelRequirement: 1,
+    stats: { heroHealth: 8, defenseHealth: 2 },
+  },
+];

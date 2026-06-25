@@ -29,3 +29,9 @@ export function devHeroAttackClassFromLocation(location = globalThis.location, e
   const id = params.get("devHeroAttack");
   return id && id.trim() ? id.trim() : null;
 }
+
+export function devLootEnabled(location = globalThis.location, env = {}) {
+  if (!canUseDevMissionRoute(env, location)) return false;
+  const params = new URLSearchParams(location?.search || "");
+  return params.get("devLoot") === "1";
+}

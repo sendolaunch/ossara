@@ -14,13 +14,14 @@ import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
 import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
 import { Inventory } from "./ui/inventory.js";
+import { LootSkeletonPanel } from "./ui/lootSkeletonPanel.js";
 import { HeroSelect } from "./ui/heroSelect.js";
 import { EnemyGallery } from "./ui/enemyGallery.js";
 import { HeroAttackLab } from "./ui/heroAttackLab.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
 import { getDifficulty, getMission } from "./config/missions.js";
-import { devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devMissionIdFromLocation } from "./dev/missionSmoke.js";
+import { devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devLootEnabled, devMissionIdFromLocation } from "./dev/missionSmoke.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -43,6 +44,7 @@ let username = "The Warded";
 const devMissionId = devMissionIdFromLocation(window.location, import.meta.env);
 const devEnemyGallery = devEnemyGalleryEnabled(window.location, import.meta.env);
 const devHeroAttackClass = devHeroAttackClassFromLocation(window.location, import.meta.env);
+const devLoot = devLootEnabled(window.location, import.meta.env);
 
 function ensureHub() {
   if (!hub) {
@@ -214,6 +216,10 @@ window.OSSARA = {
   enterHub,
   startMission,
 };
+
+if (devLoot) {
+  window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui);
+}
 
 if (devHeroAttackClass) {
   screensRoot.style.display = "none";
