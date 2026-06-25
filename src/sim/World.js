@@ -9,7 +9,7 @@ import { WAVES } from "../config/waves.js";
 import { HERO } from "../config/hero.js";
 import { CLASS_KITS } from "../config/kits.js";
 import { MISSION_DASH } from "../config/moves.js";
-import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, gridToWorld, worldToGrid, cellKey, expandRects, getLevelLanes } from "./pathing.js";
+import { buildLanePath, buildLanePaths, pointAtDistance, gridToWorld, worldToGrid, cellKey } from "./pathing.js";
 import {
   advanceEnemyAlongLane,
   applyEnemySeparation,
@@ -37,6 +37,11 @@ import {
   sellDefense,
   upgradeDefense,
 } from "./commandActions.js";
+import {
+  buildableAt as placementBuildableAt,
+  createPlacementSets,
+  placementStatus as checkPlacementStatus,
+} from "./placementRules.js";
 
 const dist2 = (ax, az, bx, bz) => {
   const dx = ax - bx;
@@ -56,20 +61,7 @@ export class World {
     this.laneIds = Object.keys(this.lanePaths);
     this.defaultLaneId = this.laneIds[0] || "legacy";
     this.lane = this.lanePaths[this.defaultLaneId] || buildLanePath(level);
-    this.pathSet = pathCellSet(level);
     this.occupied = new Set(); // cell keys with a tower on them
-    this.buildableSet = null;
-    if (!level.openBuildable && Array.isArray(level.buildableZones) && level.buildableZones.length) {
-      this.buildableSet = new Set(expandRects(level.buildableZones).map((cell) => cellKey(cell.col, cell.row)));
-    }
-
-    // impassable ruins (obstacle rects minus any cell on the lane)
-    this.blockedSet = new Set();
-    const blockedZones = [...(level.obstacles || []), ...(level.blockedZones || [])];
-    for (const cell of expandRects(blockedZones)) {
-      const k = cellKey(cell.col, cell.row);
-      if (!this.pathSet.has(k)) this.blockedSet.add(k);
-    }
 
     this.enemyPool = new Pool(createEnemy, resetEnemy);
     this.projPool = new Pool(createProjectile, resetProjectile);
@@ -77,15 +69,11 @@ export class World {
     const heroDef = level.heroSpawn ? { ...this.heroDef, spawn: level.heroSpawn } : this.heroDef;
     this.hero = createHero(heroDef, level);
     const heroSpawnGrid = worldToGrid(this.hero._spawn.x, this.hero._spawn.z, level);
-    this.reservedSet = new Set([
-      cellKey(level.core.col, level.core.row),
-      cellKey(heroSpawnGrid.col, heroSpawnGrid.row),
-    ]);
-    for (const lane of getLevelLanes(level)) {
-      if (lane.spawn) this.reservedSet.add(cellKey(lane.spawn.col, lane.spawn.row));
-    }
-    if (level.breach) this.reservedSet.add(cellKey(level.breach.col, level.breach.row));
-    for (const cell of expandRects(level.reservedZones || [])) this.reservedSet.add(cellKey(cell.col, cell.row));
+    const placementSets = createPlacementSets(level, heroSpawnGrid);
+    this.pathSet = placementSets.pathSet;
+    this.buildableSet = placementSets.buildableSet;
+    this.blockedSet = placementSets.blockedSet;
+    this.reservedSet = placementSets.reservedSet;
     const _B = this.bonuses;
     this.hero.ability = { ...this.hero.ability };
     this.hero.attackDamage *= 1 + (_B.heroDamagePct || 0) / 100;
@@ -139,21 +127,24 @@ export class World {
   // ---- building -------------------------------------------------------------
 
   placementStatus(typeId, col, row, opts = {}) {
-    const k = cellKey(col, row);
-    const def = typeId ? TOWERS[typeId] : null;
-    if (typeId && !def) return { ok: false, reason: "unknown" };
-    if (col < 0 || row < 0 || col >= this.level.cols || row >= this.level.rows) return { ok: false, reason: "bounds" };
-    if (this.reservedSet.has(k)) return { ok: false, reason: "reserved" };
-    if (this.pathSet.has(k) && !(def && (def.blocksEnemies || def.defenseType === "trap" || def.defenseType === "aura"))) return { ok: false, reason: "path" };
-    if (this.blockedSet.has(k)) return { ok: false, reason: "blocked" };
-    if (this.buildableSet && !this.buildableSet.has(k)) return { ok: false, reason: "buildable" };
-    if (this.occupied.has(k)) return { ok: false, reason: "occupied" };
-    if (!opts.ignoreCost && def && this.marrow < def.cost) return { ok: false, reason: "marrow" };
-    return { ok: true, reason: "ok" };
+    return checkPlacementStatus(this._placementRuleState(), typeId, col, row, opts);
   }
 
   buildableAt(col, row) {
-    return this.placementStatus(null, col, row, { ignoreCost: true }).ok;
+    return placementBuildableAt(this._placementRuleState(), col, row);
+  }
+
+  _placementRuleState() {
+    return {
+      level: this.level,
+      towerDefs: TOWERS,
+      marrow: this.marrow,
+      pathSet: this.pathSet,
+      reservedSet: this.reservedSet,
+      blockedSet: this.blockedSet,
+      buildableSet: this.buildableSet,
+      occupied: this.occupied,
+    };
   }
 
   _blockedAt(x, z) {
