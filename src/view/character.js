@@ -119,6 +119,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
 
   // ---- animation (the single risky API surface; fully guarded) --------------
   let layer = null;
+  let hasAttack = false;
   const tracks = {};
   try {
     for (const lib of CHAR_ANIM_LIBS) collectTracks(await loadContainer(app, lib), tracks);
@@ -139,7 +140,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     assign("Walk", CHAR_CLIPS.walk, true);
     assign("Run", CHAR_CLIPS.run, true);
     assign("Death", CHAR_CLIPS.death, false);
-    const hasAttack = assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping when a real clip exists
+    hasAttack = assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping when a real clip exists
     layer = inner.anim.baseLayer || null;
     goto(layer, "Idle", 0);
   } catch (e) {

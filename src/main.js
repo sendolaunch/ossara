@@ -97,7 +97,9 @@ function startMission(missionId = "first-breach", selection = {}) {
   }
   const missionCfg = selection.mission || getMission(missionId || selection.missionId || "first-breach");
   const difficultyCfg = selection.difficulty || getDifficulty(selection.difficultyId || "initiate");
+  screensRoot.style.display = "none";
   if (mapSelect) mapSelect.hide();
+  if (heroSelect) heroSelect.hide();
   if (hub) hub.hide();
   app.style.display = "";
   if (!mission) {

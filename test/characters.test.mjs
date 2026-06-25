@@ -13,6 +13,7 @@ import {
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
 const pub = (rel) => fileURLToPath(new URL("../public/" + rel, import.meta.url));
+const src = (rel) => fileURLToPath(new URL("../src/" + rel, import.meta.url));
 
 // Minimal GLB → embedded glTF JSON reader (first JSON chunk).
 function glbJson(absPath) {
@@ -43,6 +44,9 @@ for (const [role, clip] of Object.entries(CHAR_CLIPS)) {
   ok(clipBank.has(clip), `clip "${clip}" (${role}) exists in the anim libraries`);
 }
 ok(!CHAR_CLIPS.attack, "Warden basic attack uses procedural sword-swing feedback instead of the Throw placeholder");
+const characterSource = readFileSync(src("view/character.js"), "utf8");
+ok(characterSource.includes("let hasAttack = false"), "hero attack clip flag is scoped for the returned control surface");
+ok(!characterSource.includes("const hasAttack = assign"), "hero attack clip flag is not block-scoped inside animation setup");
 
 // 2) Every class: model present, has both handslots, weapon/offhand present.
 for (const [cls, def] of Object.entries(CHARACTERS)) {

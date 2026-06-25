@@ -1598,7 +1598,16 @@ export class PCRenderer {
       this.heroCtl.setMoving(moving && h.alive);
       this.heroCtl.setDead(!h.alive);
       this.heroAnimation = { loaded: true, fallback: false, moving: moving && h.alive, running: running && moving && h.alive, dead: !h.alive };
-      if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) this.heroCtl.playAttack();
+      if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
+        try {
+          this.heroCtl.playAttack?.();
+        } catch (err) {
+          if (!this._warnedHeroAttackVisual) {
+            console.warn("[mission] hero attack animation failed; continuing with procedural FX", err);
+            this._warnedHeroAttackVisual = true;
+          }
+        }
+      }
       this._prevAtkCd = h.attackCd;
       this._prevHero = { x: h.x, z: h.z };
     } else {
