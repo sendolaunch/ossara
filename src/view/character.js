@@ -428,11 +428,11 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   };
 
   const resolveAttackTarget = (preferred = "") => {
-    if (!preferred) return attackPose.hand || attackPose.handSlot || attackPose.sword || inner.findByName("sword_1handed");
+    if (!preferred) return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
     if (preferred === "hand.r") return attackPose.hand;
     if (preferred === HANDSLOT_R) return attackPose.handSlot;
     if (preferred === "sword_1handed") return attackPose.sword || inner.findByName("sword_1handed");
-    return attackPose.hand || attackPose.handSlot || attackPose.sword || inner.findByName("sword_1handed");
+    return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
   };
 
   const resetAttackPose = () => {
@@ -463,16 +463,16 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     attackPose.phase = pose.phase;
     applyBoneOffset("upper", attackPose.upperArm, pose.arm.upper);
     applyBoneOffset("lower", attackPose.lowerArm, pose.arm.lower);
-    if (attackPose.target !== attackPose.hand) applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
+    applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
     attackPose.target.setLocalPosition(
       attackPose.basePos.x + pose.pos.x,
       attackPose.basePos.y + pose.pos.y,
       attackPose.basePos.z + pose.pos.z,
     );
     attackPose.target.setLocalEulerAngles(
-      attackPose.baseRot.x + pose.rot.x + (attackPose.target === attackPose.hand ? pose.arm.hand.x * 0.35 : 0),
-      attackPose.baseRot.y + pose.rot.y + (attackPose.target === attackPose.hand ? pose.arm.hand.y * 0.35 : 0),
-      attackPose.baseRot.z + pose.rot.z + (attackPose.target === attackPose.hand ? pose.arm.hand.z * 0.35 : 0),
+      attackPose.baseRot.x + pose.rot.x,
+      attackPose.baseRot.y + pose.rot.y,
+      attackPose.baseRot.z + pose.rot.z,
     );
     attackPose.lastWorld = worldSnapshot(attackPose.target);
     attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
@@ -496,7 +496,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.lastWorld = attackPose.beforeWorld;
       attackPose.lastLocalRot = localRotSnapshot(target);
       attackPose.variant = resolveAttackVariant(opts.variant ?? opts.variantId ?? 0);
-      attackPose.handFollowActive = target === attackPose.hand || target === attackPose.handSlot;
+      attackPose.handFollowActive = target === attackPose.sword || target?.name === "sword_1handed";
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
       attackPose.duration = HERO_ATTACK_TIMING.total;
       attackPose.playbackScale = opts.slow ? HERO_ATTACK_TIMING.total / HERO_ATTACK_TIMING.slowTotal : 1;

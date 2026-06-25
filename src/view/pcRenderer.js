@@ -259,6 +259,7 @@ export class PCRenderer {
     this.heroAttackComboIndex = 0;
     this.heroBodySwing = null;
     this.heroAttackProxyVisible = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devAttackProxy") === "1");
+    this.heroSlashTrailVisible = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devSlashTrail") === "1");
     this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     this.enemyAnimDebugEnabled = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devAnimDebug") === "1");
     this.enemyAnimDebugEl = null;
@@ -1270,6 +1271,7 @@ export class PCRenderer {
     const swingVariant = typeof variant === "string"
       ? HERO_ATTACK_VARIANTS.find((v) => v.id === variant) || HERO_ATTACK_VARIANTS[0]
       : variant || HERO_ATTACK_VARIANTS[0];
+    if (!this.heroAttackProxyVisible && !this.heroSlashTrailVisible) return;
     const root = new pc.Entity("hero-sword-swing");
     root.name = this.heroAttackProxyVisible ? "hero-visible-sword-proxy" : "hero-slash-trail-fx";
     let blade = null;
@@ -1289,14 +1291,16 @@ export class PCRenderer {
       guard.setLocalScale(0.42, 0.06, 0.08);
       root.addChild(guard);
     }
-    const trailMat = mat(hit ? "plague" : "ash", hit ? 1.2 : 0.7);
     const trails = [];
-    for (let i = 0; i < 4; i++) {
-      const t = prim("box", trailMat);
-      t.name = `sword-trail-${i}`;
-      t.setLocalScale(0.55 - i * 0.08, 0.035, 0.05);
-      root.addChild(t);
-      trails.push(t);
+    if (this.heroSlashTrailVisible) {
+      const trailMat = mat(hit ? "plague" : "ash", hit ? 1.2 : 0.7);
+      for (let i = 0; i < 4; i++) {
+        const t = prim("box", trailMat);
+        t.name = `sword-trail-${i}`;
+        t.setLocalScale(0.55 - i * 0.08, 0.035, 0.05);
+        root.addChild(t);
+        trails.push(t);
+      }
     }
     this.app.root.addChild(root);
     this.fx.push({
@@ -1355,9 +1359,9 @@ export class PCRenderer {
     // Torso starts a hair before the arm/sword so the slash reads body-driven.
     const t = Math.min(duration, elapsed + 0.035);
     const pose = heroAttackPoseAt(this.heroBodySwing.variant || HERO_ATTACK_VARIANTS[0], t).body;
-    const yaw = pose.yaw;
-    const roll = pose.roll;
-    const pitch = pose.pitch;
+    const yaw = pose.yaw * 0.35;
+    const roll = 0;
+    const pitch = 0;
     this.heroEntity.setLocalEulerAngles(pitch, baseYawDeg + yaw, roll);
   }
 

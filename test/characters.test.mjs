@@ -56,7 +56,7 @@ ok(characterSource.includes("playExtremePose"), "character control exposes dev e
 ok(characterSource.includes("getAttackDebug"), "character control exposes attack visual diagnostics");
 ok(characterSource.includes("updateProceduralAttackPose"), "character control can reapply attack pose after animation sync");
 ok(characterSource.includes("lowerarm.r") && characterSource.includes("upperarm.r"), "procedural attack pose can target right arm bones");
-ok(characterSource.includes("return attackPose.hand || attackPose.handSlot"), "procedural attack defaults to the right hand so the sword follows the grip");
+ok(characterSource.includes("return attackPose.sword || inner.findByName(\"sword_1handed\")"), "procedural attack defaults to the v3-approved sword source of truth");
 ok(characterSource.includes("heroAttackPoseAt"), "character attack uses a shared key-pose calculation");
 ok(characterSource.includes("phase: \"windup\"") && characterSource.includes("phase: \"strike\""), "procedural attack exposes windup and strike phases");
 ok(characterSource.includes("phase: \"followThrough\"") && characterSource.includes("phase: \"recover\""), "procedural attack exposes follow-through and recovery phases");
@@ -81,7 +81,8 @@ ok(rendererSource.includes("playProceduralAttack?.({ variant: variant.id })"), "
 ok(rendererSource.includes("heroBodySwing"), "mission renderer applies visual-only body recoil during Warden attacks");
 ok(rendererSource.includes("updateProceduralAttackPose?.()"), "mission renderer reapplies procedural arm/sword pose after animation sync");
 ok(rendererSource.includes("HERO_ATTACK_TIMING.total"), "mission renderer syncs sword/body FX duration to attack timing");
-ok(rendererSource.includes("devAttackProxy") && rendererSource.includes("hero-slash-trail-fx"), "mission renderer hides old proxy sword unless explicitly debug-enabled");
+ok(rendererSource.includes("devAttackProxy") && rendererSource.includes("devSlashTrail"), "mission renderer keeps proxy/trail slash helpers behind explicit dev flags");
+ok(rendererSource.includes("if (!this.heroAttackProxyVisible && !this.heroSlashTrailVisible) return"), "normal mission attacks do not spawn proxy or claw trail FX");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
 ok(labSource.includes("pose driver:"), "hero attack lab reports bone/proxy driver state");
