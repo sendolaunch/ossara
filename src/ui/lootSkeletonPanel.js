@@ -3,7 +3,7 @@ import { LOOT_EQUIPMENT_SLOTS, LOOT_STAT_KEYS } from "../config/items.js";
 import {
   createLootState,
   equipLootItem,
-  getEquippedLootStats,
+  getLootViewerData,
   grantStarterLoot,
   unequipLootSlot,
 } from "../sim/lootModel.js";
@@ -16,8 +16,10 @@ const el = (tag, styles = {}, text = "") => {
 };
 
 export class LootSkeletonPanel {
-  constructor(root) {
-    this.state = createLootState();
+  constructor(root, { getState, onChange } = {}) {
+    this.getState = getState || (() => this.state);
+    this.onChange = onChange || (() => {});
+    this.state = createLootState(this.getState?.());
     this.root = el("div", {
       position: "absolute",
       right: "14px",
@@ -35,6 +37,12 @@ export class LootSkeletonPanel {
       boxShadow: "0 12px 30px rgba(0,0,0,0.45)",
     });
     root.appendChild(this.root);
+    this.render();
+  }
+
+  mutate(fn) {
+    fn(this.state);
+    this.onChange(this.state);
     this.render();
   }
 
@@ -65,11 +73,13 @@ export class LootSkeletonPanel {
       "Dev-only equipment test panel. This is not the Forge or final loot UI."));
 
     this.root.appendChild(this.button("Grant starter reward", () => {
-      grantStarterLoot(this.state);
-      this.render();
+      this.mutate((state) => grantStarterLoot(state));
     }));
 
-    const stats = getEquippedLootStats(this.state);
+    const data = getLootViewerData(this.state);
+    const itemStats = data.itemStats;
+    const setStats = data.setStats;
+    const finalStats = data.totalStats;
     this.root.appendChild(el("div", {
       marginTop: "10px",
       padding: "7px",
@@ -77,15 +87,24 @@ export class LootSkeletonPanel {
       background: "rgba(110,230,90,0.08)",
       color: CSS.plague,
       lineHeight: "1.45",
-    }, LOOT_STAT_KEYS.map((key) => `${key}: ${stats[key]}`).join(" | ")));
+    }, `Final: ${LOOT_STAT_KEYS.map((key) => `${key}: ${finalStats[key]}`).join(" | ")}`));
+    this.root.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" },
+      `Items: ${LOOT_STAT_KEYS.map((key) => `${key}: ${itemStats[key]}`).join(" | ")}`));
+    this.root.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "3px" },
+      `Sets: ${LOOT_STAT_KEYS.map((key) => `${key}: ${setStats[key]}`).join(" | ")}`));
+
+    const setLines = data.activeSetBonuses.length
+      ? data.activeSetBonuses.map((bonus) => `${bonus.setName} ${bonus.label}`).join(" | ")
+      : "No active set bonuses.";
+    this.root.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, setLines));
 
     const equipped = el("div", { marginTop: "10px" });
     equipped.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Equipped"));
     for (const slot of LOOT_EQUIPMENT_SLOTS) {
-      const item = this.state.items.find((candidate) => candidate.id === this.state.equipped[slot]);
+      const item = data.equippedItems[slot];
       const row = el("div", { color: item ? CSS.bone : CSS.ash, margin: "3px 0" },
         `${slot}: ${item ? item.name : "empty"}`);
-      if (item) row.appendChild(this.button("Unequip", () => { unequipLootSlot(this.state, slot); this.render(); }));
+      if (item) row.appendChild(this.button("Unequip", () => this.mutate((state) => unequipLootSlot(state, slot))));
       equipped.appendChild(row);
     }
     this.root.appendChild(equipped);
@@ -103,10 +122,14 @@ export class LootSkeletonPanel {
       });
       card.appendChild(el("div", { color: CSS.bone, fontWeight: "700" }, item.name));
       card.appendChild(el("div", { color: CSS.ash, fontSize: "11px" },
-        `${item.slot} | ${item.rarity} | ilvl ${item.itemLevel}`));
+        `${item.slot} | ${item.rarity} | ilvl ${item.itemLevel}${item.setId ? " | " + item.setId : ""}`));
       card.appendChild(el("div", { color: CSS.plague, fontSize: "11px", marginTop: "2px" },
         LOOT_STAT_KEYS.filter((key) => item.stats[key]).map((key) => `+${item.stats[key]} ${key}`).join(" | ") || "No stats"));
-      card.appendChild(this.button("Equip", () => { equipLootItem(this.state, item.id); this.render(); }));
+      if (this.state.equipped[item.slot] === item.id) {
+        card.appendChild(el("div", { color: CSS.gold, fontSize: "11px", marginTop: "6px", fontWeight: "700" }, "Equipped"));
+      } else {
+        card.appendChild(this.button("Equip", () => this.mutate((state) => equipLootItem(state, item.id))));
+      }
       items.appendChild(card);
     }
     this.root.appendChild(items);

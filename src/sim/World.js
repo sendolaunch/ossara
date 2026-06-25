@@ -76,6 +76,7 @@ export class World {
     this.heroDef = opts.hero || CLASS_KITS.warden.hero;
     this.availableTowers = opts.towers || Object.keys(TOWERS);
     this.bonuses = opts.bonuses || {};
+    this.equipmentStats = opts.equipmentStats || {};
     this.lanePaths = buildLanePaths(level);
     this.laneIds = Object.keys(this.lanePaths);
     this.defaultLaneId = this.laneIds[0] || "legacy";
@@ -98,6 +99,7 @@ export class World {
     this.hero.attackDamage *= 1 + (_B.heroDamagePct || 0) / 100;
     this.hero.ability.damage *= 1 + (_B.heroDamagePct || 0) / 100;
     this.hero.maxHp = Math.round(this.hero.maxHp * (1 + (_B.heroHpPct || 0) / 100));
+    this._applyEquipmentHeroStats();
     this.hero.hp = this.hero.maxHp;
     this.hero.speed *= 1 + (_B.movePct || 0) / 100;
     this.hero.attackRate *= 1 + (_B.fireRatePct || 0) / 100;
@@ -183,12 +185,40 @@ export class World {
     tower.range *= 1 + (this.bonuses.rangePct || 0) / 100;
     tower.fireRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
     tower.attackRate *= 1 + (this.bonuses.fireRatePct || 0) / 100;
+    this._applyEquipmentDefenseStats(tower);
     this._captureDefenseBaseStats(tower);
     this._refreshDefenseEconomy(tower);
     this.towers.push(tower);
     this.occupied.add(cellKey(col, row));
     this.events.push({ kind: "place", x: w.x, z: w.z });
     return { ok: true, tower };
+  }
+
+  _equipmentStat(key) {
+    return Number(this.equipmentStats?.[key] || 0);
+  }
+
+  _applyEquipmentHeroStats() {
+    const heroDamage = this._equipmentStat("heroDamage");
+    const heroHealth = this._equipmentStat("heroHealth");
+    const abilityPower = this._equipmentStat("abilityPower");
+    if (heroDamage) this.hero.attackDamage = Math.max(0, this.hero.attackDamage + heroDamage);
+    if (abilityPower && this.hero.ability) this.hero.ability.damage = Math.max(0, this.hero.ability.damage + abilityPower);
+    if (heroHealth) this.hero.maxHp = Math.max(1, Math.round(this.hero.maxHp + heroHealth));
+  }
+
+  _applyEquipmentDefenseStats(tower) {
+    const defenseHealth = this._equipmentStat("defenseHealth");
+    const defenseDamage = this._equipmentStat("defenseDamage");
+    if (defenseHealth && tower.maxHp > 0) {
+      const hpBonus = Math.round(defenseHealth);
+      tower.maxHp = Math.max(1, tower.maxHp + hpBonus);
+      tower.hp = Math.max(1, tower.hp + hpBonus);
+    }
+    if (defenseDamage) {
+      if (tower.damage > 0) tower.damage = Math.max(0, tower.damage + defenseDamage);
+      if (tower.contactDamage > 0) tower.contactDamage = Math.max(0, tower.contactDamage + defenseDamage);
+    }
   }
 
   towerAtCell(col, row) {

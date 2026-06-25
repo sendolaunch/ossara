@@ -131,9 +131,10 @@ export class Mission {
     this.waves = opts.tutorial ? TUTORIAL_WAVES : startCfg.waves || WAVES;
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._bonuses = opts.bonuses || {};
+    this._equipmentStats = opts.equipmentStats || {};
     this.onWin = opts.onWin || null;
     this._wonFired = false;
-    this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
+    this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
     this.renderer.reset();
@@ -157,7 +158,7 @@ export class Mission {
     this.input?.resetState?.();
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
-    this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
+    this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
     this.renderer.reset();

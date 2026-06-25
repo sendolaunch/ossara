@@ -54,12 +54,55 @@ export const STARTER_LOOT_ITEMS = [
     stats: { heroDamage: 3, abilityPower: 1 },
   },
   {
-    id: "starter-warded-helm",
-    name: "Warded Recruit Helm",
+    id: "starter-plagueguard-helm",
+    name: "Plagueguard Helm",
     slot: "helm",
     rarity: "common",
     itemLevel: 1,
     levelRequirement: 1,
+    setId: "plagueguard",
     stats: { heroHealth: 8, defenseHealth: 2 },
   },
+  {
+    id: "starter-plagueguard-chest",
+    name: "Plagueguard Cuirass",
+    slot: "chest",
+    rarity: "common",
+    itemLevel: 1,
+    levelRequirement: 1,
+    setId: "plagueguard",
+    stats: { heroHealth: 12, defenseHealth: 3 },
+  },
+  {
+    id: "starter-plagueguard-gloves",
+    name: "Plagueguard Grips",
+    slot: "gloves",
+    rarity: "common",
+    itemLevel: 1,
+    levelRequirement: 1,
+    setId: "plagueguard",
+    stats: { defenseDamage: 1, abilityPower: 1 },
+  },
+  {
+    id: "starter-plagueguard-boots",
+    name: "Plagueguard Sabatons",
+    slot: "boots",
+    rarity: "common",
+    itemLevel: 1,
+    levelRequirement: 1,
+    setId: "plagueguard",
+    stats: { heroHealth: 6, defenseHealth: 1 },
+  },
 ];
+
+export const LOOT_ITEM_SETS = {
+  plagueguard: {
+    id: "plagueguard",
+    name: "Plagueguard",
+    slots: ["helm", "chest", "gloves", "boots"],
+    bonuses: [
+      { pieces: 2, label: "2-piece: +5 defenseHealth", stats: { defenseHealth: 5 } },
+      { pieces: 4, label: "4-piece: +4 abilityPower", stats: { abilityPower: 4 } },
+    ],
+  },
+};

@@ -12,6 +12,7 @@ import { mountVersionBadge } from "./ui/versionBadge.js";
 import { loadProfile, saveProfile, addItem, getBonuses, setActive } from "./sim/profile.js";
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
+import { createLootState, getAppliedLootStats } from "./sim/lootModel.js";
 import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
 import { Inventory } from "./ui/inventory.js";
 import { LootSkeletonPanel } from "./ui/lootSkeletonPanel.js";
@@ -26,6 +27,7 @@ import { devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devLootEnabled,
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
 const profile = loadProfile();
+profile.lootSkeleton = createLootState(profile.lootSkeleton);
 let inventoryUI = null;
 let account = null;
 function persist() { saveProfile(profile); if (account) saveRemoteProfile(profile, account); }
@@ -115,6 +117,7 @@ function startMission(missionId = "first-breach", selection = {}) {
     level: missionCfg.level,
     waves: missionCfg.waves,
     bonuses: getBonuses(profile, profile.activeClass),
+    equipmentStats: getAppliedLootStats(profile.lootSkeleton).totalStats,
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), difficultyCfg.loot);
       drops.forEach((d) => addItem(profile, d));
@@ -187,6 +190,7 @@ const flow = new ScreenFlow(screensRoot, {
     profile.wallet = address;
     const remote = await loadRemoteProfile(address);
     adoptRemote(profile, remote);
+    profile.lootSkeleton = createLootState(profile.lootSkeleton);
     saveProfile(profile);
     await saveRemoteProfile(profile, account);
   },
@@ -218,7 +222,13 @@ window.OSSARA = {
 };
 
 if (devLoot) {
-  window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui);
+  window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui, {
+    getState: () => profile.lootSkeleton,
+    onChange: (state) => {
+      profile.lootSkeleton = createLootState(state);
+      persist();
+    },
+  });
 }
 
 if (devHeroAttackClass) {

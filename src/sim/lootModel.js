@@ -1,4 +1,4 @@
-import { LOOT_EQUIPMENT_SLOTS, LOOT_MODEL_VERSION, LOOT_STAT_KEYS, STARTER_LOOT_ITEMS } from "../config/items.js";
+import { LOOT_EQUIPMENT_SLOTS, LOOT_ITEM_SETS, LOOT_MODEL_VERSION, LOOT_STAT_KEYS, STARTER_LOOT_ITEMS } from "../config/items.js";
 
 export function emptyLootEquipment() {
   const equipped = {};
@@ -13,6 +13,7 @@ export function emptyLootStats() {
 }
 
 export function createLootState(data = {}) {
+  data = data && typeof data === "object" ? data : {};
   const state = {
     version: LOOT_MODEL_VERSION,
     items: [],
@@ -40,6 +41,7 @@ export function normalizeLootItem(item) {
     rarity: String(item?.rarity || "common"),
     itemLevel: Math.max(1, Number(item?.itemLevel || item?.ilvl || 1)),
     levelRequirement: Math.max(1, Number(item?.levelRequirement || 1)),
+    setId: item?.setId ? String(item.setId) : null,
     stats,
   };
 }
@@ -108,6 +110,58 @@ export function getEquippedLootStats(state) {
     for (const key of LOOT_STAT_KEYS) totals[key] += Number(item.stats?.[key] || 0);
   }
   return totals;
+}
+
+export function addLootStats(a = {}, b = {}) {
+  const totals = emptyLootStats();
+  for (const key of LOOT_STAT_KEYS) totals[key] = Number(a[key] || 0) + Number(b[key] || 0);
+  return totals;
+}
+
+export function getLootSetCounts(state, sets = LOOT_ITEM_SETS) {
+  const counts = {};
+  for (const item of Object.values(getEquippedLootItems(state))) {
+    if (!item || !item.setId || !sets[item.setId]) continue;
+    counts[item.setId] = (counts[item.setId] || 0) + 1;
+  }
+  return counts;
+}
+
+export function getActiveLootSetBonuses(state, sets = LOOT_ITEM_SETS) {
+  const counts = getLootSetCounts(state, sets);
+  const active = [];
+  for (const set of Object.values(sets)) {
+    const count = counts[set.id] || 0;
+    for (const bonus of set.bonuses || []) {
+      if (count >= bonus.pieces) active.push({ setId: set.id, setName: set.name, pieces: bonus.pieces, label: bonus.label, stats: { ...(bonus.stats || {}) } });
+    }
+  }
+  return active;
+}
+
+export function getLootSetBonusStats(state, sets = LOOT_ITEM_SETS) {
+  let totals = emptyLootStats();
+  for (const bonus of getActiveLootSetBonuses(state, sets)) totals = addLootStats(totals, bonus.stats);
+  return totals;
+}
+
+export function getAppliedLootStats(state, sets = LOOT_ITEM_SETS) {
+  const itemStats = getEquippedLootStats(state);
+  const setStats = getLootSetBonusStats(state, sets);
+  return {
+    itemStats,
+    setStats,
+    totalStats: addLootStats(itemStats, setStats),
+    activeSetBonuses: getActiveLootSetBonuses(state, sets),
+  };
+}
+
+export function getLootViewerData(state) {
+  return {
+    state,
+    equippedItems: getEquippedLootItems(state),
+    ...getAppliedLootStats(state),
+  };
 }
 
 export function grantStarterLoot(state, itemIds = STARTER_LOOT_ITEMS.map((item) => item.id)) {

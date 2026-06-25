@@ -39,7 +39,7 @@ export function setHeroName(acct, classId, username) {
 }
 
 export function createAccount() {
-  return { version: SAVE_VERSION, name: "", wallet: null, stash: [], heroes: {}, activeClass: null };
+  return { version: SAVE_VERSION, name: "", wallet: null, stash: [], heroes: {}, activeClass: null, lootSkeleton: null };
 }
 
 // Lazily create + normalise the hero for a class, then return it.
@@ -134,6 +134,7 @@ export function migrate(data) {
     a.stash = Array.isArray(data.stash) ? data.stash : [];
     a.heroes = data.heroes && typeof data.heroes === "object" ? data.heroes : {};
     a.activeClass = data.activeClass || null;
+    a.lootSkeleton = data.lootSkeleton && typeof data.lootSkeleton === "object" ? data.lootSkeleton : null;
     for (const cid of Object.keys(a.heroes)) ensureHero(a, cid);
     if (a.activeClass && !a.heroes[a.activeClass]) a.activeClass = null;
     return a;
