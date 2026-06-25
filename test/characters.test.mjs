@@ -7,7 +7,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  CHARACTERS, CHAR_ANIM_LIBS, CHAR_CLIPS, CHAR_DEV_ATTACK_ANIM_LIB, CHAR_DEV_ATTACK_CLIPS, HANDSLOT_R, HANDSLOT_L,
+  CHARACTERS, CHAR_ANIM_LIBS, CHAR_CLIPS, CHAR_DEV_ATTACK_ANIM_LIB, CHAR_DEV_ATTACK_CLIPS, CHAR_MELEE_ATTACK_ANIM_LIB, CHAR_WARDEN_ATTACK_CLIP, HANDSLOT_R, HANDSLOT_L,
 } from "../src/config/characters.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt } from "../src/view/character.js";
 
@@ -50,7 +50,10 @@ const devAttackNames = existsSync(devAttackPath) ? animNames(glbJson(devAttackPa
 for (const clip of CHAR_DEV_ATTACK_CLIPS) {
   ok(devAttackNames.has(clip), `dev attack clip exists: ${clip}`);
 }
-ok(!CHAR_CLIPS.attack, "Warden basic attack uses procedural sword-swing feedback instead of the Throw placeholder");
+ok(!CHAR_CLIPS.attack, "global default attack clip stays unset so classes opt in deliberately");
+ok(CHARACTERS.warden.attackAnimLib === CHAR_MELEE_ATTACK_ANIM_LIB, "Warden loads the KayKit melee combat animation library");
+ok(CHARACTERS.warden.attackClip === CHAR_WARDEN_ATTACK_CLIP, "Warden default attack uses the approved KayKit 1H clip");
+ok(CHAR_WARDEN_ATTACK_CLIP === "Melee_1H_Attack_Slice_Diagonal", "Warden selected clip is the approved diagonal 1H slice");
 const characterSource = readFileSync(src("view/character.js"), "utf8");
 ok(characterSource.includes("let hasAttack = false"), "hero attack clip flag is scoped for the returned control surface");
 ok(!characterSource.includes("const hasAttack = assign"), "hero attack clip flag is not block-scoped inside animation setup");
@@ -71,6 +74,8 @@ ok(characterSource.includes("devSegmentedArm = false"), "segmented right-arm fol
 ok(characterSource.includes("segmentedArmEnabled = !!(devSegmentedArm && import.meta.env?.DEV)"), "segmented arm fallback is gated behind dev mode");
 ok(characterSource.includes("real KayKit arm + sword fallback"), "normal attack keeps the real KayKit right arm visible");
 ok(characterSource.includes("playDevAttackClip"), "character control exposes dev-only real KayKit attack clip preview");
+ok(characterSource.includes("attackVisualMode: hasAttack ? \"real-kaykit-clip\" : \"procedural-fallback\""), "character control tracks real-vs-fallback attack visual mode");
+ok(characterSource.includes("activeAttackClip: hasAttack ? attackClip : \"\""), "character control exposes the active attack clip name");
 ok(characterSource.includes("computeElbowPoint"), "procedural attack computes an elbow target for visible arm bend");
 ok(characterSource.includes("return attackPose.sword || inner.findByName(\"sword_1handed\")"), "procedural attack defaults to the v3-approved sword source of truth");
 ok(characterSource.includes("heroAttackPoseAt"), "character attack uses a shared key-pose calculation");
@@ -94,6 +99,8 @@ const rendererSource = readFileSync(src("view/pcRenderer.js"), "utf8");
 ok(rendererSource.includes("heroAttackComboIndex"), "mission renderer tracks visual-only attack combo index");
 ok(rendererSource.includes("variantId: swingVariant.id"), "hero sword proxy stores the visual variant id");
 ok(rendererSource.includes("playProceduralAttack?.({ variant: variant.id })"), "mission renderer passes combo variant to procedural sword pose");
+ok(rendererSource.includes("const usedClip = this.heroCtl.playAttack?.()"), "mission renderer tries the real KayKit attack clip first");
+ok(rendererSource.includes("else playProceduralFallback()"), "mission renderer keeps procedural sword swing as fallback");
 ok(rendererSource.includes("heroBodySwing"), "mission renderer applies visual-only body recoil during Warden attacks");
 ok(rendererSource.includes("updateProceduralAttackPose?.()"), "mission renderer reapplies procedural arm/sword pose after animation sync");
 ok(rendererSource.includes("HERO_ATTACK_TIMING.total"), "mission renderer syncs sword/body FX duration to attack timing");
@@ -103,7 +110,10 @@ ok(rendererSource.includes("const roll = 0") && rendererSource.includes("const p
 ok(rendererSource.includes("pose.yaw * 0.1"), "mission renderer keeps Warden body yaw subtle");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
-ok(labSource.includes("Real KayKit 1H / A"), "hero attack lab exposes real KayKit one-handed clip probe");
+ok(labSource.includes("Normal Attack / Space"), "hero attack lab normal attack uses the production visual path");
+ok(labSource.includes("Cycle Real 1H / A"), "hero attack lab exposes real KayKit one-handed clip probe");
+ok(labSource.includes("Force Procedural / P"), "hero attack lab can force procedural fallback for comparison");
+ok(labSource.includes("attack visual mode:") && labSource.includes("active attack clip:"), "hero attack lab reports real-vs-fallback mode and active clip");
 ok(labSource.includes("devSegmentedArm"), "hero attack lab requires an explicit dev flag for the segmented arm fallback");
 ok(labSource.includes("Proof lowerarm.r / K") && labSource.includes("Proof upperarm.r / L"), "hero attack lab exposes direct right-arm bone proof controls");
 ok(labSource.includes("Proof arm mesh / M"), "hero attack lab exposes visible arm mesh proof control");

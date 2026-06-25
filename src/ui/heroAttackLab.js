@@ -48,7 +48,7 @@ export class HeroAttackLab {
     this.variantIndex = 0;
     const params = new URLSearchParams(window.location.search);
     this.devSegmentedArm = params.get("devSegmentedArm") === "1";
-    this.realAttackClipIndex = 0;
+    this.realAttackClipIndex = 1;
     this.lastAction = "loading";
     this._frame = this._frame.bind(this);
     this._onKey = this._onKey.bind(this);
@@ -108,9 +108,10 @@ export class HeroAttackLab {
       <div style="color:${CSS.ash}">Dev-only route: ?devHeroAttack=warden</div>
       <div style="color:${CSS.ash}">Segmented arm is hidden by default; add ?devSegmentedArm=1 to compare the old follower.</div>
       <div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto">
-        <button data-action="attack">Attack / Space</button>
-        <button data-action="slow">Slow Attack / S</button>
-        <button data-action="real-attack">Real KayKit 1H / A</button>
+        <button data-action="attack">Normal Attack / Space</button>
+        <button data-action="procedural">Force Procedural / P</button>
+        <button data-action="slow">Slow Procedural / S</button>
+        <button data-action="real-attack">Cycle Real 1H / A</button>
         <button data-action="variant-0">Variant A / 1</button>
         <button data-action="variant-1">Variant B / 2</button>
         <button data-action="variant-2">Variant C / 3</button>
@@ -141,6 +142,9 @@ export class HeroAttackLab {
       this.ctl.wrap.setLocalEulerAngles(0, 190, 0);
       this.ctl.setMoving(false);
       this.ctl.setDead(false);
+      const preferred = this.ctl.defaultAttackClip || "Melee_1H_Attack_Slice_Diagonal";
+      const preferredIndex = (this.ctl.devAttackClips || []).indexOf(preferred);
+      if (preferredIndex >= 0) this.realAttackClipIndex = preferredIndex;
       this.lastAction = "loaded";
     } else {
       this.lastAction = "failed to load character";
@@ -150,10 +154,20 @@ export class HeroAttackLab {
     requestAnimationFrame(this._frame);
   }
 
-  _triggerAttack(slow = false) {
+  _triggerAttack() {
+    const ok = this.ctl?.playAttack?.();
+    const d = this.ctl?.getAttackDebug?.() || {};
+    if (ok) {
+      this.lastAction = `normal real attack: ${d.activeAttackClip || d.defaultAttackClip || "Attack"}`;
+      return;
+    }
+    this._triggerProceduralFallback(false);
+  }
+
+  _triggerProceduralFallback(slow = false) {
     const variant = HERO_ATTACK_VARIANTS[this.variantIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
     const ok = this.ctl?.playProceduralAttack?.({ slow, variant: variant.id });
-    this.lastAction = ok ? `${slow ? "slow " : ""}${variant.label}` : "attack visual unavailable";
+    this.lastAction = ok ? `${slow ? "slow " : ""}procedural fallback: ${variant.label}` : "procedural fallback unavailable";
     if (ok) this.variantIndex = (this.variantIndex + 1) % HERO_ATTACK_VARIANTS.length;
   }
 
@@ -186,8 +200,9 @@ export class HeroAttackLab {
     if (!btn) return;
     ev.preventDefault();
     const action = btn.dataset.action;
-    if (action === "attack") this._triggerAttack(false);
-    else if (action === "slow") this._triggerAttack(true);
+    if (action === "attack") this._triggerAttack();
+    else if (action === "procedural") this._triggerProceduralFallback(false);
+    else if (action === "slow") this._triggerProceduralFallback(true);
     else if (action === "real-attack") this._triggerRealAttackClip();
     else if (action === "variant-0") this._forceVariant(0);
     else if (action === "variant-1") this._forceVariant(1);
@@ -208,10 +223,13 @@ export class HeroAttackLab {
     const k = ev.key.toLowerCase();
     if (k === " ") {
       ev.preventDefault();
-      this._triggerAttack(false);
+      this._triggerAttack();
     } else if (k === "s") {
       ev.preventDefault();
-      this._triggerAttack(true);
+      this._triggerProceduralFallback(true);
+    } else if (k === "p") {
+      ev.preventDefault();
+      this._triggerProceduralFallback(false);
     } else if (k === "a") {
       ev.preventDefault();
       this._triggerRealAttackClip();
@@ -254,6 +272,10 @@ export class HeroAttackLab {
       `segmented arm dev flag: ${this.devSegmentedArm ? "enabled" : "disabled"}`,
       `real KayKit clips: ${(this.ctl?.devAttackClips || []).join(", ") || "-"}`,
       `active variant: ${d.variantId || "-"} ${d.variantLabel || ""}`,
+      `attack visual mode: ${d.attackVisualMode || "-"}`,
+      `active attack clip: ${d.activeAttackClip || "-"}`,
+      `default attack clip: ${d.defaultAttackClip || "-"}`,
+      `real attack loaded: ${d.realAttackLoaded ? "yes" : "no"}`,
       `attack phase: ${d.phase || "-"}`,
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
       `pose driver: ${boneDriven ? "sword + right-arm bones" : "sword/proxy fallback"}`,

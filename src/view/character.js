@@ -361,9 +361,15 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
   // ---- animation (the single risky API surface; fully guarded) --------------
   let layer = null;
   let hasAttack = false;
+  const attackClip = def.attackClip || CHAR_CLIPS.attack || "";
+  let attackDurationMs = 520;
   const tracks = {};
   try {
     for (const lib of CHAR_ANIM_LIBS) collectTracks(await loadContainer(app, lib), tracks);
+    const extraAnimLibs = new Set();
+    if (def.attackAnimLib) extraAnimLibs.add(def.attackAnimLib);
+    if (devAttackAnimation && import.meta.env?.DEV) extraAnimLibs.add(CHAR_DEV_ATTACK_ANIM_LIB);
+    for (const lib of extraAnimLibs) collectTracks(await loadContainer(app, lib), tracks);
     inner.addComponent("anim", { activate: true });
     const assign = (state, clip, loop = true) => {
       const t = tracks[clip];
@@ -381,9 +387,11 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
     assign("Walk", CHAR_CLIPS.walk, true);
     assign("Run", CHAR_CLIPS.run, true);
     assign("Death", CHAR_CLIPS.death, false);
-    hasAttack = assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping when a real clip exists
-    if (devAttackAnimation && import.meta.env?.DEV) {
-      collectTracks(await loadContainer(app, CHAR_DEV_ATTACK_ANIM_LIB), tracks);
+    hasAttack = assign("Attack", attackClip, false);   // one-shot, non-looping when a real clip exists
+    if (hasAttack && tracks[attackClip]?.duration) {
+      attackDurationMs = Math.min(Math.max(tracks[attackClip].duration * 1000, 420), 2600);
+    } else if (attackClip && import.meta.env?.DEV) {
+      console.warn("[character] attack clip unavailable; procedural fallback will be used", attackClip);
     }
     layer = inner.anim.baseLayer || null;
     goto(layer, "Idle", 0);
@@ -677,6 +685,8 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
       attackPose.handFollowActive = target === attackPose.sword || target?.name === "sword_1handed";
       attackPose.armFollowerActive = false;
       attackPose.armMode = attackPose.segmentedArmEnabled ? "fallback segmented arm" : "real KayKit arm + sword fallback";
+      st.attackVisualMode = "procedural-fallback";
+      st.activeAttackClip = "procedural sword_1handed";
       attackPose.driverProofActive = false;
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
       attackPose.duration = HERO_ATTACK_TIMING.total;
@@ -826,6 +836,10 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
       variantId: attackPose.variant?.id || "",
       variantLabel: attackPose.variant?.label || "",
       currentClip: st.currentClip || "Idle",
+      attackVisualMode: attackPose.active ? "procedural-fallback" : st.attackVisualMode,
+      activeAttackClip: attackPose.active ? "procedural sword_1handed" : st.activeAttackClip,
+      defaultAttackClip: st.defaultAttackClip,
+      realAttackLoaded: !!hasAttack,
       handFollowActive: !!attackPose.handFollowActive,
       armFollowerActive: !!attackPose.armFollowerActive,
       elbowBendActive: !!attackPose.elbowBendActive,
@@ -859,13 +873,26 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
     };
   };
 
-  const st = { moving: false, running: false, dead: false, currentClip: "Idle", _atk: null, _one: null, _assigned: new Set() };
+  const st = {
+    moving: false,
+    running: false,
+    dead: false,
+    attacking: false,
+    currentClip: "Idle",
+    attackVisualMode: hasAttack ? "real-kaykit-clip" : "procedural-fallback",
+    activeAttackClip: hasAttack ? attackClip : "",
+    defaultAttackClip: attackClip || "",
+    _atk: null,
+    _one: null,
+    _assigned: new Set(),
+  };
   return {
     wrap,
     foot,
     setMoving(b) {
       if (!layer || st.dead || b === st.moving) return;
       st.moving = b;
+      if (st.attacking) return;
       st.currentClip = b ? (st.running ? "Run" : "Walk") : "Idle";
       goto(layer, st.currentClip);
     },
@@ -873,6 +900,7 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
       running = !!running;
       if (st.running === running) return;
       st.running = running;
+      if (st.attacking) return;
       if (st.moving && layer) {
         st.currentClip = running ? "Run" : "Walk";
         goto(layer, st.currentClip, 0.15);
@@ -887,6 +915,10 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
         st._assigned.add(name);
       }
       st.currentClip = name;
+      if (CHAR_DEV_ATTACK_CLIPS.includes(name)) {
+        st.attackVisualMode = "real-kaykit-clip";
+        st.activeAttackClip = name;
+      }
       goto(layer, name, 0.1);
       if (!loop) {
         clearTimeout(st._one);
@@ -894,6 +926,8 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
         st._one = setTimeout(() => {
           if (!st.dead) {
             st.currentClip = st.moving ? (st.running ? "Run" : "Walk") : "Idle";
+            st.attackVisualMode = hasAttack ? "real-kaykit-clip" : "procedural-fallback";
+            st.activeAttackClip = hasAttack ? attackClip : "";
             goto(layer, st.currentClip, 0.15);
           }
         }, ms);
@@ -910,20 +944,28 @@ export async function loadCharacter(app, classId, { weapon = true, devSegmentedA
     setDead(b) {
       if (!layer || b === st.dead) return;
       st.dead = b;
+      st.attacking = false;
       st.currentClip = b ? "Death" : "Idle";
       goto(layer, st.currentClip, b ? 0.1 : 0.15);
     },
     playAttack() {
       if (!layer || st.dead || !hasAttack) return false;
       st.currentClip = "Attack";
+      st.attacking = true;
+      st.attackVisualMode = "real-kaykit-clip";
+      st.activeAttackClip = attackClip;
+      resetAttackPose();
       goto(layer, "Attack", 0.05);
       clearTimeout(st._atk);
       st._atk = setTimeout(() => {
         if (!st.dead) {
-          st.currentClip = st.moving ? "Walk" : "Idle";
+          st.attacking = false;
+          st.currentClip = st.moving ? (st.running ? "Run" : "Walk") : "Idle";
+          st.attackVisualMode = "real-kaykit-clip";
+          st.activeAttackClip = attackClip;
           goto(layer, st.currentClip, 0.12);
         }
-      }, 520);
+      }, attackDurationMs);
       return true;
     },
     playProceduralAttack,

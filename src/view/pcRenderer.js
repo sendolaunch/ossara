@@ -1679,16 +1679,21 @@ export class PCRenderer {
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
         const variant = HERO_ATTACK_VARIANTS[this.heroAttackComboIndex % HERO_ATTACK_VARIANTS.length] || HERO_ATTACK_VARIANTS[0];
         this.heroAttackComboIndex = (this.heroAttackComboIndex + 1) % HERO_ATTACK_VARIANTS.length;
-        this.heroBodySwing = { variant, startedAt: this._heroAttackVisualTime(), duration: HERO_ATTACK_TIMING.total };
-        this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true, variant);
+        const playProceduralFallback = () => {
+          this.heroBodySwing = { variant, startedAt: this._heroAttackVisualTime(), duration: HERO_ATTACK_TIMING.total };
+          this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true, variant);
+          this.heroCtl.playProceduralAttack?.({ variant: variant.id });
+        };
         try {
           const usedClip = this.heroCtl.playAttack?.();
-          if (!usedClip) this.heroCtl.playProceduralAttack?.({ variant: variant.id });
+          if (usedClip) this.heroBodySwing = null;
+          else playProceduralFallback();
         } catch (err) {
           if (!this._warnedHeroAttackVisual) {
             console.warn("[mission] hero attack animation failed; continuing with procedural FX", err);
             this._warnedHeroAttackVisual = true;
           }
+          playProceduralFallback();
         }
       }
       this.heroCtl.updateProceduralAttackPose?.();
