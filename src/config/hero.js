@@ -9,7 +9,7 @@ export const HERO = {
   radius: 0.32,
 
   // Manual attack: player-clicked melee swing on a cooldown.
-  attackRange: 1.2,
+  attackRange: 2.0,
   attackDamage: 22,
   attackRate: 1.8, // swings / sec
 

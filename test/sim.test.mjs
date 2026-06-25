@@ -1017,6 +1017,7 @@ section("a tower kills enemies and grants marrow");
 section("manual hero attack and slam damages");
 {
   const w = new World(LEVEL);
+  ok(CLASS_KITS.warden.hero.attackRange === 2.0, "Warden basic attack range is tuned to 2.0 world units");
   w._spawnEnemy("husk", w.defaultLaneId);
   const en = w.enemies[0];
   en.speed = 0;
@@ -1034,6 +1035,7 @@ section("manual hero attack and slam damages");
   w.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
   ok(en.hp < hpBefore, "manual attack damages an enemy in the aimed arc");
   ok(w.events.some((ev) => ev.kind === "heroHit"), "successful manual attack emits one hero-hit visual event");
+  ok(w.events.some((ev) => ev.kind === "heroHit" && ev.range === w.hero.attackRange), "hero-hit visual event carries the tuned attack range");
   const hpAfterAttack = en.hp;
   const cdAfterAttack = w.hero.attackCd;
   w.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
@@ -1050,10 +1052,19 @@ section("manual hero attack and slam damages");
   ok(en.hp === hpAfterAttack, "manual attack ignores enemies behind the hero");
 
   w.hero.attackCd = 0;
+  en.hp = hpAfterAttack;
+  const fartherHp = en.hp;
+  en.x = w.hero.x + Math.sin(w.hero.facing) * 2.1;
+  en.z = w.hero.z + Math.cos(w.hero.facing) * 2.1;
+  w._heroAttack(w.hero, { attackX: en.x, attackZ: en.z });
+  ok(en.hp < fartherHp, "manual attack reaches a slightly farther enemy inside the tuned range");
+
+  w.hero.attackCd = 0;
+  const outOfRangeHp = en.hp;
   en.x = w.hero.x + 10;
   en.z = w.hero.z + 10;
   w._heroAttack(w.hero, { attackX: en.x, attackZ: en.z });
-  ok(en.hp === hpAfterAttack, "out-of-range manual attack does not damage enemies");
+  ok(en.hp === outOfRangeHp, "out-of-range manual attack does not damage enemies");
   ok(w.events.some((ev) => ev.kind === "heroSwing"), "missed but valid manual attack emits a swing visual event");
   en.x = nearX;
   en.z = nearZ;

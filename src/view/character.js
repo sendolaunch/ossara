@@ -53,6 +53,13 @@ function goto(layer, state, blend = 0.12) {
   }
 }
 
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const easeOut = (v) => 1 - Math.pow(1 - clamp01(v), 3);
+const easeInOut = (v) => {
+  v = clamp01(v);
+  return v < 0.5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2;
+};
+
 // Scale `inner` to def.targetHeight and plant its feet at y=0. Returns foot offset.
 function autoFit(inner, def) {
   let foot = 0;
@@ -156,6 +163,89 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   // ---- wrap + control surface ----------------------------------------------
   const wrap = new pc.Entity("hero");
   wrap.addChild(inner);
+  const rightHand = inner.findByName(HANDSLOT_R);
+  const attackPose = {
+    active: false,
+    raf: 0,
+    hand: rightHand || null,
+    basePos: null,
+    baseRot: null,
+    startedAt: 0,
+    duration: 0.35,
+  };
+  if (import.meta.env?.DEV && !app._charHandSlotLogged) {
+    app._charHandSlotLogged = true;
+    console.debug("[character] hand/weapon slots", {
+      rightHand: rightHand?.name || null,
+      leftHand: inner.findByName(HANDSLOT_L)?.name || null,
+    });
+  }
+
+  const resetAttackPose = () => {
+    if (attackPose.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(attackPose.raf);
+    attackPose.raf = 0;
+    attackPose.active = false;
+    if (attackPose.hand && attackPose.basePos && attackPose.baseRot) {
+      try {
+        attackPose.hand.setLocalPosition(attackPose.basePos);
+        attackPose.hand.setLocalEulerAngles(attackPose.baseRot.x, attackPose.baseRot.y, attackPose.baseRot.z);
+      } catch (_) {
+        /* visual reset best-effort only */
+      }
+    }
+  };
+
+  const applyAttackPose = (t) => {
+    if (!attackPose.hand || !attackPose.basePos || !attackPose.baseRot) return false;
+    const windup = clamp01(t / 0.08);
+    const slash = clamp01((t - 0.08) / 0.12);
+    const recovery = clamp01((t - 0.2) / 0.15);
+    const swing = t < 0.08 ? -0.38 * easeOut(windup)
+      : t < 0.2 ? -0.38 + 1.55 * easeInOut(slash)
+        : 1.17 * (1 - easeOut(recovery));
+    const lift = Math.sin(Math.PI * clamp01(t / 0.2));
+    const settle = t > 0.2 ? 1 - easeOut(recovery) : 1;
+    attackPose.hand.setLocalPosition(
+      attackPose.basePos.x + 0.05 * Math.sin(swing) * settle,
+      attackPose.basePos.y + 0.06 * lift,
+      attackPose.basePos.z - 0.04 * Math.cos(swing) * settle,
+    );
+    attackPose.hand.setLocalEulerAngles(
+      attackPose.baseRot.x - 34 * lift + 12 * recovery,
+      attackPose.baseRot.y + swing * 58,
+      attackPose.baseRot.z - 62 * swing,
+    );
+    return true;
+  };
+
+  const playProceduralAttack = () => {
+    if (!attackPose.hand || attackPose.active) return false;
+    try {
+      attackPose.basePos = attackPose.hand.getLocalPosition().clone();
+      attackPose.baseRot = attackPose.hand.getLocalEulerAngles().clone();
+      attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+      attackPose.active = true;
+      const step = () => {
+        const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+        const t = now - attackPose.startedAt;
+        if (t >= attackPose.duration) {
+          resetAttackPose();
+          return;
+        }
+        if (!applyAttackPose(t)) {
+          resetAttackPose();
+          return;
+        }
+        if (typeof requestAnimationFrame === "function") attackPose.raf = requestAnimationFrame(step);
+      };
+      step();
+      return true;
+    } catch (e) {
+      console.warn("[character] procedural attack pose failed", e);
+      resetAttackPose();
+      return false;
+    }
+  };
 
   const st = { moving: false, running: false, dead: false, _atk: null, _one: null, _assigned: new Set() };
   return {
@@ -199,6 +289,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       st._atk = setTimeout(() => { if (!st.dead) goto(layer, st.moving ? "Walk" : "Idle", 0.12); }, 520);
       return true;
     },
+    playProceduralAttack,
+    resetAttackPose,
     playOnce(state) {
       goto(layer, state, 0.08);
     },

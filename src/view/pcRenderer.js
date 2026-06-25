@@ -690,6 +690,7 @@ export class PCRenderer {
 
   async setHeroClass(classId) {
     const token = ++this._heroLoadToken;
+    if (this.heroCtl) this.heroCtl.resetAttackPose?.();
     if (this.heroEntity) { this.heroEntity.destroy(); this.heroEntity = null; }
     this.heroCtl = null;
     this._heroFoot = 0;
@@ -1600,7 +1601,8 @@ export class PCRenderer {
       this.heroAnimation = { loaded: true, fallback: false, moving: moving && h.alive, running: running && moving && h.alive, dead: !h.alive };
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
         try {
-          this.heroCtl.playAttack?.();
+          const usedClip = this.heroCtl.playAttack?.();
+          if (!usedClip) this.heroCtl.playProceduralAttack?.();
         } catch (err) {
           if (!this._warnedHeroAttackVisual) {
             console.warn("[mission] hero attack animation failed; continuing with procedural FX", err);
@@ -1634,6 +1636,7 @@ export class PCRenderer {
     this._prevAtkCd = null;
     this._cameraPrimed = false;
     if (this.heroCtl) {
+      this.heroCtl.resetAttackPose?.();
       this.heroCtl.setMoving(false);
       this.heroCtl.setDead(false);
     }
