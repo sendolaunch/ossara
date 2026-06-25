@@ -71,6 +71,52 @@ const lerpBody = (a, b, t) => ({
   pitch: lerpNum(a?.pitch || 0, b?.pitch || 0, t),
 });
 const scaleVec = (v, s) => ({ x: (v?.x || 0) * s, y: (v?.y || 0) * s, z: (v?.z || 0) * s });
+const distVec = (a, b) => {
+  if (!a || !b) return 0;
+  return Math.hypot((a.x || 0) - (b.x || 0), (a.y || 0) - (b.y || 0), (a.z || 0) - (b.z || 0));
+};
+const mixPoint = (a, b, t) => ({
+  x: lerpNum(a?.x || 0, b?.x || 0, t),
+  y: lerpNum(a?.y || 0, b?.y || 0, t),
+  z: lerpNum(a?.z || 0, b?.z || 0, t),
+});
+const addPoint = (a, b) => ({ x: (a?.x || 0) + (b?.x || 0), y: (a?.y || 0) + (b?.y || 0), z: (a?.z || 0) + (b?.z || 0) });
+const subPoint = (a, b) => ({ x: (a?.x || 0) - (b?.x || 0), y: (a?.y || 0) - (b?.y || 0), z: (a?.z || 0) - (b?.z || 0) });
+const normalizePoint = (v, fallback = { x: 0.35, y: 0.2, z: 0.1 }) => {
+  const len = Math.hypot(v?.x || 0, v?.y || 0, v?.z || 0);
+  if (len < 0.001) return fallback;
+  return { x: v.x / len, y: v.y / len, z: v.z / len };
+};
+
+function renderMaterial(hex, emissive = 0) {
+  const m = new pc.StandardMaterial();
+  const c = new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
+  m.diffuse = c;
+  if (emissive > 0) {
+    m.emissive = c;
+    m.emissiveIntensity = emissive;
+  }
+  m.update();
+  return m;
+}
+
+function renderPrim(type, material, name) {
+  const e = new pc.Entity(name);
+  e.addComponent("render", { type, castShadows: true, receiveShadows: true });
+  if (material && e.render?.meshInstances?.[0]) e.render.meshInstances[0].material = material;
+  return e;
+}
+
+function placeSegment(entity, a, b, thickness) {
+  if (!entity || !a || !b) return false;
+  const len = Math.max(0.04, distVec(a, b));
+  const mid = mixPoint(a, b, 0.5);
+  entity.enabled = true;
+  entity.setPosition(mid.x, mid.y, mid.z);
+  entity.lookAt(b.x, b.y, b.z);
+  entity.setLocalScale(thickness, thickness, len);
+  return true;
+}
 
 export const HERO_ATTACK_TIMING = {
   windup: 0.16,
@@ -264,6 +310,29 @@ function attach(app, inner, url, boneName, onAttach = null) {
   });
 }
 
+function createArmChain(app) {
+  const root = new pc.Entity("warden-elbow-bend-arm-chain");
+  const armor = renderMaterial(0x8f948b, 0.02);
+  const shadow = renderMaterial(0x343a34, 0);
+  const leather = renderMaterial(0x6d4b32, 0);
+  const upper = renderPrim("box", armor, "upper-arm-segment");
+  const lower = renderPrim("box", armor, "forearm-segment");
+  const elbow = renderPrim("sphere", shadow, "elbow-joint");
+  const wrist = renderPrim("sphere", shadow, "wrist-joint");
+  const hand = renderPrim("box", leather, "hand-grip-segment");
+  elbow.setLocalScale(0.13, 0.13, 0.13);
+  wrist.setLocalScale(0.1, 0.1, 0.1);
+  hand.setLocalScale(0.14, 0.1, 0.12);
+  root.addChild(upper);
+  root.addChild(lower);
+  root.addChild(elbow);
+  root.addChild(wrist);
+  root.addChild(hand);
+  root.enabled = false;
+  app.root.addChild(root);
+  return { root, upper, lower, elbow, wrist, hand };
+}
+
 /**
  * Load an animated character for `classId`.
  * @returns {Promise<null | {
@@ -328,6 +397,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const rightArmMesh = inner.findByName("Knight_ArmRight");
   const rightHandSlot = inner.findByName(HANDSLOT_R);
   const leftHandSlot = inner.findByName(HANDSLOT_L);
+  const visualArmChain = createArmChain(app);
   const attackPose = {
     active: false,
     raf: 0,
@@ -346,6 +416,11 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     lastLocalRot: null,
     armFollowerActive: false,
     armFollowerTargetWorld: null,
+    elbowWorld: null,
+    wristWorld: null,
+    armMode: "idle",
+    elbowBendActive: false,
+    armMeshWasEnabled: true,
     baseHiltWorld: null,
     lastHiltWorld: null,
     driverProofActive: false,
@@ -438,42 +513,62 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     }
   };
 
-  const applyArmMeshFollower = (pose) => {
-    const base = attackPose.boneBases.armMesh;
-    if (!attackPose.armMesh || !base || !pose || !attackPose.handFollowActive) {
-      attackPose.armFollowerActive = false;
+  const hideVisualArmChain = () => {
+    if (visualArmChain?.root) visualArmChain.root.enabled = false;
+    if (attackPose.armMesh) attackPose.armMesh.enabled = attackPose.armMeshWasEnabled;
+    attackPose.armFollowerActive = false;
+    attackPose.elbowBendActive = false;
+    attackPose.armMode = "idle";
+    attackPose.armFollowerTargetWorld = null;
+    attackPose.elbowWorld = null;
+    attackPose.wristWorld = null;
+  };
+
+  const computeElbowPoint = (shoulder, wrist, baseElbow, pose) => {
+    const mid = mixPoint(shoulder, wrist, 0.48);
+    const naturalBend = normalizePoint(subPoint(baseElbow, mid), { x: 0.38, y: 0.2, z: 0.1 });
+    const phase = pose?.phase || "";
+    const phaseBend = phase === "windup" ? 0.42 : phase === "strike" ? 0.26 : phase === "followThrough" ? 0.22 : 0.18;
+    const verticalLift = phase === "windup" ? 0.12 : phase === "strike" ? 0.04 : phase === "followThrough" ? -0.02 : 0;
+    const bend = scaleVec(naturalBend, phaseBend);
+    return addPoint(addPoint(mid, bend), { x: 0, y: verticalLift, z: 0 });
+  };
+
+  const applySegmentedArmFollower = (pose) => {
+    if (!visualArmChain?.root || !pose || !attackPose.handFollowActive) {
+      hideVisualArmChain();
+      return;
+    }
+    const shoulder = worldSnapshot(attackPose.upperArm);
+    const baseElbow = worldSnapshot(attackPose.lowerArm);
+    const hilt = worldSnapshot(attackPose.sword || attackPose.target);
+    if (!shoulder || !baseElbow || !hilt) {
+      hideVisualArmChain();
       return;
     }
     try {
-      // Visual-only support for the KayKit Warden, whose visible right arm is a
-      // separate render mesh. The actual sword remains the driver; this mesh
-      // follows the same phase/hilt curve so the shoulder -> sword chain reads.
-      const upper = pose.arm?.upper || {};
-      const lower = pose.arm?.lower || {};
-      const hand = pose.arm?.hand || {};
-      const lift = Math.max(0, pose.pos?.y || 0);
-      const side = pose.pos?.x || 0;
-      const reach = pose.pos?.z || 0;
-      const hilt = worldSnapshot(attackPose.sword || attackPose.target);
-      const baseHilt = attackPose.baseHiltWorld;
-      const hiltDelta = hilt && baseHilt
-        ? { x: hilt.x - baseHilt.x, y: hilt.y - baseHilt.y, z: hilt.z - baseHilt.z }
-        : { x: 0, y: 0, z: 0 };
-      attackPose.armMesh.setLocalPosition(
-        base.pos.x + side * 0.16 + hiltDelta.x * 0.1,
-        base.pos.y + lift * 0.1 + hiltDelta.y * 0.08,
-        base.pos.z + reach * 0.1 + hiltDelta.z * 0.1,
-      );
-      attackPose.armMesh.setLocalEulerAngles(
-        base.rot.x + (upper.x || 0) * 0.22 + (lower.x || 0) * 0.1,
-        base.rot.y + (upper.y || 0) * 0.18 + (hand.y || 0) * 0.06,
-        base.rot.z + (upper.z || 0) * 0.3 + (lower.z || 0) * 0.16 + (hand.z || 0) * 0.08,
-      );
+      const wrist = hilt;
+      const elbow = computeElbowPoint(shoulder, wrist, baseElbow, pose);
+      const handEnd = addPoint(wrist, scaleVec(normalizePoint(subPoint(wrist, elbow), { x: 0.15, y: -0.1, z: -0.05 }), 0.08));
+      if (!attackPose.armFollowerActive) attackPose.armMeshWasEnabled = attackPose.armMesh ? attackPose.armMesh.enabled : true;
+      if (attackPose.armMesh) attackPose.armMesh.enabled = false;
+      visualArmChain.root.enabled = true;
+      placeSegment(visualArmChain.upper, shoulder, elbow, 0.13);
+      placeSegment(visualArmChain.lower, elbow, wrist, 0.105);
+      placeSegment(visualArmChain.hand, wrist, handEnd, 0.095);
+      visualArmChain.elbow.enabled = true;
+      visualArmChain.elbow.setPosition(elbow.x, elbow.y, elbow.z);
+      visualArmChain.wrist.enabled = true;
+      visualArmChain.wrist.setPosition(wrist.x, wrist.y, wrist.z);
       attackPose.lastHiltWorld = hilt;
       attackPose.armFollowerTargetWorld = hilt;
+      attackPose.elbowWorld = elbow;
+      attackPose.wristWorld = wrist;
       attackPose.armFollowerActive = true;
+      attackPose.elbowBendActive = distVec(elbow, mixPoint(shoulder, wrist, 0.5)) > 0.12;
+      attackPose.armMode = "fallback segmented arm";
     } catch (_) {
-      attackPose.armFollowerActive = false;
+      hideVisualArmChain();
     }
   };
 
@@ -506,6 +601,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     resetBone("lower", attackPose.lowerArm);
     resetBone("hand", attackPose.hand);
     resetBone("armMesh", attackPose.armMesh);
+    hideVisualArmChain();
     if (attackPose.target && attackPose.basePos && attackPose.baseRot) {
       try {
         attackPose.target.setLocalPosition(attackPose.basePos);
@@ -538,7 +634,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     );
     attackPose.lastWorld = worldSnapshot(attackPose.target);
     attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
-    applyArmMeshFollower(pose);
+    applySegmentedArmFollower(pose);
     return true;
   };
 
@@ -715,6 +811,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       currentClip: st.currentClip || "Idle",
       handFollowActive: !!attackPose.handFollowActive,
       armFollowerActive: !!attackPose.armFollowerActive,
+      elbowBendActive: !!attackPose.elbowBendActive,
+      armMode: attackPose.armMode || "idle",
       driverProofActive: !!attackPose.driverProofActive,
       driverProofTarget: attackPose.driverProofTarget || "",
       legacyProxyHidden: true,
@@ -731,6 +829,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       shoulderWorld: worldSnapshot(attackPose.upperArm),
       lowerArmWorld: worldSnapshot(attackPose.lowerArm),
       handWorld: worldSnapshot(attackPose.hand),
+      elbowWorld: attackPose.elbowWorld,
+      wristWorld: attackPose.wristWorld,
       hiltWorld: attackPose.lastHiltWorld || worldSnapshot(attackPose.sword || attackPose.handSlot),
       swordWorld: worldSnapshot(attackPose.sword || inner.findByName("sword_1handed")),
       followerWorld: attackPose.armFollowerTargetWorld || worldSnapshot(attackPose.armMesh || attackPose.hand),

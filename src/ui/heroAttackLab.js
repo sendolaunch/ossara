@@ -78,6 +78,8 @@ export class HeroAttackLab {
 
     this.markers = {
       shoulder: this._marker("right-shoulder-marker", 0xd6b35a, 0.055),
+      elbow: this._marker("right-elbow-marker", 0xff7a5f, 0.052),
+      wrist: this._marker("right-wrist-marker", 0x88e1ff, 0.046),
       hilt: this._marker("sword-hilt-marker", 0x5bff70, 0.045),
       follower: this._marker("arm-follower-marker", 0x7aa8ff, 0.05),
     };
@@ -235,6 +237,8 @@ export class HeroAttackLab {
       `pose driver: ${boneDriven ? "sword + right-arm bones" : "sword/proxy fallback"}`,
       `hand/arm follow active: ${d.handFollowActive ? "yes" : "no"}`,
       `visible arm follower active: ${d.armFollowerActive ? "yes" : "no"}`,
+      `elbow bend active: ${d.elbowBendActive ? "yes" : "no"}`,
+      `arm mode: ${d.armMode || "idle"}`,
       `after-sync proof active: ${d.driverProofActive ? "yes" : "no"} ${d.driverProofTarget || ""}`,
       `old proxy/fallback visual hidden: ${d.legacyProxyHidden ? "yes" : "no"}`,
       `current animation clip: ${d.currentClip || "-"}`,
@@ -252,6 +256,8 @@ export class HeroAttackLab {
       `after world position: ${fmt(d.afterWorld)}`,
       `current world position: ${fmt(d.currentWorld)}`,
       `shoulder marker world: ${fmt(d.shoulderWorld)}`,
+      `elbow marker world: ${fmt(d.elbowWorld)}`,
+      `wrist marker world: ${fmt(d.wristWorld)}`,
       `hilt marker world: ${fmt(d.hiltWorld)}`,
       `follower marker world: ${fmt(d.followerWorld)}`,
       "",
@@ -272,6 +278,8 @@ export class HeroAttackLab {
     if (!this.running) return;
     const d = this.ctl?.getAttackDebug?.() || {};
     this._syncMarker("shoulder", d.shoulderWorld);
+    this._syncMarker("elbow", d.elbowWorld);
+    this._syncMarker("wrist", d.wristWorld);
     this._syncMarker("hilt", d.hiltWorld);
     this._syncMarker("follower", d.followerWorld);
     if (this.debugEl) this.debugEl.textContent = this._debugText();

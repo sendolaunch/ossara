@@ -60,7 +60,8 @@ ok(characterSource.includes("lowerarm.r") && characterSource.includes("upperarm.
 ok(characterSource.includes("if (preferred === \"lowerarm.r\") return attackPose.lowerArm"), "dev proof can directly target lowerarm.r");
 ok(characterSource.includes("if (preferred === \"upperarm.r\") return attackPose.upperArm"), "dev proof can directly target upperarm.r");
 ok(characterSource.includes("if (preferred === \"Knight_ArmRight\") return attackPose.armMesh"), "dev proof can directly target the visible right-arm mesh");
-ok(characterSource.includes("applyArmMeshFollower"), "procedural attack has a visible right-arm mesh follower layer");
+ok(characterSource.includes("applySegmentedArmFollower"), "procedural attack has a segmented right-arm follower layer");
+ok(characterSource.includes("computeElbowPoint"), "procedural attack computes an elbow target for visible arm bend");
 ok(characterSource.includes("return attackPose.sword || inner.findByName(\"sword_1handed\")"), "procedural attack defaults to the v3-approved sword source of truth");
 ok(characterSource.includes("heroAttackPoseAt"), "character attack uses a shared key-pose calculation");
 ok(characterSource.includes("phase: \"windup\"") && characterSource.includes("phase: \"strike\""), "procedural attack exposes windup and strike phases");
@@ -94,9 +95,11 @@ const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
 ok(labSource.includes("Proof lowerarm.r / K") && labSource.includes("Proof upperarm.r / L"), "hero attack lab exposes direct right-arm bone proof controls");
 ok(labSource.includes("Proof arm mesh / M"), "hero attack lab exposes visible arm mesh proof control");
-ok(labSource.includes("right-shoulder-marker") && labSource.includes("sword-hilt-marker") && labSource.includes("arm-follower-marker"), "hero attack lab exposes dev-only shoulder/hilt/follower markers");
+ok(labSource.includes("right-shoulder-marker") && labSource.includes("right-elbow-marker") && labSource.includes("right-wrist-marker"), "hero attack lab exposes dev-only shoulder/elbow/wrist markers");
+ok(labSource.includes("sword-hilt-marker") && labSource.includes("arm-follower-marker"), "hero attack lab exposes dev-only hilt/follower markers");
 ok(labSource.includes("pose driver:"), "hero attack lab reports bone/proxy driver state");
 ok(labSource.includes("hand/arm follow active:") && labSource.includes("visible arm follower active:"), "hero attack lab reports arm follow/follower state");
+ok(labSource.includes("elbow bend active:") && labSource.includes("arm mode:"), "hero attack lab reports elbow bend and arm mode");
 ok(labSource.includes("old proxy/fallback visual hidden:"), "hero attack lab reports v4 proxy state");
 
 // 2) Every class: model present, has both handslots, weapon/offhand present.
