@@ -12,7 +12,7 @@ export const CLASSES = {
     order: "The Wall",
     role: "Frontline tank — heavy armour, holds the lane",
     towers: ["Barricades", "Spike-gates"],
-    special: "Ward-slam — radial burst that staggers everything around you",
+    special: "Ward Slam — short-range burst that punishes clustered enemies",
     blurb: "Stand in the breach and refuse to move. The line holds because you do.",
     modelFile: "models/hero.glb",
     accent: "bone",
