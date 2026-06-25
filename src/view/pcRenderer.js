@@ -9,7 +9,7 @@ import { TOWERS } from "../config/towers.js";
 import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
-import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, loadCharacter } from "./character.js";
+import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 
@@ -199,11 +199,6 @@ const easeInOut = (v) => {
   const t = clamp(v, 0, 1);
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 };
-const lerpPose = (a = {}, b = {}, t = 0) => ({
-  yaw: lerp(a.yaw || 0, b.yaw || 0, t),
-  roll: lerp(a.roll || 0, b.roll || 0, t),
-  pitch: lerp(a.pitch || 0, b.pitch || 0, t),
-});
 const angleDeltaDeg = (from, to) => ((((to - from) % 360) + 540) % 360) - 180;
 const approachAngleDeg = (from, to, t) => from + angleDeltaDeg(from, to) * t;
 const smoothFactor = (value, dt) => 1 - Math.pow(1 - clamp(value, 0, 1), Math.max(1, dt * 60));
@@ -263,6 +258,7 @@ export class PCRenderer {
     this._heroLoadToken = 0;
     this.heroAttackComboIndex = 0;
     this.heroBodySwing = null;
+    this.heroAttackProxyVisible = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devAttackProxy") === "1");
     this.heroAnimation = { loaded: false, fallback: false, moving: false, running: false, dead: false };
     this.enemyAnimDebugEnabled = !!(import.meta.env?.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("devAnimDebug") === "1");
     this.enemyAnimDebugEl = null;
@@ -1275,19 +1271,24 @@ export class PCRenderer {
       ? HERO_ATTACK_VARIANTS.find((v) => v.id === variant) || HERO_ATTACK_VARIANTS[0]
       : variant || HERO_ATTACK_VARIANTS[0];
     const root = new pc.Entity("hero-sword-swing");
-    root.name = "hero-visible-sword-proxy";
-    const blade = prim("box", mat("bone", 1.4));
-    blade.name = "sword-blade";
-    blade.setLocalScale(Math.max(1.05, range * 0.74), 0.075, 0.115);
-    root.addChild(blade);
-    const hilt = prim("box", mat("gold", 1.1));
-    hilt.name = "sword-hilt";
-    hilt.setLocalScale(0.24, 0.12, 0.2);
-    root.addChild(hilt);
-    const guard = prim("box", mat("gold", 1.25));
-    guard.name = "sword-crossguard";
-    guard.setLocalScale(0.42, 0.06, 0.08);
-    root.addChild(guard);
+    root.name = this.heroAttackProxyVisible ? "hero-visible-sword-proxy" : "hero-slash-trail-fx";
+    let blade = null;
+    let hilt = null;
+    let guard = null;
+    if (this.heroAttackProxyVisible) {
+      blade = prim("box", mat("bone", 1.4));
+      blade.name = "sword-blade";
+      blade.setLocalScale(Math.max(1.05, range * 0.74), 0.075, 0.115);
+      root.addChild(blade);
+      hilt = prim("box", mat("gold", 1.1));
+      hilt.name = "sword-hilt";
+      hilt.setLocalScale(0.24, 0.12, 0.2);
+      root.addChild(hilt);
+      guard = prim("box", mat("gold", 1.25));
+      guard.name = "sword-crossguard";
+      guard.setLocalScale(0.42, 0.06, 0.08);
+      root.addChild(guard);
+    }
     const trailMat = mat(hit ? "plague" : "ash", hit ? 1.2 : 0.7);
     const trails = [];
     for (let i = 0; i < 4; i++) {
@@ -1353,18 +1354,7 @@ export class PCRenderer {
     }
     // Torso starts a hair before the arm/sword so the slash reads body-driven.
     const t = Math.min(duration, elapsed + 0.035);
-    const cfg = this.heroBodySwing.variant?.body || HERO_ATTACK_VARIANTS[0].body;
-    const windupEnd = HERO_ATTACK_TIMING.windup;
-    const strikeEnd = windupEnd + HERO_ATTACK_TIMING.strike;
-    const followEnd = strikeEnd + HERO_ATTACK_TIMING.followThrough;
-    const rest = { yaw: 0, roll: 0, pitch: 0 };
-    const pose = t < windupEnd
-      ? lerpPose(rest, cfg.windup, easeOut(t / HERO_ATTACK_TIMING.windup))
-      : t < strikeEnd
-        ? lerpPose(cfg.windup, cfg.strike, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike))
-        : t < followEnd
-          ? lerpPose(cfg.strike, cfg.followThrough, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough))
-          : lerpPose(cfg.followThrough, rest, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover));
+    const pose = heroAttackPoseAt(this.heroBodySwing.variant || HERO_ATTACK_VARIANTS[0], t).body;
     const yaw = pose.yaw;
     const roll = pose.roll;
     const pitch = pose.pitch;
@@ -1402,11 +1392,11 @@ export class PCRenderer {
           : t < 0.58
             ? 0.25 + easeInOut((t - 0.3) / 0.28) * 0.6
             : 0.85 + easeOut((t - 0.58) / 0.42) * 0.15;
-        this._positionHeroSwingPart(fx.blade, fx, slashT, 1, 0);
-        this._positionHeroSwingPart(fx.hilt, fx, Math.max(0, slashT - 0.05), 0.72, -0.04);
+        if (fx.blade) this._positionHeroSwingPart(fx.blade, fx, slashT, 1, 0);
+        if (fx.hilt) this._positionHeroSwingPart(fx.hilt, fx, Math.max(0, slashT - 0.05), 0.72, -0.04);
         if (fx.guard) this._positionHeroSwingPart(fx.guard, fx, Math.max(0, slashT - 0.04), 0.78, -0.02);
-        fx.blade.enabled = t < 0.9;
-        fx.hilt.enabled = t < 0.9;
+        if (fx.blade) fx.blade.enabled = t < 0.9;
+        if (fx.hilt) fx.hilt.enabled = t < 0.9;
         if (fx.guard) fx.guard.enabled = t < 0.9;
         fx.trails.forEach((trail, i) => {
           const trailT = Math.max(0, slashT - 0.09 * (i + 1));

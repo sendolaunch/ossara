@@ -39,7 +39,7 @@ export const HANDSLOT_L = "handslot.l";
 // Plague Doctor uses Rogue_Hooded as a stand-in until the KayKit EXTRA "Druid"
 // is dropped in — then just change `model` below (one line).
 export const CHARACTERS = {
-  warden:       { model: DIR + "Knight.glb",        weapon: WPN + "sword_1handed.gltf", offhand: WPN + "shield_round.gltf", targetHeight: 1.85, scale: 1 },
+  warden:       { model: DIR + "Knight.glb",        weapon: WPN + "sword_1handed.gltf", offhand: WPN + "shield_round.gltf", targetHeight: 1.85, scale: 1, weaponScale: 1.12 },
   hunter:       { model: DIR + "Ranger.glb",        weapon: WPN + "bow.gltf",                                              targetHeight: 1.8,  scale: 1 },
   stormcaller:  { model: DIR + "Mage.glb",          weapon: WPN + "staff.gltf",                                            targetHeight: 1.8,  scale: 1 },
   plaguedoctor: { model: DIR + "Rogue_Hooded.glb",  weapon: WPN + "dagger.gltf",                                           targetHeight: 1.78, scale: 1 },

@@ -65,6 +65,11 @@ const lerpVec = (a, b, t) => ({
   y: lerpNum(a.y || 0, b.y || 0, t),
   z: lerpNum(a.z || 0, b.z || 0, t),
 });
+const lerpBody = (a, b, t) => ({
+  yaw: lerpNum(a?.yaw || 0, b?.yaw || 0, t),
+  roll: lerpNum(a?.roll || 0, b?.roll || 0, t),
+  pitch: lerpNum(a?.pitch || 0, b?.pitch || 0, t),
+});
 
 export const HERO_ATTACK_TIMING = {
   windup: 0.16,
@@ -137,6 +142,83 @@ export const HERO_ATTACK_VARIANT_IDS = HERO_ATTACK_VARIANTS.map((v) => v.id);
 function resolveAttackVariant(idOrIndex = 0) {
   if (typeof idOrIndex === "string") return HERO_ATTACK_VARIANTS.find((v) => v.id === idOrIndex) || HERO_ATTACK_VARIANTS[0];
   return HERO_ATTACK_VARIANTS[((Number(idOrIndex) || 0) % HERO_ATTACK_VARIANTS.length + HERO_ATTACK_VARIANTS.length) % HERO_ATTACK_VARIANTS.length];
+}
+
+export function heroAttackPoseAt(idOrVariant = 0, t = 0) {
+  const variant = typeof idOrVariant === "object" && idOrVariant ? idOrVariant : resolveAttackVariant(idOrVariant);
+  const arm = variant.arm || HERO_ATTACK_VARIANTS[0].arm;
+  const body = variant.body || HERO_ATTACK_VARIANTS[0].body;
+  const windupEnd = HERO_ATTACK_TIMING.windup;
+  const strikeEnd = windupEnd + HERO_ATTACK_TIMING.strike;
+  const followEnd = strikeEnd + HERO_ATTACK_TIMING.followThrough;
+  const rest = { x: 0, y: 0, z: 0 };
+  const bodyRest = { yaw: 0, roll: 0, pitch: 0 };
+  if (t < windupEnd) {
+    const amount = clamp01(t / windupEnd);
+    const eased = easeOut(amount);
+    return {
+      phase: "windup",
+      amount,
+      eased,
+      pos: lerpVec(rest, variant.windup.pos, eased),
+      rot: lerpVec(rest, variant.windup.rot, eased),
+      arm: {
+        upper: lerpVec(rest, arm.windup.upper, eased),
+        lower: lerpVec(rest, arm.windup.lower, eased),
+        hand: lerpVec(rest, arm.windup.hand, eased),
+      },
+      body: lerpBody(bodyRest, body.windup, eased),
+    };
+  }
+  if (t < strikeEnd) {
+    const amount = clamp01((t - windupEnd) / HERO_ATTACK_TIMING.strike);
+    const eased = easeInOut(amount);
+    return {
+      phase: "strike",
+      amount,
+      eased,
+      pos: lerpVec(variant.windup.pos, variant.strike.pos, eased),
+      rot: lerpVec(variant.windup.rot, variant.strike.rot, eased),
+      arm: {
+        upper: lerpVec(arm.windup.upper, arm.strike.upper, eased),
+        lower: lerpVec(arm.windup.lower, arm.strike.lower, eased),
+        hand: lerpVec(arm.windup.hand, arm.strike.hand, eased),
+      },
+      body: lerpBody(body.windup, body.strike, eased),
+    };
+  }
+  if (t < followEnd) {
+    const amount = clamp01((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough);
+    const eased = easeOut(amount);
+    return {
+      phase: "followThrough",
+      amount,
+      eased,
+      pos: lerpVec(variant.strike.pos, variant.followThrough.pos, eased),
+      rot: lerpVec(variant.strike.rot, variant.followThrough.rot, eased),
+      arm: {
+        upper: lerpVec(arm.strike.upper, arm.followThrough.upper, eased),
+        lower: lerpVec(arm.strike.lower, arm.followThrough.lower, eased),
+        hand: lerpVec(arm.strike.hand, arm.followThrough.hand, eased),
+      },
+      body: lerpBody(body.strike, body.followThrough, eased),
+    };
+  }
+  const amount = clamp01((t - followEnd) / HERO_ATTACK_TIMING.recover);
+  const eased = easeInOut(amount);
+  return {
+    phase: "recover",
+    amount,
+    eased,
+    pos: lerpVec(variant.followThrough.pos, rest, eased),
+    rot: lerpVec(variant.followThrough.rot, rest, eased),
+    arm: {
+      upper: lerpVec(arm.followThrough.upper, rest, eased),
+      lower: lerpVec(arm.followThrough.lower, rest, eased),
+      hand: lerpVec(arm.followThrough.hand, rest, eased),
+    },
+    body: lerpBody(body.followThrough, bodyRest, eased),
+  };
 }
 
 // Scale `inner` to def.targetHeight and plant its feet at y=0. Returns foot offset.
@@ -249,6 +331,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     raf: 0,
     target: null,
     targetName: "",
+    handFollowActive: false,
     hand: rightHand || null,
     lowerArm: rightLowerArm || null,
     upperArm: rightUpperArm || null,
@@ -279,6 +362,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   // ---- weapon(s) ------------------------------------------------------------
   if (weapon) {
     attach(app, inner, def.weapon, HANDSLOT_R, (piece) => {
+      if (piece && Number.isFinite(def.weaponScale) && def.weaponScale > 0) piece.setLocalScale(def.weaponScale, def.weaponScale, def.weaponScale);
       attackPose.sword = piece || null;
       if (import.meta.env?.DEV && piece) console.debug("[character] attached main weapon", piece.name || "(unnamed)");
     });
@@ -344,10 +428,11 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   };
 
   const resolveAttackTarget = (preferred = "") => {
+    if (!preferred) return attackPose.hand || attackPose.handSlot || attackPose.sword || inner.findByName("sword_1handed");
     if (preferred === "hand.r") return attackPose.hand;
     if (preferred === HANDSLOT_R) return attackPose.handSlot;
     if (preferred === "sword_1handed") return attackPose.sword || inner.findByName("sword_1handed");
-    return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
+    return attackPose.hand || attackPose.handSlot || attackPose.sword || inner.findByName("sword_1handed");
   };
 
   const resetAttackPose = () => {
@@ -356,6 +441,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     attackPose.raf = 0;
     attackPose.active = false;
     attackPose.phase = "idle";
+    attackPose.handFollowActive = false;
     resetBone("upper", attackPose.upperArm);
     resetBone("lower", attackPose.lowerArm);
     resetBone("hand", attackPose.hand);
@@ -373,67 +459,20 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
 
   const applyAttackPose = (t) => {
     if (!attackPose.target || !attackPose.basePos || !attackPose.baseRot) return false;
-    const variant = attackPose.variant || HERO_ATTACK_VARIANTS[0];
-    const arm = variant.arm || HERO_ATTACK_VARIANTS[0].arm;
-    const windupEnd = HERO_ATTACK_TIMING.windup;
-    const strikeEnd = windupEnd + HERO_ATTACK_TIMING.strike;
-    const followEnd = strikeEnd + HERO_ATTACK_TIMING.followThrough;
-    const pose = t < windupEnd
-      ? {
-          phase: "windup",
-          pos: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.pos, easeOut(t / windupEnd)),
-          rot: lerpVec({ x: 0, y: 0, z: 0 }, variant.windup.rot, easeOut(t / windupEnd)),
-          arm: {
-            upper: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.upper, easeOut(t / windupEnd)),
-            lower: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.lower, easeOut(t / windupEnd)),
-            hand: lerpVec({ x: 0, y: 0, z: 0 }, arm.windup.hand, easeOut(t / windupEnd)),
-          },
-        }
-      : t < strikeEnd
-        ? {
-            phase: "strike",
-            pos: lerpVec(variant.windup.pos, variant.strike.pos, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
-            rot: lerpVec(variant.windup.rot, variant.strike.rot, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
-            arm: {
-              upper: lerpVec(arm.windup.upper, arm.strike.upper, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
-              lower: lerpVec(arm.windup.lower, arm.strike.lower, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
-              hand: lerpVec(arm.windup.hand, arm.strike.hand, easeInOut((t - windupEnd) / HERO_ATTACK_TIMING.strike)),
-            },
-          }
-        : t < followEnd
-          ? {
-              phase: "followThrough",
-              pos: lerpVec(variant.strike.pos, variant.followThrough.pos, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
-              rot: lerpVec(variant.strike.rot, variant.followThrough.rot, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
-              arm: {
-                upper: lerpVec(arm.strike.upper, arm.followThrough.upper, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
-                lower: lerpVec(arm.strike.lower, arm.followThrough.lower, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
-                hand: lerpVec(arm.strike.hand, arm.followThrough.hand, easeOut((t - strikeEnd) / HERO_ATTACK_TIMING.followThrough)),
-              },
-            }
-        : {
-            phase: "recover",
-            pos: lerpVec(variant.followThrough.pos, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
-            rot: lerpVec(variant.followThrough.rot, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
-            arm: {
-              upper: lerpVec(arm.followThrough.upper, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
-              lower: lerpVec(arm.followThrough.lower, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
-              hand: lerpVec(arm.followThrough.hand, { x: 0, y: 0, z: 0 }, easeInOut((t - followEnd) / HERO_ATTACK_TIMING.recover)),
-            },
-          };
+    const pose = heroAttackPoseAt(attackPose.variant || HERO_ATTACK_VARIANTS[0], t);
     attackPose.phase = pose.phase;
     applyBoneOffset("upper", attackPose.upperArm, pose.arm.upper);
     applyBoneOffset("lower", attackPose.lowerArm, pose.arm.lower);
-    applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
+    if (attackPose.target !== attackPose.hand) applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
     attackPose.target.setLocalPosition(
       attackPose.basePos.x + pose.pos.x,
       attackPose.basePos.y + pose.pos.y,
       attackPose.basePos.z + pose.pos.z,
     );
     attackPose.target.setLocalEulerAngles(
-      attackPose.baseRot.x + pose.rot.x,
-      attackPose.baseRot.y + pose.rot.y,
-      attackPose.baseRot.z + pose.rot.z,
+      attackPose.baseRot.x + pose.rot.x + (attackPose.target === attackPose.hand ? pose.arm.hand.x * 0.35 : 0),
+      attackPose.baseRot.y + pose.rot.y + (attackPose.target === attackPose.hand ? pose.arm.hand.y * 0.35 : 0),
+      attackPose.baseRot.z + pose.rot.z + (attackPose.target === attackPose.hand ? pose.arm.hand.z * 0.35 : 0),
     );
     attackPose.lastWorld = worldSnapshot(attackPose.target);
     attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
@@ -457,6 +496,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.lastWorld = attackPose.beforeWorld;
       attackPose.lastLocalRot = localRotSnapshot(target);
       attackPose.variant = resolveAttackVariant(opts.variant ?? opts.variantId ?? 0);
+      attackPose.handFollowActive = target === attackPose.hand || target === attackPose.handSlot;
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
       attackPose.duration = HERO_ATTACK_TIMING.total;
       attackPose.playbackScale = opts.slow ? HERO_ATTACK_TIMING.total / HERO_ATTACK_TIMING.slowTotal : 1;
@@ -502,6 +542,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.basePos = target.getLocalPosition().clone();
       attackPose.baseRot = target.getLocalEulerAngles().clone();
       attackPose.beforeWorld = worldSnapshot(target);
+      attackPose.handFollowActive = false;
       attackPose.phase = "extreme";
       target.setLocalPosition(attackPose.basePos.x + 0.45, attackPose.basePos.y + 0.65, attackPose.basePos.z - 0.35);
       target.setLocalEulerAngles(attackPose.baseRot.x + 105, attackPose.baseRot.y + 120, attackPose.baseRot.z - 95);
@@ -541,6 +582,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       variantId: attackPose.variant?.id || "",
       variantLabel: attackPose.variant?.label || "",
       currentClip: st.currentClip || "Idle",
+      handFollowActive: !!attackPose.handFollowActive,
+      legacyProxyHidden: true,
       rightHandFound: !!attackPose.hand,
       handSlotFound: !!attackPose.handSlot,
       lowerArmFound: !!attackPose.lowerArm,

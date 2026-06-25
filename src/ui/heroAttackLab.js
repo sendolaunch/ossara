@@ -204,6 +204,8 @@ export class HeroAttackLab {
       `attack phase: ${d.phase || "-"}`,
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
       `pose driver: ${boneDriven ? "sword + right-arm bones" : "sword/proxy fallback"}`,
+      `hand/arm follow active: ${d.handFollowActive ? "yes" : "no"}`,
+      `old proxy/fallback visual hidden: ${d.legacyProxyHidden ? "yes" : "no"}`,
       `current animation clip: ${d.currentClip || "-"}`,
       `right hand entity found: ${d.rightHandFound ? "yes" : "no"}`,
       `lowerarm.r entity found: ${d.lowerArmFound ? "yes" : "no"}`,
