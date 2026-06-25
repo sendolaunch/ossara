@@ -50,6 +50,9 @@ ok(!characterSource.includes("const hasAttack = assign"), "hero attack clip flag
 ok(characterSource.includes("playProceduralAttack"), "character control exposes procedural attack pose support");
 ok(characterSource.includes("resetAttackPose"), "character control exposes attack-pose cleanup");
 ok(characterSource.includes("inner.findByName(HANDSLOT_R)"), "procedural attack pose targets the verified right-hand slot");
+ok(characterSource.includes("sword_1handed"), "procedural attack pose can target the visible attached sword entity");
+ok(characterSource.includes("playExtremePose"), "character control exposes dev extreme-pose proof support");
+ok(characterSource.includes("getAttackDebug"), "character control exposes attack visual diagnostics");
 
 // 2) Every class: model present, has both handslots, weapon/offhand present.
 for (const [cls, def] of Object.entries(CHARACTERS)) {

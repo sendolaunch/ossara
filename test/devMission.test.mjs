@@ -1,4 +1,4 @@
-import { canUseDevMissionRoute, devEnemyGalleryEnabled, devMissionIdFromLocation, isLocalDevHost } from "../src/dev/missionSmoke.js";
+import { canUseDevMissionRoute, devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devMissionIdFromLocation, isLocalDevHost } from "../src/dev/missionSmoke.js";
 
 let pass = 0;
 let fail = 0;
@@ -44,6 +44,18 @@ ok(
 ok(
   !devEnemyGalleryEnabled({ hostname: "localhost", search: "" }, { DEV: true }),
   "missing enemy gallery query does not trigger route",
+);
+ok(
+  devHeroAttackClassFromLocation({ hostname: "localhost", search: "?devHeroAttack=warden" }, { DEV: true }) === "warden",
+  "local dev hero attack lab resolves class id",
+);
+ok(
+  devHeroAttackClassFromLocation({ hostname: "localhost", search: "?devHeroAttack=warden" }, { DEV: false }) === null,
+  "production build ignores hero attack lab route",
+);
+ok(
+  devHeroAttackClassFromLocation({ hostname: "ossara.vercel.app", search: "?devHeroAttack=warden" }, { DEV: true }) === null,
+  "non-local host ignores hero attack lab route",
 );
 
 console.log(`devMission: ${pass}/${pass + fail} checks passed`);

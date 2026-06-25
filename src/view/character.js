@@ -85,16 +85,19 @@ function autoFit(inner, def) {
   return foot;
 }
 
-function attach(app, inner, url, boneName) {
-  if (!url) return;
-  loadContainer(app, url).then((asset) => {
+function attach(app, inner, url, boneName, onAttach = null) {
+  if (!url) return Promise.resolve(null);
+  return loadContainer(app, url).then((asset) => {
     if (!asset) return;
     try {
       const piece = asset.resource.instantiateRenderEntity();
       const bone = inner.findByName(boneName);
       (bone || inner).addChild(piece);
+      if (onAttach) onAttach(piece);
+      return piece;
     } catch (e) {
       console.warn("[character] weapon attach failed", url, e);
+      return null;
     }
   });
 }
@@ -154,20 +157,24 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     console.warn("[character] anim setup failed (static model)", e);
   }
 
-  // ---- weapon(s) ------------------------------------------------------------
-  if (weapon) {
-    attach(app, inner, def.weapon, HANDSLOT_R);
-    attach(app, inner, def.offhand, HANDSLOT_L);
-  }
-
   // ---- wrap + control surface ----------------------------------------------
   const wrap = new pc.Entity("hero");
   wrap.addChild(inner);
-  const rightHand = inner.findByName(HANDSLOT_R);
+  const rightHand = inner.findByName("hand.r");
+  const rightHandSlot = inner.findByName(HANDSLOT_R);
+  const leftHandSlot = inner.findByName(HANDSLOT_L);
   const attackPose = {
     active: false,
     raf: 0,
+    target: null,
+    targetName: "",
     hand: rightHand || null,
+    handSlot: rightHandSlot || null,
+    sword: null,
+    beforeWorld: null,
+    lastWorld: null,
+    lastLocalRot: null,
+    phase: "idle",
     basePos: null,
     baseRot: null,
     startedAt: 0,
@@ -177,18 +184,59 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     app._charHandSlotLogged = true;
     console.debug("[character] hand/weapon slots", {
       rightHand: rightHand?.name || null,
-      leftHand: inner.findByName(HANDSLOT_L)?.name || null,
+      rightHandSlot: rightHandSlot?.name || null,
+      leftHandSlot: leftHandSlot?.name || null,
     });
   }
 
+  // ---- weapon(s) ------------------------------------------------------------
+  if (weapon) {
+    attach(app, inner, def.weapon, HANDSLOT_R, (piece) => {
+      attackPose.sword = piece || null;
+      if (import.meta.env?.DEV && piece) console.debug("[character] attached main weapon", piece.name || "(unnamed)");
+    });
+    attach(app, inner, def.offhand, HANDSLOT_L);
+  }
+
+  const worldSnapshot = (entity) => {
+    if (!entity) return null;
+    try {
+      const p = entity.getPosition();
+      return { x: p.x, y: p.y, z: p.z };
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const localRotSnapshot = (entity) => {
+    if (!entity) return null;
+    try {
+      const r = entity.getLocalEulerAngles();
+      return { x: r.x, y: r.y, z: r.z };
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const resolveAttackTarget = (preferred = "") => {
+    if (preferred === "hand.r") return attackPose.hand;
+    if (preferred === HANDSLOT_R) return attackPose.handSlot;
+    if (preferred === "sword_1handed") return attackPose.sword || inner.findByName("sword_1handed");
+    return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
+  };
+
   const resetAttackPose = () => {
     if (attackPose.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(attackPose.raf);
+    clearTimeout(attackPose._extremeTimer);
     attackPose.raf = 0;
     attackPose.active = false;
-    if (attackPose.hand && attackPose.basePos && attackPose.baseRot) {
+    attackPose.phase = "idle";
+    if (attackPose.target && attackPose.basePos && attackPose.baseRot) {
       try {
-        attackPose.hand.setLocalPosition(attackPose.basePos);
-        attackPose.hand.setLocalEulerAngles(attackPose.baseRot.x, attackPose.baseRot.y, attackPose.baseRot.z);
+        attackPose.target.setLocalPosition(attackPose.basePos);
+        attackPose.target.setLocalEulerAngles(attackPose.baseRot.x, attackPose.baseRot.y, attackPose.baseRot.z);
+        attackPose.lastWorld = worldSnapshot(attackPose.target);
+        attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
       } catch (_) {
         /* visual reset best-effort only */
       }
@@ -196,38 +244,50 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   };
 
   const applyAttackPose = (t) => {
-    if (!attackPose.hand || !attackPose.basePos || !attackPose.baseRot) return false;
+    if (!attackPose.target || !attackPose.basePos || !attackPose.baseRot) return false;
     const windup = clamp01(t / 0.08);
     const slash = clamp01((t - 0.08) / 0.12);
     const recovery = clamp01((t - 0.2) / 0.15);
+    attackPose.phase = t < 0.08 ? "windup" : t < 0.2 ? "slash" : "recovery";
     const swing = t < 0.08 ? -0.38 * easeOut(windup)
       : t < 0.2 ? -0.38 + 1.55 * easeInOut(slash)
         : 1.17 * (1 - easeOut(recovery));
     const lift = Math.sin(Math.PI * clamp01(t / 0.2));
     const settle = t > 0.2 ? 1 - easeOut(recovery) : 1;
-    attackPose.hand.setLocalPosition(
-      attackPose.basePos.x + 0.05 * Math.sin(swing) * settle,
-      attackPose.basePos.y + 0.06 * lift,
-      attackPose.basePos.z - 0.04 * Math.cos(swing) * settle,
+    attackPose.target.setLocalPosition(
+      attackPose.basePos.x + 0.12 * Math.sin(swing) * settle,
+      attackPose.basePos.y + 0.16 * lift,
+      attackPose.basePos.z - 0.1 * Math.cos(swing) * settle,
     );
-    attackPose.hand.setLocalEulerAngles(
-      attackPose.baseRot.x - 34 * lift + 12 * recovery,
-      attackPose.baseRot.y + swing * 58,
-      attackPose.baseRot.z - 62 * swing,
+    attackPose.target.setLocalEulerAngles(
+      attackPose.baseRot.x - 62 * lift + 18 * recovery,
+      attackPose.baseRot.y + swing * 96,
+      attackPose.baseRot.z - 128 * swing,
     );
+    attackPose.lastWorld = worldSnapshot(attackPose.target);
+    attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
     return true;
   };
 
-  const playProceduralAttack = () => {
-    if (!attackPose.hand || attackPose.active) return false;
+  const playProceduralAttack = (opts = {}) => {
+    if (attackPose.active) return false;
     try {
-      attackPose.basePos = attackPose.hand.getLocalPosition().clone();
-      attackPose.baseRot = attackPose.hand.getLocalEulerAngles().clone();
+      const target = resolveAttackTarget(opts.target || "");
+      if (!target) return false;
+      attackPose.target = target;
+      attackPose.targetName = target.name || opts.target || "(unnamed)";
+      attackPose.basePos = target.getLocalPosition().clone();
+      attackPose.baseRot = target.getLocalEulerAngles().clone();
+      attackPose.beforeWorld = worldSnapshot(target);
+      attackPose.lastWorld = attackPose.beforeWorld;
+      attackPose.lastLocalRot = localRotSnapshot(target);
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+      attackPose.duration = 0.35;
       attackPose.active = true;
       const step = () => {
         const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
-        const t = now - attackPose.startedAt;
+        const elapsed = now - attackPose.startedAt;
+        const t = elapsed * (opts.slow ? 0.35 / 1.2 : 1);
         if (t >= attackPose.duration) {
           resetAttackPose();
           return;
@@ -247,20 +307,83 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     }
   };
 
-  const st = { moving: false, running: false, dead: false, _atk: null, _one: null, _assigned: new Set() };
+  const playExtremePose = (targetName = "sword_1handed", duration = 2) => {
+    resetAttackPose();
+    const target = resolveAttackTarget(targetName);
+    if (!target) return false;
+    try {
+      attackPose.target = target;
+      attackPose.targetName = target.name || targetName;
+      attackPose.basePos = target.getLocalPosition().clone();
+      attackPose.baseRot = target.getLocalEulerAngles().clone();
+      attackPose.beforeWorld = worldSnapshot(target);
+      attackPose.phase = "extreme";
+      target.setLocalPosition(attackPose.basePos.x + 0.45, attackPose.basePos.y + 0.65, attackPose.basePos.z - 0.35);
+      target.setLocalEulerAngles(attackPose.baseRot.x + 105, attackPose.baseRot.y + 120, attackPose.baseRot.z - 95);
+      attackPose.lastWorld = worldSnapshot(target);
+      attackPose.lastLocalRot = localRotSnapshot(target);
+      attackPose.active = true;
+      clearTimeout(attackPose._extremeTimer);
+      attackPose._extremeTimer = setTimeout(resetAttackPose, Math.max(0.1, duration) * 1000);
+      return true;
+    } catch (e) {
+      console.warn("[character] extreme attack pose failed", e);
+      resetAttackPose();
+      return false;
+    }
+  };
+
+  const collectAttackDebug = () => {
+    const matches = [];
+    const walk = (entity) => {
+      if (!entity) return;
+      const name = entity.name || "";
+      if (/hand|handslot|sword|weapon|blade|arm/i.test(name)) {
+        matches.push({
+          name,
+          hasRender: !!entity.render,
+          children: entity.children?.length || 0,
+          world: worldSnapshot(entity),
+        });
+      }
+      for (const child of entity.children || []) walk(child);
+    };
+    walk(wrap);
+    const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+    return {
+      phase: attackPose.phase,
+      time: attackPose.active ? Math.max(0, now - attackPose.startedAt) : 0,
+      currentClip: st.currentClip || "Idle",
+      rightHandFound: !!attackPose.hand,
+      handSlotFound: !!attackPose.handSlot,
+      swordFound: !!(attackPose.sword || inner.findByName("sword_1handed")),
+      animatedEntity: attackPose.targetName || "",
+      beforeWorld: attackPose.beforeWorld,
+      afterWorld: attackPose.lastWorld,
+      beforeLocalRot: attackPose.baseRot ? { x: attackPose.baseRot.x, y: attackPose.baseRot.y, z: attackPose.baseRot.z } : null,
+      afterLocalRot: attackPose.lastLocalRot,
+      entities: matches,
+    };
+  };
+
+  const st = { moving: false, running: false, dead: false, currentClip: "Idle", _atk: null, _one: null, _assigned: new Set() };
   return {
     wrap,
     foot,
     setMoving(b) {
       if (!layer || st.dead || b === st.moving) return;
       st.moving = b;
-      goto(layer, b ? (st.running ? "Run" : "Walk") : "Idle");
+      st.currentClip = b ? (st.running ? "Run" : "Walk") : "Idle";
+      goto(layer, st.currentClip);
     },
     setGait(running) {
       running = !!running;
       if (st.running === running) return;
       st.running = running;
-      if (st.moving && layer) goto(layer, running ? "Run" : "Walk", 0.15);
+      if (st.moving && layer) {
+        st.currentClip = running ? "Run" : "Walk";
+        goto(layer, st.currentClip, 0.15);
+      }
     },
     playClip(name, loop = false) {
       if (!layer || st.dead) return;
@@ -270,28 +393,44 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
         try { inner.anim.assignAnimation(name, t, undefined, 1, loop); } catch (_) { return; }
         st._assigned.add(name);
       }
+      st.currentClip = name;
       goto(layer, name, 0.1);
       if (!loop) {
         clearTimeout(st._one);
         const ms = Math.min((t.duration ? t.duration * 1000 : 800), 2600);
-        st._one = setTimeout(() => { if (!st.dead) goto(layer, st.moving ? (st.running ? "Run" : "Walk") : "Idle", 0.15); }, ms);
+        st._one = setTimeout(() => {
+          if (!st.dead) {
+            st.currentClip = st.moving ? (st.running ? "Run" : "Walk") : "Idle";
+            goto(layer, st.currentClip, 0.15);
+          }
+        }, ms);
       }
     },
     setDead(b) {
       if (!layer || b === st.dead) return;
       st.dead = b;
-      goto(layer, b ? "Death" : "Idle", b ? 0.1 : 0.15);
+      st.currentClip = b ? "Death" : "Idle";
+      goto(layer, st.currentClip, b ? 0.1 : 0.15);
     },
     playAttack() {
       if (!layer || st.dead || !hasAttack) return false;
+      st.currentClip = "Attack";
       goto(layer, "Attack", 0.05);
       clearTimeout(st._atk);
-      st._atk = setTimeout(() => { if (!st.dead) goto(layer, st.moving ? "Walk" : "Idle", 0.12); }, 520);
+      st._atk = setTimeout(() => {
+        if (!st.dead) {
+          st.currentClip = st.moving ? "Walk" : "Idle";
+          goto(layer, st.currentClip, 0.12);
+        }
+      }, 520);
       return true;
     },
     playProceduralAttack,
+    playExtremePose,
     resetAttackPose,
+    getAttackDebug: collectAttackDebug,
     playOnce(state) {
+      st.currentClip = state;
       goto(layer, state, 0.08);
     },
   };

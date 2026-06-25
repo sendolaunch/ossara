@@ -16,10 +16,11 @@ import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
 import { Inventory } from "./ui/inventory.js";
 import { HeroSelect } from "./ui/heroSelect.js";
 import { EnemyGallery } from "./ui/enemyGallery.js";
+import { HeroAttackLab } from "./ui/heroAttackLab.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
 import { getDifficulty, getMission } from "./config/missions.js";
-import { devEnemyGalleryEnabled, devMissionIdFromLocation } from "./dev/missionSmoke.js";
+import { devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devMissionIdFromLocation } from "./dev/missionSmoke.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -41,6 +42,7 @@ let heroSelect = null;
 let username = "The Warded";
 const devMissionId = devMissionIdFromLocation(window.location, import.meta.env);
 const devEnemyGallery = devEnemyGalleryEnabled(window.location, import.meta.env);
+const devHeroAttackClass = devHeroAttackClassFromLocation(window.location, import.meta.env);
 
 function ensureHub() {
   if (!hub) {
@@ -213,7 +215,13 @@ window.OSSARA = {
   startMission,
 };
 
-if (devEnemyGallery) {
+if (devHeroAttackClass) {
+  screensRoot.style.display = "none";
+  app.style.display = "";
+  const lab = new HeroAttackLab(app, ui, devHeroAttackClass);
+  window.OSSARA.heroAttackLab = lab;
+  lab.start();
+} else if (devEnemyGallery) {
   screensRoot.style.display = "none";
   app.style.display = "";
   const gallery = new EnemyGallery(app, ui);

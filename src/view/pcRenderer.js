@@ -1231,10 +1231,7 @@ export class PCRenderer {
   _spawnEventFx(events = []) {
     for (const ev of events) {
       if (ev.kind === "heroHit") {
-        this._heroSwordSwing(ev.heroX ?? ev.x, ev.heroZ ?? ev.z, ev.facing || 0, ev.range || 1.2, true);
         this._spark(ev.x, ev.z, "gold", 0.4);
-      } else if (ev.kind === "heroSwing") {
-        this._heroSwordSwing(ev.x, ev.z, ev.facing || 0, ev.range || 1.2, false);
       }
       else if (ev.kind === "heroDash") this._ring(ev.x, ev.z, ev.range || 1.1, "plague", 0.28);
       else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
@@ -1261,14 +1258,19 @@ export class PCRenderer {
 
   _heroSwordSwing(x, z, facing, range, hit = false) {
     const root = new pc.Entity("hero-sword-swing");
+    root.name = "hero-visible-sword-proxy";
     const blade = prim("box", mat("bone", 1.4));
     blade.name = "sword-blade";
-    blade.setLocalScale(0.9, 0.07, 0.09);
+    blade.setLocalScale(Math.max(1.05, range * 0.74), 0.075, 0.115);
     root.addChild(blade);
     const hilt = prim("box", mat("gold", 1.1));
     hilt.name = "sword-hilt";
-    hilt.setLocalScale(0.18, 0.1, 0.18);
+    hilt.setLocalScale(0.24, 0.12, 0.2);
     root.addChild(hilt);
+    const guard = prim("box", mat("gold", 1.25));
+    guard.name = "sword-crossguard";
+    guard.setLocalScale(0.42, 0.06, 0.08);
+    root.addChild(guard);
     const trailMat = mat(hit ? "plague" : "ash", hit ? 1.2 : 0.7);
     const trails = [];
     for (let i = 0; i < 4; i++) {
@@ -1279,7 +1281,7 @@ export class PCRenderer {
       trails.push(t);
     }
     this.app.root.addChild(root);
-    this.fx.push({ ent: root, kind: "heroSwordSwing", life: 0.35, maxLife: 0.35, x, z, facing, range, blade, hilt, trails });
+    this.fx.push({ ent: root, kind: "heroSwordSwing", life: 0.35, maxLife: 0.35, x, z, facing, range, blade, hilt, guard, trails });
   }
 
   _positionHeroSwingPart(part, fx, t, sideScale = 1, yOff = 0) {
@@ -1289,10 +1291,10 @@ export class PCRenderer {
     const rightX = Math.cos(fx.facing);
     const rightZ = -Math.sin(fx.facing);
     const side = (-0.62 + 1.24 * swing) * sideScale;
-    const reach = fx.range * (0.52 + 0.16 * Math.sin(Math.PI * swing));
-    const y = 0.86 + yOff + Math.sin(Math.PI * swing) * 0.12;
+    const reach = fx.range * (0.46 + 0.22 * Math.sin(Math.PI * swing));
+    const y = 1.03 + yOff + Math.sin(Math.PI * swing) * 0.18;
     part.setPosition(fx.x + fwdX * reach + rightX * side, y, fx.z + fwdZ * reach + rightZ * side);
-    part.setLocalEulerAngles(8 - 18 * swing, (fx.facing * 180) / Math.PI - 58 + 116 * swing, -24 + 48 * swing);
+    part.setLocalEulerAngles(16 - 32 * swing, (fx.facing * 180) / Math.PI - 72 + 144 * swing, -36 + 72 * swing);
   }
 
   _slash(x, z, facing, range, colorKey) {
@@ -1324,8 +1326,10 @@ export class PCRenderer {
         const slashT = t < 0.22 ? t * 1.15 : t < 0.62 ? 0.25 + (t - 0.22) * 1.65 : 0.91 + (t - 0.62) * 0.24;
         this._positionHeroSwingPart(fx.blade, fx, slashT, 1, 0);
         this._positionHeroSwingPart(fx.hilt, fx, Math.max(0, slashT - 0.05), 0.72, -0.04);
+        if (fx.guard) this._positionHeroSwingPart(fx.guard, fx, Math.max(0, slashT - 0.04), 0.78, -0.02);
         fx.blade.enabled = t < 0.9;
         fx.hilt.enabled = t < 0.9;
+        if (fx.guard) fx.guard.enabled = t < 0.9;
         fx.trails.forEach((trail, i) => {
           const trailT = Math.max(0, slashT - 0.09 * (i + 1));
           this._positionHeroSwingPart(trail, fx, trailT, 1, -0.02 - i * 0.01);
@@ -1600,6 +1604,7 @@ export class PCRenderer {
       this.heroCtl.setDead(!h.alive);
       this.heroAnimation = { loaded: true, fallback: false, moving: moving && h.alive, running: running && moving && h.alive, dead: !h.alive };
       if (this._prevAtkCd != null && h.attackCd > this._prevAtkCd + 0.05) {
+        this._heroSwordSwing(h.x, h.z, h.facing || 0, h.attackRange || 1.2, true);
         try {
           const usedClip = this.heroCtl.playAttack?.();
           if (!usedClip) this.heroCtl.playProceduralAttack?.();

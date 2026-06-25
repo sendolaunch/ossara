@@ -22,3 +22,10 @@ export function devEnemyGalleryEnabled(location = globalThis.location, env = {})
   const params = new URLSearchParams(location?.search || "");
   return params.get("devEnemyGallery") === "1";
 }
+
+export function devHeroAttackClassFromLocation(location = globalThis.location, env = {}) {
+  if (!canUseDevMissionRoute(env, location)) return null;
+  const params = new URLSearchParams(location?.search || "");
+  const id = params.get("devHeroAttack");
+  return id && id.trim() ? id.trim() : null;
+}
