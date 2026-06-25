@@ -2,7 +2,7 @@
 // two defences that class may build. The mission is handed one of these based on
 // the order the player chose. Shared spawn/radius come from hero.js.
 //
-// ability.type drives how it hits (World._useAbility):
+// ability.type drives how it hits (heroCombat.useHeroAbility):
 //   radial — burst around the hero
 //   cone   — forward arc in the hero's facing
 //   chain  — the N nearest enemies in range

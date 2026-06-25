@@ -8,7 +8,6 @@ import { TOWERS } from "../config/towers.js";
 import { WAVES } from "../config/waves.js";
 import { HERO } from "../config/hero.js";
 import { CLASS_KITS } from "../config/kits.js";
-import { MISSION_DASH } from "../config/moves.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, gridToWorld, worldToGrid, cellKey } from "./pathing.js";
 import {
   advanceEnemyAlongLane,
@@ -48,12 +47,18 @@ import {
   updateAuraDefense,
   updateTrapDefense,
 } from "./defenseBehavior.js";
-
-const dist2 = (ax, az, bx, bz) => {
-  const dx = ax - bx;
-  const dz = az - bz;
-  return dx * dx + dz * dz;
-};
+import {
+  applyHeroEnemyContactDamage,
+  heroAttack,
+  heroDashSpeedMultiplier,
+  isHeroDashing,
+  selectHeroAttackTarget,
+  tickHeroActionCooldowns,
+  tickHeroDashTimers,
+  tryStartHeroDash,
+  tryUseHeroAbility,
+  useHeroAbility,
+} from "./heroCombat.js";
 
 const UPGRADE_MAX_LEVEL = COMMAND_MAX_LEVEL;
 export class World {
@@ -447,58 +452,11 @@ export class World {
   }
 
   _enemyInHeroAttackArc(h, aimX, aimZ) {
-    const hasAim = Number.isFinite(aimX) && Number.isFinite(aimZ);
-    let fx = Math.sin(h.facing);
-    let fz = Math.cos(h.facing);
-    if (hasAim) {
-      const ax = aimX - h.x;
-      const az = aimZ - h.z;
-      const am = Math.hypot(ax, az);
-      if (am > 1e-4) {
-        fx = ax / am;
-        fz = az / am;
-        h.facing = Math.atan2(fx, fz);
-      }
-    }
-
-    let best = null;
-    let bestScore = Infinity;
-    let fallback = null;
-    let fallbackScore = Infinity;
-    const reach = h.attackRange + 0.35;
-    for (const e of this.enemies) {
-      if (!e.alive) continue;
-      const dx = e.x - h.x;
-      const dz = e.z - h.z;
-      const d = Math.hypot(dx, dz);
-      if (d > reach + e.radius || d < 1e-5) continue;
-      const dot = (dx / d) * fx + (dz / d) * fz;
-      if (dot < 0.08) continue;
-      const aimBias = hasAim ? Math.hypot(e.x - aimX, e.z - aimZ) * 0.2 : 0;
-      const score = d + aimBias;
-      if (dot >= 0.35 && score < bestScore) {
-        bestScore = score;
-        best = e;
-      }
-      if (score < fallbackScore) {
-        fallbackScore = score;
-        fallback = e;
-      }
-    }
-    return best || fallback;
+    return selectHeroAttackTarget(h, this.enemies, aimX, aimZ);
   }
 
   _heroAttack(h, input) {
-    if (h.attackCd > 0) return false;
-    const target = this._enemyInHeroAttackArc(h, input.attackX, input.attackZ);
-    if (target) {
-      this._damageEnemy(target, h.attackDamage);
-      this.events.push({ kind: "heroHit", x: target.x, z: target.z, heroX: h.x, heroZ: h.z, facing: h.facing, range: h.attackRange });
-    } else {
-      this.events.push({ kind: "heroSwing", x: h.x, z: h.z, facing: h.facing, range: h.attackRange });
-    }
-    h.attackCd = 1 / h.attackRate;
-    return true;
+    return heroAttack(h, input, this.enemies, this._heroCombatHooks());
   }
 
   _enemyById(id) {
@@ -519,32 +477,19 @@ export class World {
       return;
     }
 
-    h.dashCd = Math.max(0, (h.dashCd || 0) - dt);
-    h.dashTimer = Math.max(0, (h.dashTimer || 0) - dt);
+    tickHeroDashTimers(h, dt);
 
     // Movement (WASD-derived direction, normalized).
     let mx = input.moveX || 0;
     let mz = input.moveZ || 0;
     const m = Math.hypot(mx, mz);
-    if (input.dash && h.dashCd <= 0) {
-      if (m > 0) {
-        h.dashX = mx / m;
-        h.dashZ = mz / m;
-      } else {
-        h.dashX = Math.sin(h.facing);
-        h.dashZ = Math.cos(h.facing);
-      }
-      h.dashTimer = MISSION_DASH.dashTime;
-      h.dashCd = MISSION_DASH.dashCooldown;
-      h.facing = Math.atan2(h.dashX, h.dashZ);
-      this.events.push({ kind: "heroDash", x: h.x, z: h.z, range: 1.2 });
-    }
-    const dashing = h.dashTimer > 0;
+    tryStartHeroDash(h, mx, mz, input.dash, this._heroCombatHooks());
+    const dashing = isHeroDashing(h);
     if (dashing) {
       mx = h.dashX;
       mz = h.dashZ;
     }
-    const speedMul = dashing ? MISSION_DASH.dashMul : 1;
+    const speedMul = heroDashSpeedMultiplier(h);
     if (dashing || m > 0) {
       const moveLen = Math.hypot(mx, mz);
       if (moveLen > 0) {
@@ -561,24 +506,14 @@ export class World {
     }
 
     // Manual hero attack. The click command comes from input; no click means no swing.
-    h.attackCd -= dt;
+    tickHeroActionCooldowns(h, dt);
     if (input.attack) this._heroAttack(h, input);
 
     // Signature ability (Q) — behaviour depends on the class kit.
-    h.abilityCd -= dt;
-    if (input.slam && h.abilityCd <= 0) {
-      this._useAbility(h);
-      h.abilityCd = h.ability.cooldown;
-    }
+    tryUseHeroAbility(h, input.slam, this.enemies, this._heroCombatHooks());
 
     // Contact damage: enemies hurt the hero only if he body-blocks them.
-    for (const e of this.enemies) {
-      if (!e.alive) continue;
-      const rr = (e.radius + h.radius) * (e.radius + h.radius);
-      if (dist2(h.x, h.z, e.x, e.z) <= rr) {
-        h.hp -= e.leak * 6 * dt; // contact dps scales with how dangerous it is
-      }
-    }
+    applyHeroEnemyContactDamage(h, this.enemies, dt);
     if (h.hp <= 0) {
       h.alive = false;
       h.hp = 0;
@@ -588,37 +523,14 @@ export class World {
   }
 
   _useAbility(h) {
-    const ab = h.ability;
-    const offset = ab.centerOffset || 0;
-    const cx = h.x + Math.sin(h.facing) * offset;
-    const cz = h.z + Math.cos(h.facing) * offset;
-    const r2 = ab.range * ab.range;
-    if (ab.type === "cone") {
-      // forward arc in the hero's facing
-      const fx = Math.sin(h.facing);
-      const fz = Math.cos(h.facing);
-      for (const e of this.enemies) {
-        if (!e.alive) continue;
-        const dx = e.x - cx;
-        const dz = e.z - cz;
-        const d2 = dx * dx + dz * dz;
-        if (d2 > r2 || d2 < 1e-6) continue;
-        const d = Math.sqrt(d2);
-        if ((dx / d) * fx + (dz / d) * fz > 0.5) this._damageEnemy(e, ab.damage); // ~60° cone
-      }
-    } else if (ab.type === "chain") {
-      const inRange = this.enemies.filter((e) => e.alive && dist2(cx, cz, e.x, e.z) <= r2);
-      inRange.sort((a, b) => dist2(cx, cz, a.x, a.z) - dist2(cx, cz, b.x, b.z));
-      const n = Math.min(ab.chain || 5, inRange.length);
-      for (let i = 0; i < n; i++) this._damageEnemy(inRange[i], ab.damage);
-    } else {
-      // radial / cloud — burst around the hero
-      for (const e of this.enemies) {
-        if (e.alive && dist2(cx, cz, e.x, e.z) <= r2) this._damageEnemy(e, ab.damage);
-      }
-      if (ab.type === "cloud" && ab.heal) h.hp = Math.min(h.maxHp, h.hp + ab.heal);
-    }
-    this.events.push({ kind: "slam", abilityId: ab.id, x: cx, z: cz, heroX: h.x, heroZ: h.z, range: ab.range });
+    useHeroAbility(h, this.enemies, this._heroCombatHooks());
+  }
+
+  _heroCombatHooks() {
+    return {
+      damageEnemy: (enemy, amount) => this._damageEnemy(enemy, amount),
+      pushEvent: (event) => this.events.push(event),
+    };
   }
 
   _updateTowers(dt) {
