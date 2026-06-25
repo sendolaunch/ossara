@@ -1673,21 +1673,60 @@ export class PCRenderer {
       let ent = this.towerEntities.get(t.id);
       if (!ent) {
         ent = new pc.Entity("tower");
-        const base = prim("cylinder", mat("ash"));
-        base.setLocalScale(0.7, 0.3, 0.7);
-        base.setLocalPosition(0, 0.15, 0);
-        ent.addChild(base);
-        const head = prim("cone", mat(t.color, t.type === "spire" ? 0.7 : 0));
-        head.setLocalScale(0.5, 0.9, 0.5);
-        head.setLocalPosition(0, 0.7, 0);
-        head.name = "head";
-        ent.addChild(head);
+        if (t.type === "barricade") {
+          const base = prim("box", mat("ash"));
+          base.setLocalScale(1.28, 0.22, 0.62);
+          base.setLocalPosition(0, 0.11, 0);
+          ent.addChild(base);
+          const head = new pc.Entity("head");
+          const wall = prim("box", mat("ash"));
+          wall.setLocalScale(1.25, 0.82, 0.28);
+          wall.setLocalPosition(0, 0.56, 0);
+          head.addChild(wall);
+          const leftPost = prim("box", mat("bone"));
+          leftPost.setLocalScale(0.18, 1.08, 0.36);
+          leftPost.setLocalPosition(-0.52, 0.62, 0);
+          head.addChild(leftPost);
+          const rightPost = prim("box", mat("bone"));
+          rightPost.setLocalScale(0.18, 1.08, 0.36);
+          rightPost.setLocalPosition(0.52, 0.62, 0);
+          head.addChild(rightPost);
+          const ward = prim("box", mat("plague", 1.25));
+          ward.name = "ward-accent";
+          ward.setLocalScale(0.22, 0.22, 0.08);
+          ward.setLocalEulerAngles(0, 0, 45);
+          ward.setLocalPosition(0, 0.7, -0.18);
+          head.addChild(ward);
+          const crack = prim("box", mat("blood", 0.4));
+          crack.name = "low-health-mark";
+          crack.setLocalScale(0.08, 0.56, 0.09);
+          crack.setLocalEulerAngles(0, 0, 22);
+          crack.setLocalPosition(0.28, 0.58, -0.2);
+          crack.enabled = false;
+          head.addChild(crack);
+          ent._ossaraLowHealthMark = crack;
+          ent.addChild(head);
+        } else {
+          const base = prim("cylinder", mat("ash"));
+          base.setLocalScale(0.7, 0.3, 0.7);
+          base.setLocalPosition(0, 0.15, 0);
+          ent.addChild(base);
+          const head = prim("cone", mat(t.color, t.type === "spire" ? 0.7 : 0));
+          head.setLocalScale(0.5, 0.9, 0.5);
+          head.setLocalPosition(0, 0.7, 0);
+          head.name = "head";
+          ent.addChild(head);
+        }
         ent.setPosition(t.x, 0, t.z);
         this.app.root.addChild(ent);
         this.towerEntities.set(t.id, ent);
       }
       const head = ent.findByName("head");
       if (head) head.setLocalEulerAngles(0, (t.facing * 180) / Math.PI, 0);
+      if (ent._ossaraLowHealthMark) {
+        const ratio = t.maxHp > 0 ? Math.max(0, t.hp / t.maxHp) : 1;
+        ent._ossaraLowHealthMark.enabled = ratio <= 0.45;
+      }
     }
     for (const [id, ent] of this.towerEntities) {
       if (!seen.has(id)) {

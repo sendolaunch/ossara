@@ -35,7 +35,7 @@ function towerIcon(id, c) {
   const s = (b) => `<svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round">${b}</svg>`;
   switch (id) {
     case "barricade":
-      return s(`<rect x="5" y="14" width="22" height="12" fill="${c}" opacity="0.35"/><path d="M5 20 H27 M11 14 V20 M21 20 V26 M16 20 V26"/>`);
+      return s(`<rect x="4" y="13" width="24" height="13" fill="${c}" opacity="0.28"/><path d="M5 13 H27 V26 H5 Z M10 13 V26 M16 13 V26 M22 13 V26 M5 20 H27"/><path d="M16 7 L20 11 L16 15 L12 11 Z" fill="${CSS.plague}" stroke="${CSS.plague}"/>`);
     case "spikegate":
       return s(`<path d="M6 26 L11 12 L16 26 L21 12 L26 26 Z" fill="${c}" opacity="0.3"/>`);
     case "trapstake":
@@ -82,6 +82,7 @@ export function defensePanelData(tower) {
   if (!tower || !tower.alive) return null;
   const def = TOWERS[tower.type] || {};
   const maxLevel = tower.maxLevel || 3;
+  const roleText = def.roleText || def.blurb || defenseTypeLabel(tower.defenseType);
   const hpText = tower.maxHp > 0
     ? `HP ${Math.ceil(tower.hp)} / ${Math.ceil(tower.maxHp)}`
     : tower.defenseType === "trap"
@@ -94,7 +95,7 @@ export function defensePanelData(tower) {
   return {
     title: `${def.name || tower.type}  L${tower.level || 1}`.toUpperCase(),
     type: defenseTypeLabel(tower.defenseType),
-    meta: `${defenseTypeLabel(tower.defenseType)}  |  ${hpText}  |  ${upgradeText}  |  Sell +${tower.sellRefund}`,
+    meta: `${defenseTypeLabel(tower.defenseType)}  |  ${roleText}  |  ${hpText}  |  ${upgradeText}  |  Sell +${tower.sellRefund}`,
     controls: `[U] Upgrade  [F] ${repairText}  [X] Sell`,
   };
 }
@@ -114,7 +115,7 @@ export function selectedDefensePanelData(towerId, world, placementStatus = null)
     title: `${def.name}`.toUpperCase(),
     type: defenseTypeLabel(def.defenseType),
     canBuild: afford && (!placement || placement.ok),
-    meta: `${defenseTypeLabel(def.defenseType)}  |  Cost ${def.cost} Marrow  |  You have ${Math.floor(world.marrow)}`,
+    meta: `${defenseTypeLabel(def.defenseType)}  |  ${def.roleText || def.blurb || "Defense"}  |  Cost ${def.cost} Marrow  |  You have ${Math.floor(world.marrow)}`,
     controls,
   };
 }

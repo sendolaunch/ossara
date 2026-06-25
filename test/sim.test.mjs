@@ -182,8 +182,82 @@ section("defense type data model");
   }
   ok(TOWERS.barricade.defenseType === "blockade", "Barricade is classified as a blockade");
   ok(TOWERS.barricade.blocksEnemies && TOWERS.barricade.targetableByEnemies, "Barricade is a physical enemy target");
+  ok(TOWERS.barricade.name === "Warden Barricade", "Warden blockade has its class identity in config");
+  ok(TOWERS.barricade.roleText.includes("Blocks enemies") && TOWERS.barricade.roleText.includes("High health"), "Warden Barricade advertises its hold-the-lane role");
+  ok(TOWERS.barricade.maxHp >= 360 && TOWERS.barricade.contactDamage === 0, "Warden Barricade is tanky without thorns damage");
   ok(TOWERS.spikegate.defenseType === "blockade", "Spike-gate is classified as a blockade variant");
   ok(TOWERS.spikegate.blocksEnemies && TOWERS.spikegate.targetableByEnemies, "Spike-gate is a physical enemy target");
+}
+
+// ---------------------------------------------------------------------------
+section("warden barricade v1");
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("barricade", 60, 32);
+  ok(placed.ok, "Warden Barricade can be placed through the existing placement flow");
+  const barricade = placed.tower;
+  ok(barricade.type === "barricade" && barricade.defenseType === "blockade", "placed Warden Barricade remains a blockade");
+  ok(barricade.maxHp === TOWERS.barricade.maxHp && barricade.hp === TOWERS.barricade.hp, "placed Warden Barricade stores tank HP");
+  ok(barricade.blocksEnemies && barricade.targetableByEnemies, "placed Warden Barricade blocks and can be attacked");
+  ok(barricade.contactDamage === 0, "Warden Barricade does not inherit Spike-gate thorns damage");
+
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  const slot = computeBlockadeAttackSlot(enemy, barricade, w.lane, 0);
+  enemy.x = slot.x;
+  enemy.z = slot.z;
+  const hpBefore = barricade.hp;
+  const distBefore = enemy.dist;
+  w.update(0.1, {});
+  ok(enemy.blockingTargetId === barricade.id && enemy.attackingBlocker, "enemy clearly attacks the Warden Barricade");
+  ok(barricade.hp < hpBefore, "Warden Barricade takes enemy damage while holding the lane");
+  ok(approx(enemy.dist, distBefore), "Warden Barricade holds enemies in place");
+
+  const damagedHp = barricade.hp;
+  const repair = w.repairTower(barricade.id);
+  ok(repair.ok && barricade.hp === barricade.maxHp && barricade.hp > damagedHp, "Warden Barricade can be repaired");
+  const maxBefore = barricade.maxHp;
+  const upgrade = w.upgradeTower(barricade.id);
+  ok(upgrade.ok && barricade.level === 2 && barricade.maxHp > maxBefore, "Warden Barricade can be upgraded for more HP");
+  const cell = { col: barricade.col, row: barricade.row };
+  const sell = w.sellTower(barricade.id);
+  ok(sell.ok && !barricade.alive && w.placementStatus("barricade", cell.col, cell.row, { ignoreCost: true }).ok, "Warden Barricade can be sold and releases its cell");
+}
+
+{
+  const dashWorld = new World(LEVEL);
+  dashWorld.marrow = 999;
+  ok(dashWorld.tryPlaceTower("barricade", 60, 32).ok, "Warden can build Barricade before using hero kit");
+  const x0 = dashWorld.hero.x;
+  dashWorld.update(0.05, { moveX: 1, moveZ: 0, dash: true });
+  run(dashWorld, 4, 0.05, { moveX: 1, moveZ: 0 });
+  ok(dashWorld.hero.x > x0 && dashWorld.hero.dashCd > 0, "Dash still works after building Warden Barricade");
+
+  const slamWorld = new World(LEVEL);
+  slamWorld.marrow = 999;
+  ok(slamWorld.tryPlaceTower("barricade", 60, 32).ok, "Warden can build Barricade before using Ward Slam");
+  const slamEnemy = spawnEnemyAt(slamWorld, "husk", slamWorld.defaultLaneId, NORTH_CHOKE_DIST);
+  const slamCenterX = slamWorld.hero.x + Math.sin(slamWorld.hero.facing) * (slamWorld.hero.ability.centerOffset || 0);
+  const slamCenterZ = slamWorld.hero.z + Math.cos(slamWorld.hero.facing) * (slamWorld.hero.ability.centerOffset || 0);
+  slamEnemy.x = slamCenterX;
+  slamEnemy.z = slamCenterZ;
+  slamEnemy.hp = 100;
+  slamWorld.hero.abilityCd = 0;
+  slamWorld._useAbility(slamWorld.hero);
+  ok(slamEnemy.hp < 100 && slamWorld.events.some((ev) => ev.kind === "slam"), "Ward Slam still works after building Warden Barricade");
+
+  const attackWorld = new World(LEVEL);
+  attackWorld.marrow = 999;
+  ok(attackWorld.tryPlaceTower("barricade", 60, 32).ok, "Warden can build Barricade before using basic attack");
+  const attackEnemy = spawnEnemyAt(attackWorld, "husk", attackWorld.defaultLaneId, NORTH_CHOKE_DIST);
+  attackEnemy.x = attackWorld.hero.x;
+  attackEnemy.z = attackWorld.hero.z + 1.0;
+  attackEnemy.hp = 100;
+  attackWorld.hero.attackCd = 0;
+  attackWorld._heroAttack(attackWorld.hero, { attackX: attackEnemy.x, attackZ: attackEnemy.z });
+  ok(attackEnemy.hp < 100 && attackWorld.hero.attackCd > 0, "basic attack still works after building Warden Barricade");
 }
 
 // ---------------------------------------------------------------------------

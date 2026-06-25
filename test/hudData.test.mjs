@@ -23,8 +23,8 @@ const hoveredBlockade = {
   sellRefund: 18,
 };
 const hoverData = defensePanelData(hoveredBlockade);
-ok(hoverData.title.includes("BARRICADE") && hoverData.title.includes("L2"), "hover panel names defense and level");
-ok(hoverData.meta.includes("Blockade") && hoverData.meta.includes("HP 156 / 420"), "hover panel includes type and HP");
+ok(hoverData.title.includes("WARDEN BARRICADE") && hoverData.title.includes("L2"), "hover panel names defense and level");
+ok(hoverData.meta.includes("Blockade") && hoverData.meta.includes("Blocks enemies") && hoverData.meta.includes("HP 156 / 420"), "hover panel includes type, role, and HP");
 ok(hoverData.controls.includes("[U]") && hoverData.controls.includes("[F]") && hoverData.controls.includes("[X]"), "hover panel includes U/F/X actions");
 
 const commandData = commandTargetPanelData("upgrade", hoveredBlockade);
@@ -54,7 +54,7 @@ ok(trapData.meta.includes("Trap") && trapData.meta.includes("Charges 3 / 6"), "t
 
 const world = { marrow: 100 };
 const selectedData = selectedDefensePanelData("barricade", world, { towerId: "barricade", ok: true });
-ok(selectedData.title === "BARRICADE" && selectedData.meta.includes("Cost 35 Marrow"), "selected defense panel includes name and cost");
+ok(selectedData.title === "WARDEN BARRICADE" && selectedData.meta.includes("Blocks enemies") && selectedData.meta.includes("Cost 40 Marrow"), "selected defense panel includes name, role, and cost");
 ok(selectedData.canBuild, "selected defense panel marks affordable valid placement");
 
 const invalidData = selectedDefensePanelData("barricade", world, { towerId: "barricade", ok: false, reason: "path" });
