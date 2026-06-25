@@ -56,6 +56,35 @@ export class Input {
     this._bind(renderer.domElement);
   }
 
+  resetState(opts = {}) {
+    if (!opts.preserveKeys) this.keys.clear();
+    if (!opts.preservePending) {
+      this.pendingSlam = false;
+      this.pendingDash = false;
+      this.pendingAttack = null;
+      this.pendingStart = false;
+    }
+    this.selected = null;
+    this.rotation = 0;
+    this.hoverCell = null;
+    this.hoverTower = null;
+    this.commandTargetMode = null;
+    this.commandTarget = null;
+    this.commandCast = null;
+    this.actionMenuOpen = false;
+    this._mouse = null;
+    this._orbitDrag = null;
+    if (this.renderer?.setHover) this.renderer.setHover(null);
+    if (this.renderer?.setCommandTarget) this.renderer.setCommandTarget(null, null);
+    if (this.renderer?.setCommandCast) this.renderer.setCommandCast(null, null);
+    if (this.onSelectChange) this.onSelectChange(null);
+    if (this.onHoverStatus) this.onHoverStatus(null);
+    if (this.onTowerHover) this.onTowerHover(null);
+    if (this.onCommandTargetChange) this.onCommandTargetChange(null, null);
+    if (this.onCommandCastChange) this.onCommandCastChange(null, null);
+    if (this.onActionMenuChange) this.onActionMenuChange(false);
+  }
+
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
@@ -294,6 +323,7 @@ export class Input {
   }
 
   requestStart() {
+    this.resetState({ preserveKeys: true });
     this.pendingStart = true;
   }
 

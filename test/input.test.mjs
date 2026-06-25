@@ -312,6 +312,88 @@ const oldWindow = globalThis.window;
   ok(results.at(-1)?.reason === "range", "command target mode reports no defense in range");
 }
 
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const calls = [];
+  const renderer = {
+    domElement: canvas,
+    setHover: (...args) => calls.push(["hover", ...args]),
+    setCommandTarget: (...args) => calls.push(["target", ...args]),
+    setCommandCast: (...args) => calls.push(["cast", ...args]),
+    pointerToCell: () => ({ col: 1, row: 1, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+    orbit: () => {},
+  };
+  const tower = { id: 17, alive: true, col: 1, row: 1, x: 0, z: 0, physical: true, hp: 40, maxHp: 100, level: 1, maxLevel: 3 };
+  const world = {
+    phase: "prep",
+    hero: { alive: true, x: 0, z: 1 },
+    level: {},
+    towers: [tower],
+    availableTowers: ["barricade"],
+    placementStatus: () => ({ ok: true, reason: "ok" }),
+    tryPlaceTower: () => ({ ok: true }),
+    towerAtCell: () => tower,
+    towerById: () => tower,
+  };
+  const input = new Input(renderer, () => world);
+  const menuStates = [];
+  input.onActionMenuChange = (open) => menuStates.push(open);
+  input.select("barricade");
+  fakeWindow.dispatch("keydown", { key: "w", preventDefault() {} });
+  fakeWindow.dispatch("keydown", { key: "Tab", preventDefault() {} });
+  canvas.dispatch("click", { clientX: 10, clientY: 20 });
+  input.commandTargetMode = "upgrade";
+  input.commandTarget = tower;
+  input.commandCast = { action: "upgrade", towerId: tower.id, duration: 3, remaining: 2 };
+  input.resetState();
+  ok(!input.movementIntent().moving, "mission input reset clears held movement keys");
+  ok(input.selected === null && input.hoverCell === null && input.hoverTower === null, "mission input reset clears build and hover state");
+  ok(input.commandTargetMode === null && input.commandTarget === null && input.commandCast === null, "mission input reset clears command target and cast state");
+  ok(input.actionMenuOpen === false && menuStates.at(-1) === false, "mission input reset closes the action menu");
+  ok(!input.consume().attack, "mission input reset clears pending manual attack");
+  ok(calls.some((c) => c[0] === "hover" && c[1] === null), "mission input reset clears renderer build preview");
+  ok(calls.some((c) => c[0] === "target" && c[1] === null), "mission input reset clears renderer command target");
+  ok(calls.some((c) => c[0] === "cast" && c[1] === null), "mission input reset clears renderer command cast");
+}
+
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const renderer = {
+    domElement: canvas,
+    setHover: () => {},
+    setCommandTarget: () => {},
+    setCommandCast: () => {},
+    pointerToCell: () => ({ col: 1, row: 1, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+    orbit: () => {},
+  };
+  const world = {
+    phase: "prep",
+    hero: { alive: true, x: 0, z: 1 },
+    level: {},
+    towers: [],
+    availableTowers: ["barricade"],
+    placementStatus: () => ({ ok: true, reason: "ok" }),
+  };
+  const input = new Input(renderer, () => world);
+  input.select("barricade");
+  input.commandCast = { action: "repair", towerId: 1, duration: 2, remaining: 1 };
+  input.actionMenuOpen = true;
+  input.pendingAttack = { x: 1, z: 1 };
+  input.requestStart();
+  const cmd = input.consume();
+  ok(cmd.startWave, "Start Wave request survives transient input cleanup");
+  ok(!cmd.attack, "Start Wave cleanup drops pending attack visuals");
+  ok(input.selected === null && input.commandCast === null && input.actionMenuOpen === false, "Start Wave cleanup clears build, cast, and menu state");
+}
+
 globalThis.window = oldWindow;
 
 console.log(`input: ${pass}/${pass + fail} checks passed`);

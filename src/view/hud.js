@@ -196,7 +196,10 @@ export class HUD {
     this.elPhase = el("div", { ...panel(), padding: "8px 20px", font: "700 15px 'Cinzel', ui-monospace, monospace", letterSpacing: "3px" });
     this.elStart = el("button", { cursor: "pointer", padding: "7px 18px", borderRadius: "9px", border: "none", background: CSS.plague, color: CSS.void, font: "700 13px ui-monospace, monospace", letterSpacing: "1px" });
     this.elStart.textContent = "START WAVE ▸";
-    this.elStart.onclick = () => this.cb.onStart();
+    this.elStart.onclick = () => {
+      this.elStart.blur?.();
+      this.cb.onStart();
+    };
     banner.append(this.elPhase, this.elStart);
     this.root.appendChild(banner);
 

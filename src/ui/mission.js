@@ -117,6 +117,7 @@ export class Mission {
     const token = ++this._startToken;
     this.running = false;
     this._show(false);
+    this.input?.resetState?.();
     if (classIdOrOpts && typeof classIdOrOpts === "object") {
       opts = classIdOrOpts;
       classIdOrOpts = opts.classId || "warden";
@@ -136,6 +137,7 @@ export class Mission {
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
     this.renderer.reset();
+    this.input?.resetState?.();
     this.hud.reset();
     this.hud.setMission(this.missionCfg, this.difficultyCfg);
     this.hud.setTowers(this.world.availableTowers);
@@ -152,12 +154,14 @@ export class Mission {
   async restart() {
     const token = ++this._startToken;
     this.running = false;
+    this.input?.resetState?.();
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
     this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses });
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
     this.renderer.reset();
+    this.input?.resetState?.();
     this.hud.reset();
     this.hud.setMission(this.missionCfg, this.difficultyCfg);
     this.hud.setTowers(this.world.availableTowers);
@@ -173,6 +177,7 @@ export class Mission {
   _exit() {
     this._startToken++;
     this.running = false;
+    this.input?.resetState?.();
     this._show(false);
     if (this.onExit) this.onExit();
   }
