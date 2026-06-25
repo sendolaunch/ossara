@@ -53,12 +53,14 @@ ok(characterSource.includes("resetAttackPose"), "character control exposes attac
 ok(characterSource.includes("inner.findByName(HANDSLOT_R)"), "procedural attack pose targets the verified right-hand slot");
 ok(characterSource.includes("sword_1handed"), "procedural attack pose can target the visible attached sword entity");
 ok(characterSource.includes("playExtremePose"), "character control exposes dev extreme-pose proof support");
+ok(characterSource.includes("playArmDriverProof"), "character control exposes after-sync arm driver proof support");
 ok(characterSource.includes("getAttackDebug"), "character control exposes attack visual diagnostics");
 ok(characterSource.includes("updateProceduralAttackPose"), "character control can reapply attack pose after animation sync");
 ok(characterSource.includes("lowerarm.r") && characterSource.includes("upperarm.r"), "procedural attack pose can target right arm bones");
 ok(characterSource.includes("if (preferred === \"lowerarm.r\") return attackPose.lowerArm"), "dev proof can directly target lowerarm.r");
 ok(characterSource.includes("if (preferred === \"upperarm.r\") return attackPose.upperArm"), "dev proof can directly target upperarm.r");
 ok(characterSource.includes("if (preferred === \"Knight_ArmRight\") return attackPose.armMesh"), "dev proof can directly target the visible right-arm mesh");
+ok(characterSource.includes("applyArmMeshFollower"), "procedural attack has a visible right-arm mesh follower layer");
 ok(characterSource.includes("return attackPose.sword || inner.findByName(\"sword_1handed\")"), "procedural attack defaults to the v3-approved sword source of truth");
 ok(characterSource.includes("heroAttackPoseAt"), "character attack uses a shared key-pose calculation");
 ok(characterSource.includes("phase: \"windup\"") && characterSource.includes("phase: \"strike\""), "procedural attack exposes windup and strike phases");
@@ -87,13 +89,15 @@ ok(rendererSource.includes("HERO_ATTACK_TIMING.total"), "mission renderer syncs 
 ok(rendererSource.includes("devAttackProxy") && rendererSource.includes("devSlashTrail"), "mission renderer keeps proxy/trail slash helpers behind explicit dev flags");
 ok(rendererSource.includes("if (!this.heroAttackProxyVisible && !this.heroSlashTrailVisible) return"), "normal mission attacks do not spawn proxy or claw trail FX");
 ok(rendererSource.includes("const roll = 0") && rendererSource.includes("const pitch = 0"), "mission renderer does not use root roll/pitch for Warden attack body support");
-ok(rendererSource.includes("pose.yaw * 0.22"), "mission renderer keeps Warden body yaw subtle");
+ok(rendererSource.includes("pose.yaw * 0.1"), "mission renderer keeps Warden body yaw subtle");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
-ok(labSource.includes("Extreme lowerarm.r / K") && labSource.includes("Extreme upperarm.r / L"), "hero attack lab exposes direct right-arm bone proof controls");
-ok(labSource.includes("Extreme arm mesh / M"), "hero attack lab exposes visible arm mesh proof control");
+ok(labSource.includes("Proof lowerarm.r / K") && labSource.includes("Proof upperarm.r / L"), "hero attack lab exposes direct right-arm bone proof controls");
+ok(labSource.includes("Proof arm mesh / M"), "hero attack lab exposes visible arm mesh proof control");
+ok(labSource.includes("right-shoulder-marker") && labSource.includes("sword-hilt-marker") && labSource.includes("arm-follower-marker"), "hero attack lab exposes dev-only shoulder/hilt/follower markers");
 ok(labSource.includes("pose driver:"), "hero attack lab reports bone/proxy driver state");
-ok(labSource.includes("hand/arm follow active:") && labSource.includes("old proxy/fallback visual hidden:"), "hero attack lab reports v4 follow/proxy state");
+ok(labSource.includes("hand/arm follow active:") && labSource.includes("visible arm follower active:"), "hero attack lab reports arm follow/follower state");
+ok(labSource.includes("old proxy/fallback visual hidden:"), "hero attack lab reports v4 proxy state");
 
 // 2) Every class: model present, has both handslots, weapon/offhand present.
 for (const [cls, def] of Object.entries(CHARACTERS)) {

@@ -76,11 +76,20 @@ export class HeroAttackLab {
     floor.setPosition(0, -0.03, 0);
     this.app.root.addChild(floor);
 
-    const handMarker = prim("sphere", mat(0x5bff70, 0.9));
-    handMarker.name = "right-hand-focus-marker";
-    handMarker.setLocalScale(0.04, 0.04, 0.04);
-    handMarker.setPosition(0.42, 1.08, 0.08);
-    this.app.root.addChild(handMarker);
+    this.markers = {
+      shoulder: this._marker("right-shoulder-marker", 0xd6b35a, 0.055),
+      hilt: this._marker("sword-hilt-marker", 0x5bff70, 0.045),
+      follower: this._marker("arm-follower-marker", 0x7aa8ff, 0.05),
+    };
+  }
+
+  _marker(name, color, scale) {
+    const e = prim("sphere", mat(color, 0.9));
+    e.name = name;
+    e.setLocalScale(scale, scale, scale);
+    e.enabled = false;
+    this.app.root.addChild(e);
+    return e;
   }
 
   _buildOverlay() {
@@ -100,10 +109,10 @@ export class HeroAttackLab {
         <button data-action="variant-2">Variant C / 3</button>
         <button data-action="extreme-sword">Extreme sword / E</button>
         <button data-action="extreme-slot">Extreme handslot / H</button>
-        <button data-action="extreme-hand">Extreme hand.r / J</button>
-        <button data-action="extreme-lower">Extreme lowerarm.r / K</button>
-        <button data-action="extreme-upper">Extreme upperarm.r / L</button>
-        <button data-action="extreme-armmesh">Extreme arm mesh / M</button>
+        <button data-action="proof-hand">Proof hand.r / J</button>
+        <button data-action="proof-lower">Proof lowerarm.r / K</button>
+        <button data-action="proof-upper">Proof upperarm.r / L</button>
+        <button data-action="proof-armmesh">Proof arm mesh / M</button>
         <button data-action="reset">Reset / R</button>
       </div>
       <pre id="heroAttackLabDebug" style="margin:0;white-space:pre-wrap;color:${CSS.bone}">loading...</pre>
@@ -149,6 +158,11 @@ export class HeroAttackLab {
     this.lastAction = ok ? `extreme pose: ${target}` : `extreme pose failed: ${target}`;
   }
 
+  _proof(target) {
+    const ok = this.ctl?.playArmDriverProof?.(target, 1);
+    this.lastAction = ok ? `after-sync driver proof: ${target}` : `driver proof failed: ${target}`;
+  }
+
   _onClick(ev) {
     const btn = ev.target?.closest?.("button[data-action]");
     if (!btn) return;
@@ -161,10 +175,10 @@ export class HeroAttackLab {
     else if (action === "variant-2") this._forceVariant(2);
     else if (action === "extreme-sword") this._extreme("sword_1handed");
     else if (action === "extreme-slot") this._extreme("handslot.r");
-    else if (action === "extreme-hand") this._extreme("hand.r");
-    else if (action === "extreme-lower") this._extreme("lowerarm.r");
-    else if (action === "extreme-upper") this._extreme("upperarm.r");
-    else if (action === "extreme-armmesh") this._extreme("Knight_ArmRight");
+    else if (action === "proof-hand") this._proof("hand.r");
+    else if (action === "proof-lower") this._proof("lowerarm.r");
+    else if (action === "proof-upper") this._proof("upperarm.r");
+    else if (action === "proof-armmesh") this._proof("Knight_ArmRight");
     else if (action === "reset") {
       this.ctl?.resetAttackPose?.();
       this.lastAction = "reset";
@@ -187,16 +201,16 @@ export class HeroAttackLab {
       this._extreme("handslot.r");
     } else if (k === "j") {
       ev.preventDefault();
-      this._extreme("hand.r");
+      this._proof("hand.r");
     } else if (k === "k") {
       ev.preventDefault();
-      this._extreme("lowerarm.r");
+      this._proof("lowerarm.r");
     } else if (k === "l") {
       ev.preventDefault();
-      this._extreme("upperarm.r");
+      this._proof("upperarm.r");
     } else if (k === "m") {
       ev.preventDefault();
-      this._extreme("Knight_ArmRight");
+      this._proof("Knight_ArmRight");
     } else if (k === "r") {
       ev.preventDefault();
       this.ctl?.resetAttackPose?.();
@@ -220,6 +234,8 @@ export class HeroAttackLab {
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
       `pose driver: ${boneDriven ? "sword + right-arm bones" : "sword/proxy fallback"}`,
       `hand/arm follow active: ${d.handFollowActive ? "yes" : "no"}`,
+      `visible arm follower active: ${d.armFollowerActive ? "yes" : "no"}`,
+      `after-sync proof active: ${d.driverProofActive ? "yes" : "no"} ${d.driverProofTarget || ""}`,
       `old proxy/fallback visual hidden: ${d.legacyProxyHidden ? "yes" : "no"}`,
       `current animation clip: ${d.currentClip || "-"}`,
       `right hand entity found: ${d.rightHandFound ? "yes" : "no"}`,
@@ -235,6 +251,9 @@ export class HeroAttackLab {
       `before world position: ${fmt(d.beforeWorld)}`,
       `after world position: ${fmt(d.afterWorld)}`,
       `current world position: ${fmt(d.currentWorld)}`,
+      `shoulder marker world: ${fmt(d.shoulderWorld)}`,
+      `hilt marker world: ${fmt(d.hiltWorld)}`,
+      `follower marker world: ${fmt(d.followerWorld)}`,
       "",
       "candidate entities:",
       ...((d.entities || []).map((e) => `- ${e.name} render:${e.hasRender ? "yes" : "no"} children:${e.children} world:${fmt(e.world)}`)),
@@ -242,8 +261,19 @@ export class HeroAttackLab {
     return rows.join("\n");
   }
 
+  _syncMarker(name, world) {
+    const marker = this.markers?.[name];
+    if (!marker) return;
+    marker.enabled = !!world;
+    if (world) marker.setPosition(world.x, world.y, world.z);
+  }
+
   _frame() {
     if (!this.running) return;
+    const d = this.ctl?.getAttackDebug?.() || {};
+    this._syncMarker("shoulder", d.shoulderWorld);
+    this._syncMarker("hilt", d.hiltWorld);
+    this._syncMarker("follower", d.followerWorld);
     if (this.debugEl) this.debugEl.textContent = this._debugText();
     requestAnimationFrame(this._frame);
   }

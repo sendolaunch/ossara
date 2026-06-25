@@ -70,6 +70,7 @@ const lerpBody = (a, b, t) => ({
   roll: lerpNum(a?.roll || 0, b?.roll || 0, t),
   pitch: lerpNum(a?.pitch || 0, b?.pitch || 0, t),
 });
+const scaleVec = (v, s) => ({ x: (v?.x || 0) * s, y: (v?.y || 0) * s, z: (v?.z || 0) * s });
 
 export const HERO_ATTACK_TIMING = {
   windup: 0.16,
@@ -343,7 +344,14 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     beforeWorld: null,
     lastWorld: null,
     lastLocalRot: null,
+    armFollowerActive: false,
+    armFollowerTargetWorld: null,
+    baseHiltWorld: null,
+    lastHiltWorld: null,
+    driverProofActive: false,
+    driverProofTarget: "",
     variant: HERO_ATTACK_VARIANTS[0],
+    lastPose: null,
     phase: "idle",
     basePos: null,
     baseRot: null,
@@ -430,6 +438,45 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     }
   };
 
+  const applyArmMeshFollower = (pose) => {
+    const base = attackPose.boneBases.armMesh;
+    if (!attackPose.armMesh || !base || !pose || !attackPose.handFollowActive) {
+      attackPose.armFollowerActive = false;
+      return;
+    }
+    try {
+      // Visual-only support for the KayKit Warden, whose visible right arm is a
+      // separate render mesh. The actual sword remains the driver; this mesh
+      // follows the same phase/hilt curve so the shoulder -> sword chain reads.
+      const upper = pose.arm?.upper || {};
+      const lower = pose.arm?.lower || {};
+      const hand = pose.arm?.hand || {};
+      const lift = Math.max(0, pose.pos?.y || 0);
+      const side = pose.pos?.x || 0;
+      const reach = pose.pos?.z || 0;
+      const hilt = worldSnapshot(attackPose.sword || attackPose.target);
+      const baseHilt = attackPose.baseHiltWorld;
+      const hiltDelta = hilt && baseHilt
+        ? { x: hilt.x - baseHilt.x, y: hilt.y - baseHilt.y, z: hilt.z - baseHilt.z }
+        : { x: 0, y: 0, z: 0 };
+      attackPose.armMesh.setLocalPosition(
+        base.pos.x + side * 0.16 + hiltDelta.x * 0.1,
+        base.pos.y + lift * 0.1 + hiltDelta.y * 0.08,
+        base.pos.z + reach * 0.1 + hiltDelta.z * 0.1,
+      );
+      attackPose.armMesh.setLocalEulerAngles(
+        base.rot.x + (upper.x || 0) * 0.22 + (lower.x || 0) * 0.1,
+        base.rot.y + (upper.y || 0) * 0.18 + (hand.y || 0) * 0.06,
+        base.rot.z + (upper.z || 0) * 0.3 + (lower.z || 0) * 0.16 + (hand.z || 0) * 0.08,
+      );
+      attackPose.lastHiltWorld = hilt;
+      attackPose.armFollowerTargetWorld = hilt;
+      attackPose.armFollowerActive = true;
+    } catch (_) {
+      attackPose.armFollowerActive = false;
+    }
+  };
+
   const resolveAttackTarget = (preferred = "") => {
     if (!preferred) return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
     if (preferred === "hand.r") return attackPose.hand;
@@ -448,9 +495,17 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     attackPose.active = false;
     attackPose.phase = "idle";
     attackPose.handFollowActive = false;
+    attackPose.armFollowerActive = false;
+    attackPose.armFollowerTargetWorld = null;
+    attackPose.baseHiltWorld = null;
+    attackPose.lastHiltWorld = null;
+    attackPose.driverProofActive = false;
+    attackPose.driverProofTarget = "";
+    attackPose.lastPose = null;
     resetBone("upper", attackPose.upperArm);
     resetBone("lower", attackPose.lowerArm);
     resetBone("hand", attackPose.hand);
+    resetBone("armMesh", attackPose.armMesh);
     if (attackPose.target && attackPose.basePos && attackPose.baseRot) {
       try {
         attackPose.target.setLocalPosition(attackPose.basePos);
@@ -467,6 +522,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     if (!attackPose.target || !attackPose.basePos || !attackPose.baseRot) return false;
     const pose = heroAttackPoseAt(attackPose.variant || HERO_ATTACK_VARIANTS[0], t);
     attackPose.phase = pose.phase;
+    attackPose.lastPose = pose;
     applyBoneOffset("upper", attackPose.upperArm, pose.arm.upper);
     applyBoneOffset("lower", attackPose.lowerArm, pose.arm.lower);
     applyBoneOffset("hand", attackPose.hand, pose.arm.hand);
@@ -482,6 +538,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     );
     attackPose.lastWorld = worldSnapshot(attackPose.target);
     attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
+    applyArmMeshFollower(pose);
     return true;
   };
 
@@ -498,11 +555,16 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       captureBoneBase("upper", attackPose.upperArm);
       captureBoneBase("lower", attackPose.lowerArm);
       captureBoneBase("hand", attackPose.hand);
+      captureBoneBase("armMesh", attackPose.armMesh);
       attackPose.beforeWorld = worldSnapshot(target);
       attackPose.lastWorld = attackPose.beforeWorld;
       attackPose.lastLocalRot = localRotSnapshot(target);
+      attackPose.baseHiltWorld = worldSnapshot(attackPose.sword || target);
+      attackPose.lastHiltWorld = attackPose.baseHiltWorld;
       attackPose.variant = resolveAttackVariant(opts.variant ?? opts.variantId ?? 0);
       attackPose.handFollowActive = target === attackPose.sword || target?.name === "sword_1handed";
+      attackPose.armFollowerActive = false;
+      attackPose.driverProofActive = false;
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
       attackPose.duration = HERO_ATTACK_TIMING.total;
       attackPose.playbackScale = opts.slow ? HERO_ATTACK_TIMING.total / HERO_ATTACK_TIMING.slowTotal : 1;
@@ -527,6 +589,32 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     if (!attackPose.active) return false;
     const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
     const t = overrideT == null ? (now - attackPose.startedAt) * (attackPose.playbackScale || 1) : overrideT;
+    if (attackPose.driverProofActive) {
+      if (t >= attackPose.duration) {
+        resetAttackPose();
+        return false;
+      }
+      try {
+        const proofPos = attackPose.proofPos || scaleVec({ x: 0.45, y: 0.65, z: -0.35 }, 1);
+        const proofRot = attackPose.proofRot || { x: -75, y: 60, z: 85 };
+        attackPose.target.setLocalPosition(
+          attackPose.basePos.x + proofPos.x,
+          attackPose.basePos.y + proofPos.y,
+          attackPose.basePos.z + proofPos.z,
+        );
+        attackPose.target.setLocalEulerAngles(
+          attackPose.baseRot.x + proofRot.x,
+          attackPose.baseRot.y + proofRot.y,
+          attackPose.baseRot.z + proofRot.z,
+        );
+        attackPose.lastWorld = worldSnapshot(attackPose.target);
+        attackPose.lastLocalRot = localRotSnapshot(attackPose.target);
+        return true;
+      } catch (_) {
+        resetAttackPose();
+        return false;
+      }
+    }
     if (t >= attackPose.duration) {
       resetAttackPose();
       return false;
@@ -565,6 +653,43 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     }
   };
 
+  const playArmDriverProof = (targetName = "Knight_ArmRight", duration = 1) => {
+    resetAttackPose();
+    const target = resolveAttackTarget(targetName);
+    if (!target) return false;
+    try {
+      attackPose.target = target;
+      attackPose.targetName = target.name || targetName;
+      attackPose.basePos = target.getLocalPosition().clone();
+      attackPose.baseRot = target.getLocalEulerAngles().clone();
+      attackPose.beforeWorld = worldSnapshot(target);
+      attackPose.lastWorld = attackPose.beforeWorld;
+      attackPose.lastLocalRot = localRotSnapshot(target);
+      attackPose.baseHiltWorld = worldSnapshot(attackPose.sword || target);
+      attackPose.lastHiltWorld = attackPose.baseHiltWorld;
+      attackPose.variant = HERO_ATTACK_VARIANTS[0];
+      attackPose.handFollowActive = false;
+      attackPose.armFollowerActive = false;
+      attackPose.driverProofActive = true;
+      attackPose.driverProofTarget = target.name || targetName;
+      attackPose.phase = "driver-proof";
+      attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+      attackPose.duration = Math.max(0.1, duration);
+      attackPose.playbackScale = 1;
+      attackPose.active = true;
+      const step = () => {
+        if (!updateProceduralAttackPose()) return;
+        if (typeof requestAnimationFrame === "function") attackPose.raf = requestAnimationFrame(step);
+      };
+      step();
+      return true;
+    } catch (e) {
+      console.warn("[character] arm driver proof failed", e);
+      resetAttackPose();
+      return false;
+    }
+  };
+
   const collectAttackDebug = () => {
     const matches = [];
     const walk = (entity) => {
@@ -589,6 +714,9 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       variantLabel: attackPose.variant?.label || "",
       currentClip: st.currentClip || "Idle",
       handFollowActive: !!attackPose.handFollowActive,
+      armFollowerActive: !!attackPose.armFollowerActive,
+      driverProofActive: !!attackPose.driverProofActive,
+      driverProofTarget: attackPose.driverProofTarget || "",
       legacyProxyHidden: true,
       rightHandFound: !!attackPose.hand,
       handSlotFound: !!attackPose.handSlot,
@@ -600,6 +728,12 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       beforeWorld: attackPose.beforeWorld,
       afterWorld: attackPose.lastWorld,
       currentWorld: worldSnapshot(attackPose.target),
+      shoulderWorld: worldSnapshot(attackPose.upperArm),
+      lowerArmWorld: worldSnapshot(attackPose.lowerArm),
+      handWorld: worldSnapshot(attackPose.hand),
+      hiltWorld: attackPose.lastHiltWorld || worldSnapshot(attackPose.sword || attackPose.handSlot),
+      swordWorld: worldSnapshot(attackPose.sword || inner.findByName("sword_1handed")),
+      followerWorld: attackPose.armFollowerTargetWorld || worldSnapshot(attackPose.armMesh || attackPose.hand),
       beforeLocalRot: attackPose.baseRot ? { x: attackPose.baseRot.x, y: attackPose.baseRot.y, z: attackPose.baseRot.z } : null,
       afterLocalRot: attackPose.lastLocalRot,
       currentLocalRot: localRotSnapshot(attackPose.target),
@@ -669,6 +803,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     playProceduralAttack,
     updateProceduralAttackPose,
     playExtremePose,
+    playArmDriverProof,
     resetAttackPose,
     getAttackDebug: collectAttackDebug,
     playOnce(state) {
