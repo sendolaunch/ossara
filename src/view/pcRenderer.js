@@ -1706,6 +1706,41 @@ export class PCRenderer {
           head.addChild(crack);
           ent._ossaraLowHealthMark = crack;
           ent.addChild(head);
+        } else if (t.type === "spikegate") {
+          const base = prim("box", mat("ash"));
+          base.setLocalScale(1.18, 0.18, 0.58);
+          base.setLocalPosition(0, 0.09, 0);
+          ent.addChild(base);
+          const head = new pc.Entity("head");
+          const rail = prim("box", mat("ash"));
+          rail.setLocalScale(1.18, 0.36, 0.22);
+          rail.setLocalPosition(0, 0.38, 0);
+          head.addChild(rail);
+          const rearRail = prim("box", mat("bone"));
+          rearRail.setLocalScale(1.08, 0.14, 0.28);
+          rearRail.setLocalPosition(0, 0.76, 0.02);
+          head.addChild(rearRail);
+          for (const x of [-0.42, -0.14, 0.14, 0.42]) {
+            const spike = prim("cone", mat("blood", 0.32));
+            spike.setLocalScale(0.15, 0.72, 0.15);
+            spike.setLocalPosition(x, 0.78, -0.08);
+            head.addChild(spike);
+          }
+          const ward = prim("box", mat("plague", 1.15));
+          ward.name = "ward-accent";
+          ward.setLocalScale(0.18, 0.18, 0.07);
+          ward.setLocalEulerAngles(0, 0, 45);
+          ward.setLocalPosition(0, 0.5, -0.17);
+          head.addChild(ward);
+          const crack = prim("box", mat("blood", 0.55));
+          crack.name = "low-health-mark";
+          crack.setLocalScale(0.08, 0.5, 0.09);
+          crack.setLocalEulerAngles(0, 0, -22);
+          crack.setLocalPosition(-0.3, 0.48, -0.18);
+          crack.enabled = false;
+          head.addChild(crack);
+          ent._ossaraLowHealthMark = crack;
+          ent.addChild(head);
         } else {
           const base = prim("cylinder", mat("ash"));
           base.setLocalScale(0.7, 0.3, 0.7);

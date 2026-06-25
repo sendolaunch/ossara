@@ -187,6 +187,10 @@ section("defense type data model");
   ok(TOWERS.barricade.maxHp >= 360 && TOWERS.barricade.contactDamage === 0, "Warden Barricade is tanky without thorns damage");
   ok(TOWERS.spikegate.defenseType === "blockade", "Spike-gate is classified as a blockade variant");
   ok(TOWERS.spikegate.blocksEnemies && TOWERS.spikegate.targetableByEnemies, "Spike-gate is a physical enemy target");
+  ok(TOWERS.spikegate.roleText.includes("Blocks enemies") && TOWERS.spikegate.roleText.includes("Damages attackers"), "Spike-gate advertises its damaging blockade role");
+  ok(TOWERS.spikegate.cost >= 45 && TOWERS.spikegate.cost <= 55, "Spike-gate cost sits in the v1 tuning band");
+  ok(TOWERS.spikegate.maxHp < TOWERS.barricade.maxHp && TOWERS.spikegate.maxHp >= 260 && TOWERS.spikegate.maxHp <= 320, "Spike-gate has less HP than Warden Barricade but remains sturdy");
+  ok(TOWERS.spikegate.contactDamage > 0 && TOWERS.spikegate.contactDamage <= 8, "Spike-gate has modest thorns contact damage");
 }
 
 // ---------------------------------------------------------------------------
@@ -258,6 +262,104 @@ section("warden barricade v1");
   attackWorld.hero.attackCd = 0;
   attackWorld._heroAttack(attackWorld.hero, { attackX: attackEnemy.x, attackZ: attackEnemy.z });
   ok(attackEnemy.hp < 100 && attackWorld.hero.attackCd > 0, "basic attack still works after building Warden Barricade");
+}
+
+// ---------------------------------------------------------------------------
+section("warden spike-gate v1");
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("spikegate", 60, 32);
+  ok(placed.ok, "Spike-gate can be placed through the existing placement flow");
+  const spike = placed.tower;
+  ok(spike.type === "spikegate" && spike.defenseType === "blockade", "placed Spike-gate remains a blockade");
+  ok(spike.maxHp === TOWERS.spikegate.maxHp && spike.maxHp < TOWERS.barricade.maxHp, "placed Spike-gate stores lower HP than Barricade");
+  ok(spike.blocksEnemies && spike.targetableByEnemies, "placed Spike-gate blocks and can be attacked");
+  ok(spike.contactDamage === TOWERS.spikegate.contactDamage && spike.contactDamage > 0, "placed Spike-gate stores thorns contact damage");
+
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  const slot = computeBlockadeAttackSlot(enemy, spike, w.lane, 0);
+  enemy.x = slot.x;
+  enemy.z = slot.z;
+  const enemyHpBefore = enemy.hp;
+  const spikeHpBefore = spike.hp;
+  const distBefore = enemy.dist;
+  w.update(0.1, {});
+  ok(enemy.blockingTargetId === spike.id && enemy.attackingBlocker, "enemy clearly attacks the Spike-gate");
+  ok(spike.hp < spikeHpBefore, "Spike-gate takes enemy damage while holding the lane");
+  ok(approx(enemy.dist, distBefore), "Spike-gate holds enemies in place");
+  ok(enemy.hp < enemyHpBefore, "Spike-gate thorns damage hurts the attacker");
+  ok(w.events.some((ev) => ev.kind === "contactDamage" && ev.id === spike.id), "Spike-gate emits contact damage feedback event");
+
+  const hpAfterTick = enemy.hp;
+  w.update(0.1, {});
+  ok(enemy.hp === hpAfterTick, "Spike-gate thorns damage respects tick cooldown");
+  w.update(0.8, {});
+  ok(enemy.hp < hpAfterTick, "Spike-gate thorns damage ticks again after cooldown");
+
+  const damagedHp = spike.hp;
+  const repair = w.repairTower(spike.id);
+  ok(repair.ok && spike.hp === spike.maxHp && spike.hp > damagedHp, "Spike-gate can be repaired");
+  const maxBefore = spike.maxHp;
+  const contactBefore = spike.contactDamage;
+  const upgrade = w.upgradeTower(spike.id);
+  ok(upgrade.ok && spike.level === 2 && spike.maxHp > maxBefore && spike.contactDamage > contactBefore, "Spike-gate upgrade improves HP and thorns damage");
+  const cell = { col: spike.col, row: spike.row };
+  const sell = w.sellTower(spike.id);
+  ok(sell.ok && !spike.alive && w.placementStatus("spikegate", cell.col, cell.row, { ignoreCost: true }).ok, "Spike-gate can be sold and releases its cell");
+}
+
+{
+  const w = new World(LEVEL);
+  w.hero.alive = false;
+  w.hero.respawnTimer = Infinity;
+  w.marrow = 999;
+  const placed = w.tryPlaceTower("barricade", 60, 32);
+  ok(placed.ok, "Barricade can be placed for Spike-gate comparison");
+  const barricade = placed.tower;
+  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  const slot = computeBlockadeAttackSlot(enemy, barricade, w.lane, 0);
+  enemy.x = slot.x;
+  enemy.z = slot.z;
+  const hpBefore = enemy.hp;
+  w.update(0.1, {});
+  ok(enemy.hp === hpBefore, "Warden Barricade remains non-damaging while Spike-gate owns thorns");
+}
+
+{
+  const dashWorld = new World(LEVEL);
+  dashWorld.marrow = 999;
+  ok(dashWorld.tryPlaceTower("spikegate", 60, 32).ok, "Warden can build Spike-gate before using hero kit");
+  const x0 = dashWorld.hero.x;
+  dashWorld.update(0.05, { moveX: 1, moveZ: 0, dash: true });
+  run(dashWorld, 4, 0.05, { moveX: 1, moveZ: 0 });
+  ok(dashWorld.hero.x > x0 && dashWorld.hero.dashCd > 0, "Dash still works after building Spike-gate");
+
+  const slamWorld = new World(LEVEL);
+  slamWorld.marrow = 999;
+  ok(slamWorld.tryPlaceTower("spikegate", 60, 32).ok, "Warden can build Spike-gate before using Ward Slam");
+  const slamEnemy = spawnEnemyAt(slamWorld, "husk", slamWorld.defaultLaneId, NORTH_CHOKE_DIST);
+  const slamCenterX = slamWorld.hero.x + Math.sin(slamWorld.hero.facing) * (slamWorld.hero.ability.centerOffset || 0);
+  const slamCenterZ = slamWorld.hero.z + Math.cos(slamWorld.hero.facing) * (slamWorld.hero.ability.centerOffset || 0);
+  slamEnemy.x = slamCenterX;
+  slamEnemy.z = slamCenterZ;
+  slamEnemy.hp = 100;
+  slamWorld.hero.abilityCd = 0;
+  slamWorld._useAbility(slamWorld.hero);
+  ok(slamEnemy.hp < 100 && slamWorld.events.some((ev) => ev.kind === "slam"), "Ward Slam still works after building Spike-gate");
+
+  const attackWorld = new World(LEVEL);
+  attackWorld.marrow = 999;
+  ok(attackWorld.tryPlaceTower("spikegate", 60, 32).ok, "Warden can build Spike-gate before using basic attack");
+  const attackEnemy = spawnEnemyAt(attackWorld, "husk", attackWorld.defaultLaneId, NORTH_CHOKE_DIST);
+  attackEnemy.x = attackWorld.hero.x;
+  attackEnemy.z = attackWorld.hero.z + 1.0;
+  attackEnemy.hp = 100;
+  attackWorld.hero.attackCd = 0;
+  attackWorld._heroAttack(attackWorld.hero, { attackX: attackEnemy.x, attackZ: attackEnemy.z });
+  ok(attackEnemy.hp < 100 && attackWorld.hero.attackCd > 0, "basic attack still works after building Spike-gate");
 }
 
 // ---------------------------------------------------------------------------

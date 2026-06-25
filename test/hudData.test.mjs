@@ -27,6 +27,23 @@ ok(hoverData.title.includes("WARDEN BARRICADE") && hoverData.title.includes("L2"
 ok(hoverData.meta.includes("Blockade") && hoverData.meta.includes("Blocks enemies") && hoverData.meta.includes("HP 156 / 420"), "hover panel includes type, role, and HP");
 ok(hoverData.controls.includes("[U]") && hoverData.controls.includes("[F]") && hoverData.controls.includes("[X]"), "hover panel includes U/F/X actions");
 
+const hoveredSpikeGate = {
+  id: 11,
+  type: "spikegate",
+  defenseType: "blockade",
+  alive: true,
+  level: 1,
+  hp: 240,
+  maxHp: 300,
+  physical: true,
+  upgradeCost: 42,
+  repairCost: 8,
+  sellRefund: 27,
+};
+const spikeHoverData = defensePanelData(hoveredSpikeGate);
+ok(spikeHoverData.title.includes("SPIKE-GATE"), "Spike-gate hover panel names the defense");
+ok(spikeHoverData.meta.includes("Damages attackers") && spikeHoverData.meta.includes("HP 240 / 300"), "Spike-gate hover panel explains thorns role and HP");
+
 const commandData = commandTargetPanelData("upgrade", hoveredBlockade);
 ok(commandData.title === "UPGRADE DEFENSE", "command target panel names the action");
 ok(commandData.meta.includes("BARRICADE") && commandData.meta.includes("Cost 90 Marrow"), "command target panel includes target and cost");
@@ -56,6 +73,9 @@ const world = { marrow: 100 };
 const selectedData = selectedDefensePanelData("barricade", world, { towerId: "barricade", ok: true });
 ok(selectedData.title === "WARDEN BARRICADE" && selectedData.meta.includes("Blocks enemies") && selectedData.meta.includes("Cost 40 Marrow"), "selected defense panel includes name, role, and cost");
 ok(selectedData.canBuild, "selected defense panel marks affordable valid placement");
+
+const selectedSpike = selectedDefensePanelData("spikegate", world, { towerId: "spikegate", ok: true });
+ok(selectedSpike.title === "SPIKE-GATE" && selectedSpike.meta.includes("Damages attackers") && selectedSpike.meta.includes("Cost 55 Marrow"), "selected Spike-gate panel includes role and cost");
 
 const invalidData = selectedDefensePanelData("barricade", world, { towerId: "barricade", ok: false, reason: "path" });
 ok(!invalidData.canBuild, "invalid placement marks selected panel blocked");

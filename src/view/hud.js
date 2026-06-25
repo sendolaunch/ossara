@@ -37,7 +37,7 @@ function towerIcon(id, c) {
     case "barricade":
       return s(`<rect x="4" y="13" width="24" height="13" fill="${c}" opacity="0.28"/><path d="M5 13 H27 V26 H5 Z M10 13 V26 M16 13 V26 M22 13 V26 M5 20 H27"/><path d="M16 7 L20 11 L16 15 L12 11 Z" fill="${CSS.plague}" stroke="${CSS.plague}"/>`);
     case "spikegate":
-      return s(`<path d="M6 26 L11 12 L16 26 L21 12 L26 26 Z" fill="${c}" opacity="0.3"/>`);
+      return s(`<rect x="5" y="20" width="22" height="6" fill="${c}" opacity="0.18"/><path d="M6 26 L10 10 L14 26 L18 10 L22 26 L26 10" fill="${c}" opacity="0.24"/><path d="M6 26 L10 10 L14 26 L18 10 L22 26 L26 10 M5 20 H27"/><path d="M16 5 L19 8 L16 11 L13 8 Z" fill="${CSS.plague}" stroke="${CSS.plague}"/>`);
     case "trapstake":
       return s(`<path d="M7 8 L25 24 M25 8 L7 24"/><circle cx="16" cy="16" r="2" fill="${c}"/>`);
     case "ballista":
