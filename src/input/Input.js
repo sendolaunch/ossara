@@ -7,6 +7,16 @@
 import { TOWERS } from "../config/towers.js";
 import { DASH_KEY } from "../config/moves.js";
 import { COMMANDS } from "../config/commands.js";
+import {
+  advanceCommandCast,
+  commandCastProgress,
+  createCommandCast,
+  isCommandAction,
+  isCommandCandidate,
+  movementCancelsCommandCast,
+  nearestCommandTarget,
+  towerInCommandRange,
+} from "../sim/commandActions.js";
 
 const ROTATE_RATE = 1.9; // rad/sec (arrow left/right)
 const ZOOM_RATE = 12; // units/sec (arrow up/down)
@@ -15,12 +25,6 @@ const MOUSE_ORBIT_RATE = 0.008;
 const MOUSE_PITCH_RATE = 0.004;
 const COMMAND_TARGET_RANGE = COMMANDS.targetRange;
 const COMMAND_CAST_TIME = COMMANDS.castTime;
-
-const dist2 = (ax, az, bx, bz) => {
-  const dx = ax - bx;
-  const dz = az - bz;
-  return dx * dx + dz * dz;
-};
 
 export class Input {
   constructor(renderer, getWorld) {
@@ -187,31 +191,15 @@ export class Input {
   }
 
   _towerInCommandRange(tower, world = this.getWorld()) {
-    if (!tower || !tower.alive || !world?.hero?.alive) return false;
-    return dist2(tower.x, tower.z, world.hero.x, world.hero.z) <= COMMAND_TARGET_RANGE * COMMAND_TARGET_RANGE;
+    return towerInCommandRange(tower, world?.hero, COMMAND_TARGET_RANGE);
   }
 
   _isCommandCandidate(tower, action, world = this.getWorld()) {
-    if (!this._towerInCommandRange(tower, world)) return false;
-    if (action === "repair") return tower.physical && tower.maxHp > 0;
-    if (action === "upgrade") return tower.level < (tower.maxLevel || 3);
-    if (action === "sell") return true;
-    return false;
+    return isCommandCandidate(tower, action, { hero: world?.hero, targetRange: COMMAND_TARGET_RANGE });
   }
 
   _nearestCommandTarget(action, world = this.getWorld()) {
-    if (!world?.hero) return null;
-    let best = null;
-    let bestD = Infinity;
-    for (const tower of world.towers || []) {
-      if (!this._isCommandCandidate(tower, action, world)) continue;
-      const d = dist2(tower.x, tower.z, world.hero.x, world.hero.z);
-      if (d < bestD) {
-        bestD = d;
-        best = tower;
-      }
-    }
-    return best;
+    return nearestCommandTarget(action, world?.towers || [], world?.hero, { targetRange: COMMAND_TARGET_RANGE });
   }
 
   _setCommandTarget(tower) {
@@ -222,7 +210,7 @@ export class Input {
 
   enterCommandTargetMode(action) {
     const world = this.getWorld();
-    if (!["upgrade", "repair", "sell"].includes(action)) return;
+    if (!isCommandAction(action)) return;
     if (this.selected) this.cancelBuild();
     if (this.actionMenuOpen) this.closeActionMenu();
     this.pendingDash = false;
@@ -259,12 +247,7 @@ export class Input {
       if (this.onManageResult) this.onManageResult(res);
       return;
     }
-    this.commandCast = {
-      action,
-      towerId: tower.id,
-      duration: COMMAND_CAST_TIME[action] || 0.35,
-      remaining: COMMAND_CAST_TIME[action] || 0.35,
-    };
+    this.commandCast = createCommandCast(action, tower, COMMAND_CAST_TIME);
     this.commandTargetMode = null;
     this.commandTarget = null;
     if (typeof this.renderer.setCommandTarget === "function") this.renderer.setCommandTarget(null, null);
@@ -285,7 +268,8 @@ export class Input {
     const tower = world?.towerById ? world.towerById(cast.towerId) : null;
     let res = { ok: false, action: cast.action, reason: "missing" };
     if (tower && this._isCommandCandidate(tower, cast.action, world)) {
-      if (cast.action === "upgrade") res = world.upgradeTower(tower.id);
+      if (typeof world.runTowerCommand === "function") res = world.runTowerCommand(cast.action, tower.id);
+      else if (cast.action === "upgrade") res = world.upgradeTower(tower.id);
       else if (cast.action === "repair") res = world.repairTower(tower.id);
       else if (cast.action === "sell") res = world.sellTower(tower.id);
     } else {
@@ -310,8 +294,8 @@ export class Input {
       return;
     }
     if (world?.hero) world.hero.facing = Math.atan2(tower.x - world.hero.x, tower.z - world.hero.z);
-    this.commandCast.remaining -= dt;
-    if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(world.hero, tower, this.commandCast.action, 1 - this.commandCast.remaining / this.commandCast.duration);
+    advanceCommandCast(this.commandCast, dt);
+    if (typeof this.renderer.setCommandCast === "function") this.renderer.setCommandCast(world.hero, tower, this.commandCast.action, commandCastProgress(this.commandCast));
     if (this.onCommandCastChange) this.onCommandCastChange(this.commandCast, tower);
     if (this.commandCast.remaining <= 0) this._finishCommandCast();
   }
@@ -357,7 +341,7 @@ export class Input {
       this.closeActionMenu();
       return;
     }
-    if (action === "upgrade" || action === "repair" || action === "sell") this.enterCommandTargetMode(action);
+    if (isCommandAction(action)) this.enterCommandTargetMode(action);
     this.closeActionMenu();
   }
 
@@ -411,7 +395,8 @@ export class Input {
     const tower = this.hoverTower || null;
     let res = { ok: false, action, reason: "missing" };
     if (world && tower) {
-      if (action === "upgrade") res = world.upgradeTower(tower.id);
+      if (typeof world.runTowerCommand === "function") res = world.runTowerCommand(action, tower.id);
+      else if (action === "upgrade") res = world.upgradeTower(tower.id);
       else if (action === "repair") res = world.repairTower(tower.id);
       else if (action === "sell") res = world.sellTower(tower.id);
     }
@@ -469,7 +454,7 @@ export class Input {
   // Arrow keys orbit/zoom the camera. Called each frame with dt.
   update(dt) {
     this.updateCamera(dt);
-    if (this.commandCast && this.movementIntent().moving) {
+    if (movementCancelsCommandCast(this.commandCast, this.movementIntent())) {
       const action = this.commandCast.action;
       this.cancelCommandCast();
       if (this.onManageResult) this.onManageResult({ ok: false, action, reason: "moved" });

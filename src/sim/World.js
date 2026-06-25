@@ -29,6 +29,14 @@ import { createEnemy, resetEnemy } from "./Enemy.js";
 import { createProjectile, resetProjectile } from "./Projectile.js";
 import { createTower } from "./Tower.js";
 import { createHero } from "./Hero.js";
+import {
+  COMMAND_MAX_LEVEL,
+  refreshDefenseEconomy,
+  repairDefense,
+  runCommandAction,
+  sellDefense,
+  upgradeDefense,
+} from "./commandActions.js";
 
 const dist2 = (ax, az, bx, bz) => {
   const dx = ax - bx;
@@ -36,13 +44,7 @@ const dist2 = (ax, az, bx, bz) => {
   return dx * dx + dz * dz;
 };
 
-const UPGRADE_MAX_LEVEL = 3;
-const UPGRADE_COST = (baseCost, level) => Math.ceil(baseCost * (0.75 + (level - 1) * 0.5));
-const SELL_REFUND = (baseCost) => Math.floor(baseCost * 0.5);
-const REPAIR_COST = (baseCost, hp, maxHp) => {
-  if (!maxHp || hp >= maxHp) return 0;
-  return Math.max(1, Math.ceil(baseCost * 0.35 * ((maxHp - hp) / maxHp)));
-};
+const UPGRADE_MAX_LEVEL = COMMAND_MAX_LEVEL;
 export class World {
   constructor(level, waves = WAVES, opts = {}) {
     this.level = level;
@@ -189,45 +191,21 @@ export class World {
 
   upgradeTower(towerId) {
     const t = this.towerById(towerId);
-    if (!t) return { ok: false, reason: "missing" };
-    if (!t.alive) return { ok: false, reason: "dead", tower: t };
-    if (t.level >= (t.maxLevel || UPGRADE_MAX_LEVEL)) return { ok: false, reason: "max", tower: t };
-    this._refreshDefenseEconomy(t);
-    if (this.marrow < t.upgradeCost) return { ok: false, reason: "marrow", tower: t, cost: t.upgradeCost };
-    const cost = t.upgradeCost;
-    this.marrow -= cost;
-    t.level++;
-    this._applyDefenseLevelStats(t);
-    this._refreshDefenseEconomy(t);
-    this.events.push({ kind: "towerUpgraded", id: t.id, x: t.x, z: t.z, level: t.level });
-    return { ok: true, action: "upgrade", tower: t, cost };
+    return upgradeDefense(this, t, this._commandActionHooks());
   }
 
   repairTower(towerId) {
     const t = this.towerById(towerId);
-    if (!t) return { ok: false, reason: "missing" };
-    if (!t.alive) return { ok: false, reason: "dead", tower: t };
-    if (!t.physical || t.maxHp <= 0) return { ok: false, reason: "unsupported", tower: t };
-    this._refreshDefenseEconomy(t);
-    if (t.hp >= t.maxHp) return { ok: false, reason: "full", tower: t };
-    if (this.marrow < t.repairCost) return { ok: false, reason: "marrow", tower: t, cost: t.repairCost };
-    const cost = t.repairCost;
-    this.marrow -= cost;
-    t.hp = t.maxHp;
-    this._refreshDefenseEconomy(t);
-    this.events.push({ kind: "towerRepaired", id: t.id, x: t.x, z: t.z });
-    return { ok: true, action: "repair", tower: t, cost };
+    return repairDefense(this, t, this._commandActionHooks());
   }
 
   sellTower(towerId) {
     const t = this.towerById(towerId);
-    if (!t) return { ok: false, reason: "missing" };
-    if (!t.alive) return { ok: false, reason: "dead", tower: t };
-    this._refreshDefenseEconomy(t);
-    const refund = t.sellRefund;
-    this.marrow += refund;
-    this._disableDefense(t, "towerSold");
-    return { ok: true, action: "sell", tower: t, refund };
+    return sellDefense(this, t, this._commandActionHooks());
+  }
+
+  runTowerCommand(action, towerId) {
+    return runCommandAction(this, action, this.towerById(towerId), this._commandActionHooks());
   }
 
   _captureDefenseBaseStats(t) {
@@ -278,9 +256,16 @@ export class World {
   }
 
   _refreshDefenseEconomy(t) {
-    t.upgradeCost = t.level >= (t.maxLevel || UPGRADE_MAX_LEVEL) ? 0 : UPGRADE_COST(t.baseCost || 0, t.level || 1);
-    t.repairCost = t.alive && t.physical ? REPAIR_COST(t.baseCost || 0, t.hp || 0, t.maxHp || 0) : 0;
-    t.sellRefund = t.alive ? SELL_REFUND(t.baseCost || 0) : 0;
+    refreshDefenseEconomy(t);
+  }
+
+  _commandActionHooks() {
+    return {
+      applyLevelStats: (tower) => this._applyDefenseLevelStats(tower),
+      refreshEconomy: (tower) => this._refreshDefenseEconomy(tower),
+      disableDefense: (tower, reason) => this._disableDefense(tower, reason),
+      pushEvent: (event) => this.events.push(event),
+    };
   }
 
   // ---- wave control ---------------------------------------------------------
