@@ -152,10 +152,13 @@ export function dashPanelData(hero) {
   const cooldown = MISSION_DASH.dashCooldown || 1;
   const cd = Math.max(0, hero?.dashCd || 0);
   const ready = cd <= 0;
+  const label = "Space Dash";
   return {
+    label,
     ready,
     ratio: ready ? 1 : Math.max(0, 1 - cd / cooldown),
-    text: !hero?.alive ? "Space: dash paused" : ready ? "Space: Dash ready" : `Space: Dash ${cd.toFixed(1)}s`,
+    status: !hero?.alive ? "PAUSED" : ready ? "READY" : `${cd.toFixed(1)}s`,
+    text: !hero?.alive ? `${label} PAUSED` : ready ? `${label} READY` : `${label} ${cd.toFixed(1)}s`,
   };
 }
 
@@ -164,12 +167,21 @@ export function abilityPanelData(hero) {
   const cooldown = ability.cooldown || 1;
   const cd = Math.max(0, hero?.abilityCd || 0);
   const ready = cd <= 0;
+  const label = `Q ${ability.name}`;
   return {
     ability,
+    label,
     ready,
     ratio: ready ? 1 : Math.max(0, 1 - cd / cooldown),
-    text: !hero?.alive ? `down â€” reviving ${Math.ceil(hero?.respawnTimer || 0)}s` : ready ? `Q: ${ability.name} ready` : `Q: ${ability.name} ${cd.toFixed(1)}s`,
+    status: !hero?.alive ? `REVIVE ${Math.ceil(hero?.respawnTimer || 0)}s` : ready ? "READY" : `${cd.toFixed(1)}s`,
+    text: !hero?.alive ? `${label} REVIVE ${Math.ceil(hero?.respawnTimer || 0)}s` : ready ? `${label} READY` : `${label} ${cd.toFixed(1)}s`,
   };
+}
+
+export function heroKitHintData(hero) {
+  if (!hero) return "";
+  if (hero.id === "warden" || hero.name === "Warden") return "Warden: hold lanes, slam crowds, reposition with Dash";
+  return "";
 }
 
 export class HUD {
@@ -240,12 +252,13 @@ export class HUD {
     const abOuter = el("div", { background: "#1a1c15", borderRadius: "4px", height: "5px", marginTop: "4px", overflow: "hidden" });
     this.elAbBar = el("div", { background: CSS.gold, height: "100%", width: "100%" });
     abOuter.appendChild(this.elAbBar);
-    this.elAbLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px" }, "Q: ready");
+    this.elAbLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px", fontWeight: "800", letterSpacing: "0.2px" }, "Q Ward Slam READY");
     const dashOuter = el("div", { background: "#1a1c15", borderRadius: "4px", height: "5px", marginTop: "4px", overflow: "hidden" });
     this.elDashBar = el("div", { background: CSS.plague, height: "100%", width: "100%" });
     dashOuter.appendChild(this.elDashBar);
-    this.elDashLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px" }, "Space: Dash ready");
-    hrInfo.append(this.elHeroName, hpOuter, abOuter, this.elAbLabel, dashOuter, this.elDashLabel);
+    this.elDashLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px", fontWeight: "800", letterSpacing: "0.2px" }, "Space Dash READY");
+    this.elKitHint = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "5px", lineHeight: "1.25", maxWidth: "218px" }, "Warden: hold lanes, slam crowds, reposition with Dash");
+    hrInfo.append(this.elHeroName, hpOuter, abOuter, this.elAbLabel, dashOuter, this.elDashLabel, this.elKitHint);
     hr.append(this.heroIcon, hrInfo);
     this.root.appendChild(hr);
 
@@ -296,10 +309,10 @@ export class HUD {
     }, "BUILD PHASE");
     this.elBuildMeta = el("div", {
       color: CSS.gold,
-      font: "800 13px ui-monospace, monospace",
-      whiteSpace: "nowrap",
+      font: "800 12px ui-monospace, monospace",
+      lineHeight: "1.28",
+      whiteSpace: "normal",
       overflow: "hidden",
-      textOverflow: "ellipsis",
     }, "180 Marrow");
     this.elBuildControls = el("div", {
       color: CSS.ash,
@@ -588,17 +601,21 @@ export class HUD {
     }
     this.elHeroBar.style.width = `${Math.max(0, (h.hp / h.maxHp) * 100)}%`;
     this.elHeroBar.style.background = h.alive ? CSS.plague : CSS.blood;
-    const ab = h.ability || { name: "Ability", cooldown: 1 };
-    const ready = h.abilityCd <= 0;
-    this.elAbBar.style.width = ready ? "100%" : `${Math.max(0, (1 - h.abilityCd / ab.cooldown) * 100)}%`;
-    this.elAbBar.style.background = ready ? CSS.plague : CSS.gold;
-    this.elAbLabel.textContent = !h.alive ? `down — reviving ${Math.ceil(h.respawnTimer)}s` : ready ? `Q: ${ab.name} ready` : `Q: ${ab.name} ${h.abilityCd.toFixed(1)}s`;
-    this.elAbLabel.style.color = h.alive && ready ? CSS.plague : CSS.ash;
+    const abilityData = abilityPanelData(h);
+    this.elAbBar.style.width = `${abilityData.ratio * 100}%`;
+    this.elAbBar.style.background = abilityData.ready ? CSS.plague : CSS.gold;
+    this.elAbLabel.textContent = abilityData.text;
+    this.elAbLabel.style.color = h.alive && abilityData.ready ? CSS.plague : CSS.ash;
     const dashData = dashPanelData(h);
     this.elDashBar.style.width = `${dashData.ratio * 100}%`;
     this.elDashBar.style.background = dashData.ready ? CSS.plague : CSS.gold;
     this.elDashLabel.textContent = dashData.text;
     this.elDashLabel.style.color = h.alive && dashData.ready ? CSS.plague : CSS.ash;
+    if (this.elKitHint) {
+      const hint = heroKitHintData(h);
+      this.elKitHint.textContent = hint;
+      this.elKitHint.style.display = hint ? "" : "none";
+    }
 
     // build cards: affordability lock
     for (const id of Object.keys(this.towerBtns || {})) {
