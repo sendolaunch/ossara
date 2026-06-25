@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/sim.test.mjs && node test/enemyMovement.test.mjs && node test/commandActions.test.mjs && node test/placementRules.test.mjs && node test/defenseBehavior.test.mjs && node test/heroCombat.test.mjs && node test/waveSpawner.test.mjs && node test/loot.test.mjs && node test/lootModel.test.mjs && node test/equippedStats.test.mjs && node test/heroes.test.mjs && node test/progress.test.mjs && node test/missions.test.mjs && node test/devMission.test.mjs && node test/enemyVisuals.test.mjs && node test/input.test.mjs && node test/spawnIndicators.test.mjs && node test/hudData.test.mjs && node test/missionLifecycle.test.mjs && node test/hubCollide.test.mjs && node test/characters.test.mjs && node test/username.test.mjs && node test/tavern.test.mjs && node test/hubFloor.test.mjs",
+    "test": "node test/sim.test.mjs && node test/enemyMovement.test.mjs && node test/commandActions.test.mjs && node test/placementRules.test.mjs && node test/defenseBehavior.test.mjs && node test/heroCombat.test.mjs && node test/waveSpawner.test.mjs && node test/loot.test.mjs && node test/lootModel.test.mjs && node test/forgeModel.test.mjs && node test/equippedStats.test.mjs && node test/heroes.test.mjs && node test/progress.test.mjs && node test/missions.test.mjs && node test/devMission.test.mjs && node test/enemyVisuals.test.mjs && node test/input.test.mjs && node test/spawnIndicators.test.mjs && node test/hudData.test.mjs && node test/missionLifecycle.test.mjs && node test/hubCollide.test.mjs && node test/characters.test.mjs && node test/username.test.mjs && node test/tavern.test.mjs && node test/hubFloor.test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

@@ -7,6 +7,7 @@ import {
   grantStarterLoot,
   unequipLootSlot,
 } from "../sim/lootModel.js";
+import { FORGE_UPGRADE_GOLD_COST, getForgeViewerData, upgradeLootItem } from "../sim/forgeModel.js";
 
 const el = (tag, styles = {}, text = "") => {
   const node = document.createElement(tag);
@@ -16,10 +17,13 @@ const el = (tag, styles = {}, text = "") => {
 };
 
 export class LootSkeletonPanel {
-  constructor(root, { getState, onChange } = {}) {
+  constructor(root, { getState, onChange, getHero } = {}) {
     this.getState = getState || (() => this.state);
     this.onChange = onChange || (() => {});
     this.state = createLootState(this.getState?.());
+    this.getHero = getHero || (() => null);
+    this.selectedForgeItemId = null;
+    this.forgeMessage = "";
     this.root = el("div", {
       position: "absolute",
       right: "14px",
@@ -41,9 +45,54 @@ export class LootSkeletonPanel {
   }
 
   mutate(fn) {
-    fn(this.state);
+    const result = fn(this.state);
+    this.state = createLootState(this.state);
     this.onChange(this.state);
     this.render();
+    return result;
+  }
+
+  activeHero() {
+    return this.getHero?.() || null;
+  }
+
+  heroGold() {
+    return Number(this.activeHero()?.gold || 0);
+  }
+
+  grantTestGold(amount = 50) {
+    const hero = this.activeHero();
+    if (!hero) {
+      this.forgeMessage = "No active hero for Gold.";
+      this.render();
+      return;
+    }
+    hero.gold = Number(hero.gold || 0) + amount;
+    this.forgeMessage = `Dev grant: +${amount} Gold.`;
+    this.onChange(this.state);
+    this.render();
+  }
+
+  selectForgeItem(itemId) {
+    this.selectedForgeItemId = itemId;
+    this.forgeMessage = "";
+    this.render();
+  }
+
+  upgradeForgeStat(statKey) {
+    const hero = this.activeHero();
+    const gold = this.heroGold();
+    this.mutate((state) => {
+      const res = upgradeLootItem(state, this.selectedForgeItemId, statKey, { availableGold: gold });
+      if (res.ok && hero) {
+        hero.gold = gold - res.cost;
+        this.forgeMessage = `${res.item.name} +${res.upgradeLevel}: ${statKey} ${res.oldValue} -> ${res.newValue}.`;
+      } else {
+        const labels = { gold: "Not enough Gold.", max: "Item is at max upgrade.", stat: "Choose an existing stat.", missing: "Select an item." };
+        this.forgeMessage = labels[res.reason] || "Upgrade failed.";
+      }
+      return res;
+    });
   }
 
   button(label, onClick) {
@@ -59,6 +108,50 @@ export class LootSkeletonPanel {
     }, label);
     button.onclick = onClick;
     return button;
+  }
+
+  renderForge() {
+    let forgeData = getForgeViewerData(this.state, this.selectedForgeItemId);
+    if (!forgeData.selectedItem && this.state.items[0]) {
+      this.selectedForgeItemId = this.state.items[0].id;
+      forgeData = getForgeViewerData(this.state, this.selectedForgeItemId);
+    }
+    const wrap = el("div", {
+      marginTop: "10px",
+      padding: "8px",
+      borderRadius: "7px",
+      border: `1px solid rgba(200,161,74,0.45)`,
+      background: "rgba(200,161,74,0.07)",
+    });
+    wrap.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Forge v1"));
+    wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
+      `Dev skeleton: +1 to an existing stat, max +5. Cost ${FORGE_UPGRADE_GOLD_COST} Gold. Marrow unaffected.`));
+    wrap.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" },
+      `Active hero Gold: ${this.heroGold()}`));
+    wrap.appendChild(this.button("Dev +50 Gold", () => this.grantTestGold(50)));
+
+    if (!forgeData.selected) {
+      wrap.appendChild(el("div", { color: CSS.ash, marginTop: "8px" }, "Grant or own an item to use the Forge."));
+      if (this.forgeMessage) wrap.appendChild(el("div", { color: CSS.gold, marginTop: "6px", fontSize: "11px" }, this.forgeMessage));
+      return wrap;
+    }
+
+    const selected = forgeData.selected;
+    this.selectedForgeItemId = selected.item.id;
+    wrap.appendChild(el("div", { color: CSS.bone, fontWeight: "700", marginTop: "8px" }, selected.item.name));
+    wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
+      `${selected.item.slot} | +${selected.upgradeLevel}/${selected.maxUpgradeLevel}`));
+    if (selected.atMax) {
+      wrap.appendChild(el("div", { color: CSS.gold, marginTop: "6px", fontSize: "11px" }, "Max upgrade reached."));
+    } else if (!selected.upgradeableStats.length) {
+      wrap.appendChild(el("div", { color: CSS.ash, marginTop: "6px", fontSize: "11px" }, "No existing stats can be upgraded."));
+    } else {
+      const choices = el("div", { marginTop: "4px" });
+      for (const statKey of selected.upgradeableStats) choices.appendChild(this.button(`+1 ${statKey}`, () => this.upgradeForgeStat(statKey)));
+      wrap.appendChild(choices);
+    }
+    if (this.forgeMessage) wrap.appendChild(el("div", { color: CSS.gold, marginTop: "6px", fontSize: "11px", lineHeight: "1.35" }, this.forgeMessage));
+    return wrap;
   }
 
   render() {
@@ -97,6 +190,7 @@ export class LootSkeletonPanel {
       ? data.activeSetBonuses.map((bonus) => `${bonus.setName} ${bonus.label}`).join(" | ")
       : "No active set bonuses.";
     this.root.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, setLines));
+    this.root.appendChild(this.renderForge());
 
     const equipped = el("div", { marginTop: "10px" });
     equipped.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Equipped"));
@@ -130,6 +224,7 @@ export class LootSkeletonPanel {
       } else {
         card.appendChild(this.button("Equip", () => this.mutate((state) => equipLootItem(state, item.id))));
       }
+      card.appendChild(this.button(this.selectedForgeItemId === item.id ? "Forging" : "Forge", () => this.selectForgeItem(item.id)));
       items.appendChild(card);
     }
     this.root.appendChild(items);

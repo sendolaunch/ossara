@@ -9,7 +9,7 @@ import { Hub } from "./ui/hub3d.js";
 import { MapSelect } from "./ui/mapselect.js";
 import { CSS } from "./config/palette.js";
 import { mountVersionBadge } from "./ui/versionBadge.js";
-import { loadProfile, saveProfile, addItem, getBonuses, setActive } from "./sim/profile.js";
+import { loadProfile, saveProfile, addItem, getActiveHero, getBonuses, setActive } from "./sim/profile.js";
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
 import { createLootState, getAppliedLootStats } from "./sim/lootModel.js";
@@ -224,6 +224,7 @@ window.OSSARA = {
 if (devLoot) {
   window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui, {
     getState: () => profile.lootSkeleton,
+    getHero: () => getActiveHero(profile),
     onChange: (state) => {
       profile.lootSkeleton = createLootState(state);
       persist();

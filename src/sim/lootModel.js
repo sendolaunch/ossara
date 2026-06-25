@@ -1,4 +1,4 @@
-import { LOOT_EQUIPMENT_SLOTS, LOOT_ITEM_SETS, LOOT_MODEL_VERSION, LOOT_STAT_KEYS, STARTER_LOOT_ITEMS } from "../config/items.js";
+import { LOOT_EQUIPMENT_SLOTS, LOOT_ITEM_DEFAULT_MAX_UPGRADE_LEVEL, LOOT_ITEM_SETS, LOOT_MODEL_VERSION, LOOT_STAT_KEYS, STARTER_LOOT_ITEMS } from "../config/items.js";
 
 export function emptyLootEquipment() {
   const equipped = {};
@@ -34,6 +34,8 @@ export function createLootState(data = {}) {
 export function normalizeLootItem(item) {
   const stats = emptyLootStats();
   for (const key of LOOT_STAT_KEYS) stats[key] = Number(item?.stats?.[key] || 0);
+  const maxUpgradeLevel = Math.max(0, Math.floor(Number(item?.maxUpgradeLevel ?? LOOT_ITEM_DEFAULT_MAX_UPGRADE_LEVEL)));
+  const upgradeLevel = Math.max(0, Math.min(maxUpgradeLevel, Math.floor(Number(item?.upgradeLevel || 0))));
   return {
     id: String(item?.id || ""),
     name: String(item?.name || "Unnamed Relic"),
@@ -42,6 +44,8 @@ export function normalizeLootItem(item) {
     itemLevel: Math.max(1, Number(item?.itemLevel || item?.ilvl || 1)),
     levelRequirement: Math.max(1, Number(item?.levelRequirement || 1)),
     setId: item?.setId ? String(item.setId) : null,
+    upgradeLevel,
+    maxUpgradeLevel,
     stats,
   };
 }

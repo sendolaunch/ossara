@@ -42,6 +42,7 @@ export const NAME_NOUN = {
 export const LOOT_MODEL_VERSION = 1;
 export const LOOT_EQUIPMENT_SLOTS = ["weapon", "helm", "chest", "gloves", "boots"];
 export const LOOT_STAT_KEYS = ["heroDamage", "heroHealth", "defenseHealth", "defenseDamage", "abilityPower"];
+export const LOOT_ITEM_DEFAULT_MAX_UPGRADE_LEVEL = 5;
 
 export const STARTER_LOOT_ITEMS = [
   {
