@@ -1,4 +1,5 @@
 import { Input } from "../src/input/Input.js";
+import { DASH_KEY } from "../src/config/moves.js";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
@@ -154,6 +155,46 @@ const oldWindow = globalThis.window;
   ok(!input.consume().attack, "build-mode left-click places tower instead of queuing hero attack");
   canvas.dispatch("contextmenu", { preventDefault() {} });
   ok(input.selected === null && input.hoverCell === null, "right-click cancels build mode");
+}
+
+{
+  const fakeWindow = target();
+  globalThis.window = fakeWindow;
+  const canvas = target();
+  const tower = { id: 20, alive: true, col: 1, row: 1, x: 0, z: 0, physical: true, hp: 40, maxHp: 100, level: 1, maxLevel: 3 };
+  const renderer = {
+    domElement: canvas,
+    setHover: () => {},
+    setCommandTarget: () => {},
+    setCommandCast: () => {},
+    pointerToCell: () => ({ col: 1, row: 1, x: 0, z: 0 }),
+    getBasis: () => ({ fwd: { x: 0, z: -1 }, right: { x: 1, z: 0 } }),
+    zoomBy: () => {},
+    orbit: () => {},
+  };
+  const world = {
+    phase: "prep",
+    hero: { alive: true, x: 0, z: 1 },
+    level: {},
+    towers: [tower],
+    availableTowers: ["barricade"],
+    placementStatus: () => ({ ok: true, reason: "ok" }),
+    towerAtCell: () => tower,
+    towerById: () => tower,
+  };
+  const input = new Input(renderer, () => world);
+  fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
+  ok(input.consume().dash, "dash key queues a hero dash in normal mode");
+  input.select("barricade");
+  fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
+  ok(!input.consume().dash, "dash key is ignored in build mode");
+  input.cancelBuild();
+  input.enterCommandTargetMode("upgrade");
+  fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
+  ok(!input.consume().dash, "dash key is ignored in command target mode");
+  input.confirmCommandTarget();
+  fakeWindow.dispatch("keydown", { key: DASH_KEY, preventDefault() {} });
+  ok(!input.consume().dash, "dash key is ignored during command casts");
 }
 
 {

@@ -1,4 +1,4 @@
-import { commandCastPanelData, commandTargetPanelData, defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
+import { commandCastPanelData, commandTargetPanelData, dashPanelData, defensePanelData, defenseTypeLabel, selectedDefensePanelData } from "../src/view/hud.js";
 
 let pass = 0;
 let fail = 0;
@@ -63,6 +63,11 @@ ok(invalidData.controls.includes("Enemy path"), "invalid placement reason surfac
 
 const poorData = selectedDefensePanelData("spikegate", { marrow: 10 }, { towerId: "spikegate", ok: true });
 ok(!poorData.canBuild && poorData.controls.includes("Not enough Marrow"), "selected panel reports insufficient Marrow");
+
+const dashReady = dashPanelData({ alive: true, dashCd: 0 });
+ok(dashReady.ready && dashReady.ratio === 1 && dashReady.text.includes("ready"), "dash HUD data reports ready state");
+const dashCooling = dashPanelData({ alive: true, dashCd: 1.2 });
+ok(!dashCooling.ready && dashCooling.ratio > 0 && dashCooling.ratio < 1 && dashCooling.text.includes("1.2s"), "dash HUD data reports cooldown state");
 
 console.log(`hudData: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

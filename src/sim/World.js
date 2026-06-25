@@ -8,7 +8,7 @@ import { TOWERS } from "../config/towers.js";
 import { WAVES } from "../config/waves.js";
 import { HERO } from "../config/hero.js";
 import { CLASS_KITS } from "../config/kits.js";
-import { MOVE } from "../config/moves.js";
+import { MISSION_DASH } from "../config/moves.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, gridToWorld, worldToGrid, cellKey, expandRects, getLevelLanes } from "./pathing.js";
 import {
   advanceEnemyAlongLane,
@@ -633,8 +633,8 @@ export class World {
         h.dashX = Math.sin(h.facing);
         h.dashZ = Math.cos(h.facing);
       }
-      h.dashTimer = MOVE.dashTime;
-      h.dashCd = MOVE.dashCooldown;
+      h.dashTimer = MISSION_DASH.dashTime;
+      h.dashCd = MISSION_DASH.dashCooldown;
       h.facing = Math.atan2(h.dashX, h.dashZ);
       this.events.push({ kind: "heroDash", x: h.x, z: h.z, range: 1.2 });
     }
@@ -643,7 +643,7 @@ export class World {
       mx = h.dashX;
       mz = h.dashZ;
     }
-    const speedMul = dashing ? MOVE.dashMul : 1;
+    const speedMul = dashing ? MISSION_DASH.dashMul : 1;
     if (dashing || m > 0) {
       const moveLen = Math.hypot(mx, mz);
       if (moveLen > 0) {

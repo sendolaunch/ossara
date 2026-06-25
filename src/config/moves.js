@@ -13,6 +13,12 @@ export const MOVE = {
   fidgetClip: "Idle_B",
 };
 
+export const MISSION_DASH = {
+  dashMul: MOVE.dashMul,
+  dashTime: MOVE.dashTime,
+  dashCooldown: 2.0,
+};
+
 // emote key (digit) -> rig clip name (one-shot, returns to idle/walk)
 export const EMOTES = {
   "1": "Interact",

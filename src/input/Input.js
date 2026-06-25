@@ -90,7 +90,7 @@ export class Input {
       const k = e.key.toLowerCase();
       if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c"].includes(k)) e.preventDefault();
       if (k === "q") this.pendingSlam = true;
-      if (k === DASH_KEY) this.pendingDash = true;
+      if (k === DASH_KEY && this._canQueueHeroDash()) this.pendingDash = true;
       if (k === "enter" && !this.commandTargetMode) this.pendingStart = true;
       if (k === "escape") {
         if (this.actionMenuOpen) this.closeActionMenu();
@@ -166,6 +166,7 @@ export class Input {
     }
     this.selected = id && TOWERS[id] ? id : null;
     if (this.selected) this.cancelCommandTarget({ silent: true });
+    if (this.selected) this.pendingDash = false;
     this.rotation = 0;
     this.hoverTower = null;
     if (!this.selected) this.renderer.setHover(null);
@@ -223,6 +224,7 @@ export class Input {
     if (!["upgrade", "repair", "sell"].includes(action)) return;
     if (this.selected) this.cancelBuild();
     if (this.actionMenuOpen) this.closeActionMenu();
+    this.pendingDash = false;
     this.commandTargetMode = action;
     this.hoverTower = null;
     if (this.onTowerHover) this.onTowerHover(null);
@@ -382,6 +384,10 @@ export class Input {
       : { x: null, z: null };
   }
 
+  _canQueueHeroDash() {
+    return !this.selected && !this.commandTargetMode && !this.commandCast && !this.actionMenuOpen;
+  }
+
   _cellFromPointer(clientX, clientY, world) {
     if (!world || !this.renderer.pointerToCell || !Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
     return this.renderer.pointerToCell(clientX, clientY, world.level);
@@ -528,11 +534,12 @@ export class Input {
   consume() {
     const { moveX, moveZ } = this.movementIntent();
     const pendingAttack = this.pendingAttack;
+    const dash = this._canQueueHeroDash() && this.pendingDash;
     const out = {
       moveX,
       moveZ,
       slam: this.pendingSlam,
-      dash: this.pendingDash,
+      dash,
       startWave: this.pendingStart,
       attack: !!pendingAttack,
       attackX: pendingAttack?.x,

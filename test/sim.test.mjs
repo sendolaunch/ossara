@@ -8,6 +8,7 @@ import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
 import { TOWERS } from "../src/config/towers.js";
 import { CLASS_KITS } from "../src/config/kits.js";
+import { MISSION_DASH } from "../src/config/moves.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, cellKey, worldToGrid, expandWaypoints } from "../src/sim/pathing.js";
 import { computeBlockadeAttackSlot } from "../src/sim/enemyMovement.js";
 
@@ -1094,9 +1095,34 @@ section("mission dash moves and respects cooldown");
   ok(moved > 1.0, "dash moves hero a noticeable distance");
   const afterDashX = w.hero.x;
   const cd = w.hero.dashCd;
+  ok(cd <= MISSION_DASH.dashCooldown && cd > MISSION_DASH.dashCooldown - 1, "mission dash uses the short v1 cooldown");
   w.update(0.05, { moveX: 1, moveZ: 0, dash: true });
-  ok(w.hero.dashCd < cd && w.hero.dashTimer <= 0.22, "dash cooldown prevents immediate re-dash");
+  ok(w.hero.dashCd < cd && w.hero.dashTimer <= MISSION_DASH.dashTime, "dash cooldown prevents immediate re-dash");
   ok(w.hero.x >= afterDashX, "blocked cooldown dash does not snap hero backward");
+
+  const facingDash = new World(LEVEL);
+  facingDash.hero.facing = Math.PI / 2;
+  const fx0 = facingDash.hero.x;
+  const fz0 = facingDash.hero.z;
+  facingDash.update(0.05, { dash: true });
+  run(facingDash, 8, 0.05, {});
+  ok(facingDash.hero.x > fx0 + 1 && Math.abs(facingDash.hero.z - fz0) < 0.75, "dash uses hero facing direction when no movement input exists");
+
+  const actionDash = new World(LEVEL);
+  actionDash.update(0.05, { moveX: 1, moveZ: 0, dash: true });
+  run(actionDash, 8, 0.05, {});
+  const postDashX = actionDash.hero.x;
+  actionDash.update(0.1, { moveX: 0, moveZ: 1 });
+  ok(actionDash.hero.z !== actionDash.hero._spawn.z || actionDash.hero.x !== postDashX, "normal movement still works after dash");
+  const en = spawnEnemyAt(actionDash, "husk", actionDash.defaultLaneId, 0);
+  en.hp = 30;
+  actionDash.hero.x = en.x;
+  actionDash.hero.z = en.z - 0.9;
+  actionDash.hero.facing = 0;
+  actionDash.hero.attackCd = 0;
+  const hpBefore = en.hp;
+  actionDash.update(0.05, { attack: true, attackX: en.x, attackZ: en.z });
+  ok(en.hp < hpBefore, "normal attack still works after dash");
 }
 
 // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@
 import { CSS } from "../config/palette.js";
 import { TOWERS } from "../config/towers.js";
 import { CLASSES } from "../config/classes.js";
+import { MISSION_DASH } from "../config/moves.js";
 
 const el = (tag, style = {}, html) => {
   const e = document.createElement(tag);
@@ -146,6 +147,17 @@ export function commandCastPanelData(cast, tower) {
   };
 }
 
+export function dashPanelData(hero) {
+  const cooldown = MISSION_DASH.dashCooldown || 1;
+  const cd = Math.max(0, hero?.dashCd || 0);
+  const ready = cd <= 0;
+  return {
+    ready,
+    ratio: ready ? 1 : Math.max(0, 1 - cd / cooldown),
+    text: !hero?.alive ? "Space: dash paused" : ready ? "Space: Dash ready" : `Space: Dash ${cd.toFixed(1)}s`,
+  };
+}
+
 export class HUD {
   constructor(root, cb) {
     this.cb = cb;
@@ -215,7 +227,11 @@ export class HUD {
     this.elAbBar = el("div", { background: CSS.gold, height: "100%", width: "100%" });
     abOuter.appendChild(this.elAbBar);
     this.elAbLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px" }, "Q: ready");
-    hrInfo.append(this.elHeroName, hpOuter, abOuter, this.elAbLabel);
+    const dashOuter = el("div", { background: "#1a1c15", borderRadius: "4px", height: "5px", marginTop: "4px", overflow: "hidden" });
+    this.elDashBar = el("div", { background: CSS.plague, height: "100%", width: "100%" });
+    dashOuter.appendChild(this.elDashBar);
+    this.elDashLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px" }, "Space: Dash ready");
+    hrInfo.append(this.elHeroName, hpOuter, abOuter, this.elAbLabel, dashOuter, this.elDashLabel);
     hr.append(this.heroIcon, hrInfo);
     this.root.appendChild(hr);
 
@@ -564,6 +580,11 @@ export class HUD {
     this.elAbBar.style.background = ready ? CSS.plague : CSS.gold;
     this.elAbLabel.textContent = !h.alive ? `down — reviving ${Math.ceil(h.respawnTimer)}s` : ready ? `Q: ${ab.name} ready` : `Q: ${ab.name} ${h.abilityCd.toFixed(1)}s`;
     this.elAbLabel.style.color = h.alive && ready ? CSS.plague : CSS.ash;
+    const dashData = dashPanelData(h);
+    this.elDashBar.style.width = `${dashData.ratio * 100}%`;
+    this.elDashBar.style.background = dashData.ready ? CSS.plague : CSS.gold;
+    this.elDashLabel.textContent = dashData.text;
+    this.elDashLabel.style.color = h.alive && dashData.ready ? CSS.plague : CSS.ash;
 
     // build cards: affordability lock
     for (const id of Object.keys(this.towerBtns || {})) {
