@@ -7,7 +7,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  CHARACTERS, CHAR_ANIM_LIBS, CHAR_CLIPS, HANDSLOT_R, HANDSLOT_L,
+  CHARACTERS, CHAR_ANIM_LIBS, CHAR_CLIPS, CHAR_DEV_ATTACK_ANIM_LIB, CHAR_DEV_ATTACK_CLIPS, HANDSLOT_R, HANDSLOT_L,
 } from "../src/config/characters.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt } from "../src/view/character.js";
 
@@ -44,6 +44,12 @@ for (const [role, clip] of Object.entries(CHAR_CLIPS)) {
   }
   ok(clipBank.has(clip), `clip "${clip}" (${role}) exists in the anim libraries`);
 }
+const devAttackPath = pub(CHAR_DEV_ATTACK_ANIM_LIB);
+ok(existsSync(devAttackPath), `dev attack anim lib present: ${CHAR_DEV_ATTACK_ANIM_LIB}`);
+const devAttackNames = existsSync(devAttackPath) ? animNames(glbJson(devAttackPath)) : new Set();
+for (const clip of CHAR_DEV_ATTACK_CLIPS) {
+  ok(devAttackNames.has(clip), `dev attack clip exists: ${clip}`);
+}
 ok(!CHAR_CLIPS.attack, "Warden basic attack uses procedural sword-swing feedback instead of the Throw placeholder");
 const characterSource = readFileSync(src("view/character.js"), "utf8");
 ok(characterSource.includes("let hasAttack = false"), "hero attack clip flag is scoped for the returned control surface");
@@ -61,6 +67,10 @@ ok(characterSource.includes("if (preferred === \"lowerarm.r\") return attackPose
 ok(characterSource.includes("if (preferred === \"upperarm.r\") return attackPose.upperArm"), "dev proof can directly target upperarm.r");
 ok(characterSource.includes("if (preferred === \"Knight_ArmRight\") return attackPose.armMesh"), "dev proof can directly target the visible right-arm mesh");
 ok(characterSource.includes("applySegmentedArmFollower"), "procedural attack has a segmented right-arm follower layer");
+ok(characterSource.includes("devSegmentedArm = false"), "segmented right-arm follower is opt-in and disabled for normal gameplay");
+ok(characterSource.includes("segmentedArmEnabled = !!(devSegmentedArm && import.meta.env?.DEV)"), "segmented arm fallback is gated behind dev mode");
+ok(characterSource.includes("real KayKit arm + sword fallback"), "normal attack keeps the real KayKit right arm visible");
+ok(characterSource.includes("playDevAttackClip"), "character control exposes dev-only real KayKit attack clip preview");
 ok(characterSource.includes("computeElbowPoint"), "procedural attack computes an elbow target for visible arm bend");
 ok(characterSource.includes("return attackPose.sword || inner.findByName(\"sword_1handed\")"), "procedural attack defaults to the v3-approved sword source of truth");
 ok(characterSource.includes("heroAttackPoseAt"), "character attack uses a shared key-pose calculation");
@@ -93,6 +103,8 @@ ok(rendererSource.includes("const roll = 0") && rendererSource.includes("const p
 ok(rendererSource.includes("pose.yaw * 0.1"), "mission renderer keeps Warden body yaw subtle");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
+ok(labSource.includes("Real KayKit 1H / A"), "hero attack lab exposes real KayKit one-handed clip probe");
+ok(labSource.includes("devSegmentedArm"), "hero attack lab requires an explicit dev flag for the segmented arm fallback");
 ok(labSource.includes("Proof lowerarm.r / K") && labSource.includes("Proof upperarm.r / L"), "hero attack lab exposes direct right-arm bone proof controls");
 ok(labSource.includes("Proof arm mesh / M"), "hero attack lab exposes visible arm mesh proof control");
 ok(labSource.includes("right-shoulder-marker") && labSource.includes("right-elbow-marker") && labSource.includes("right-wrist-marker"), "hero attack lab exposes dev-only shoulder/elbow/wrist markers");

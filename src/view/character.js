@@ -10,7 +10,7 @@
 
 import * as pc from "playcanvas";
 import {
-  CHARACTERS, CHAR_FALLBACK, CHAR_ANIM_LIBS, CHAR_CLIPS, HANDSLOT_R, HANDSLOT_L,
+  CHARACTERS, CHAR_FALLBACK, CHAR_ANIM_LIBS, CHAR_CLIPS, CHAR_DEV_ATTACK_ANIM_LIB, CHAR_DEV_ATTACK_CLIPS, HANDSLOT_R, HANDSLOT_L,
 } from "../config/characters.js";
 
 // Container assets are cached so the shared anim libraries load once per app.
@@ -340,7 +340,7 @@ function createArmChain(app) {
  *   setMoving(b:boolean): void, setDead(b:boolean): void, playOnce(state:string): void,
  * }>}
  */
-export async function loadCharacter(app, classId, { weapon = true } = {}) {
+export async function loadCharacter(app, classId, { weapon = true, devSegmentedArm = false, devAttackAnimation = false } = {}) {
   const def = CHARACTERS[classId] || CHARACTERS[CHAR_FALLBACK];
   if (!def) return null;
 
@@ -382,6 +382,9 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     assign("Run", CHAR_CLIPS.run, true);
     assign("Death", CHAR_CLIPS.death, false);
     hasAttack = assign("Attack", CHAR_CLIPS.attack, false);   // one-shot, non-looping when a real clip exists
+    if (devAttackAnimation && import.meta.env?.DEV) {
+      collectTracks(await loadContainer(app, CHAR_DEV_ATTACK_ANIM_LIB), tracks);
+    }
     layer = inner.anim.baseLayer || null;
     goto(layer, "Idle", 0);
   } catch (e) {
@@ -397,7 +400,8 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const rightArmMesh = inner.findByName("Knight_ArmRight");
   const rightHandSlot = inner.findByName(HANDSLOT_R);
   const leftHandSlot = inner.findByName(HANDSLOT_L);
-  const visualArmChain = createArmChain(app);
+  const segmentedArmEnabled = !!(devSegmentedArm && import.meta.env?.DEV);
+  const visualArmChain = segmentedArmEnabled ? createArmChain(app) : null;
   const attackPose = {
     active: false,
     raf: 0,
@@ -419,6 +423,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     elbowWorld: null,
     wristWorld: null,
     armMode: "idle",
+    segmentedArmEnabled,
     elbowBendActive: false,
     armMeshWasEnabled: true,
     baseHiltWorld: null,
@@ -535,7 +540,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   };
 
   const applySegmentedArmFollower = (pose) => {
-    if (!visualArmChain?.root || !pose || !attackPose.handFollowActive) {
+    if (!pose || !attackPose.handFollowActive) {
       hideVisualArmChain();
       return;
     }
@@ -544,6 +549,17 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     const hilt = worldSnapshot(attackPose.sword || attackPose.target);
     if (!shoulder || !baseElbow || !hilt) {
       hideVisualArmChain();
+      return;
+    }
+    if (!attackPose.segmentedArmEnabled || !visualArmChain?.root) {
+      if (attackPose.armMesh) attackPose.armMesh.enabled = attackPose.armMeshWasEnabled;
+      attackPose.lastHiltWorld = hilt;
+      attackPose.armFollowerTargetWorld = hilt;
+      attackPose.elbowWorld = null;
+      attackPose.wristWorld = null;
+      attackPose.armFollowerActive = false;
+      attackPose.elbowBendActive = false;
+      attackPose.armMode = "real KayKit arm + sword fallback";
       return;
     }
     try {
@@ -660,6 +676,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       attackPose.variant = resolveAttackVariant(opts.variant ?? opts.variantId ?? 0);
       attackPose.handFollowActive = target === attackPose.sword || target?.name === "sword_1handed";
       attackPose.armFollowerActive = false;
+      attackPose.armMode = attackPose.segmentedArmEnabled ? "fallback segmented arm" : "real KayKit arm + sword fallback";
       attackPose.driverProofActive = false;
       attackPose.startedAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
       attackPose.duration = HERO_ATTACK_TIMING.total;
@@ -813,6 +830,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       armFollowerActive: !!attackPose.armFollowerActive,
       elbowBendActive: !!attackPose.elbowBendActive,
       armMode: attackPose.armMode || "idle",
+      segmentedArmEnabled: !!attackPose.segmentedArmEnabled,
       driverProofActive: !!attackPose.driverProofActive,
       driverProofTarget: attackPose.driverProofTarget || "",
       legacyProxyHidden: true,
@@ -881,6 +899,14 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
         }, ms);
       }
     },
+    playDevAttackClip(name = CHAR_DEV_ATTACK_CLIPS[0]) {
+      if (!import.meta.env?.DEV || !CHAR_DEV_ATTACK_CLIPS.includes(name)) return false;
+      resetAttackPose();
+      const before = st.currentClip;
+      this.playClip(name, false);
+      return st.currentClip !== before && st.currentClip === name;
+    },
+    devAttackClips: CHAR_DEV_ATTACK_CLIPS.slice(),
     setDead(b) {
       if (!layer || b === st.dead) return;
       st.dead = b;

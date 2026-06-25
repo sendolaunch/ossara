@@ -46,6 +46,9 @@ export class HeroAttackLab {
     this.running = false;
     this.slow = false;
     this.variantIndex = 0;
+    const params = new URLSearchParams(window.location.search);
+    this.devSegmentedArm = params.get("devSegmentedArm") === "1";
+    this.realAttackClipIndex = 0;
     this.lastAction = "loading";
     this._frame = this._frame.bind(this);
     this._onKey = this._onKey.bind(this);
@@ -103,9 +106,11 @@ export class HeroAttackLab {
     this.root.innerHTML = `<div style="position:absolute;left:16px;top:14px;width:min(620px,calc(100vw - 32px));padding:12px 14px;border:1px solid ${CSS.plague};background:rgba(6,10,7,.86);color:${CSS.bone};font:12px ui-monospace,Consolas,monospace;line-height:1.45;box-shadow:0 0 22px rgba(91,255,112,.18)">
       <div style="color:${CSS.gold};font-weight:800;letter-spacing:.08em">WARDEN ATTACK VISUAL LAB</div>
       <div style="color:${CSS.ash}">Dev-only route: ?devHeroAttack=warden</div>
+      <div style="color:${CSS.ash}">Segmented arm is hidden by default; add ?devSegmentedArm=1 to compare the old follower.</div>
       <div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto">
         <button data-action="attack">Attack / Space</button>
         <button data-action="slow">Slow Attack / S</button>
+        <button data-action="real-attack">Real KayKit 1H / A</button>
         <button data-action="variant-0">Variant A / 1</button>
         <button data-action="variant-1">Variant B / 2</button>
         <button data-action="variant-2">Variant C / 3</button>
@@ -126,7 +131,10 @@ export class HeroAttackLab {
 
   async start() {
     this.app.start();
-    this.ctl = await loadCharacter(this.app, this.classId);
+    this.ctl = await loadCharacter(this.app, this.classId, {
+      devAttackAnimation: true,
+      devSegmentedArm: this.devSegmentedArm,
+    });
     if (this.ctl?.wrap) {
       this.app.root.addChild(this.ctl.wrap);
       this.ctl.wrap.setPosition(0, 0, 0);
@@ -155,6 +163,14 @@ export class HeroAttackLab {
     this.lastAction = `forced ${variant.label}`;
   }
 
+  _triggerRealAttackClip() {
+    const clips = this.ctl?.devAttackClips || [];
+    const clip = clips[this.realAttackClipIndex % Math.max(1, clips.length)];
+    const ok = clip ? this.ctl?.playDevAttackClip?.(clip) : false;
+    this.lastAction = ok ? `real KayKit clip: ${clip}` : "real KayKit clip unavailable";
+    if (ok) this.realAttackClipIndex = (this.realAttackClipIndex + 1) % clips.length;
+  }
+
   _extreme(target) {
     const ok = this.ctl?.playExtremePose?.(target, 2);
     this.lastAction = ok ? `extreme pose: ${target}` : `extreme pose failed: ${target}`;
@@ -172,6 +188,7 @@ export class HeroAttackLab {
     const action = btn.dataset.action;
     if (action === "attack") this._triggerAttack(false);
     else if (action === "slow") this._triggerAttack(true);
+    else if (action === "real-attack") this._triggerRealAttackClip();
     else if (action === "variant-0") this._forceVariant(0);
     else if (action === "variant-1") this._forceVariant(1);
     else if (action === "variant-2") this._forceVariant(2);
@@ -195,6 +212,9 @@ export class HeroAttackLab {
     } else if (k === "s") {
       ev.preventDefault();
       this._triggerAttack(true);
+    } else if (k === "a") {
+      ev.preventDefault();
+      this._triggerRealAttackClip();
     } else if (k === "e") {
       ev.preventDefault();
       this._extreme("sword_1handed");
@@ -231,6 +251,8 @@ export class HeroAttackLab {
       `class: ${this.classId}`,
       `last action: ${this.lastAction}`,
       `queued variant: ${this.variantIndex + 1} ${queuedVariant.label}`,
+      `segmented arm dev flag: ${this.devSegmentedArm ? "enabled" : "disabled"}`,
+      `real KayKit clips: ${(this.ctl?.devAttackClips || []).join(", ") || "-"}`,
       `active variant: ${d.variantId || "-"} ${d.variantLabel || ""}`,
       `attack phase: ${d.phase || "-"}`,
       `attack time: ${Number(d.time || 0).toFixed(3)}`,
@@ -239,6 +261,7 @@ export class HeroAttackLab {
       `visible arm follower active: ${d.armFollowerActive ? "yes" : "no"}`,
       `elbow bend active: ${d.elbowBendActive ? "yes" : "no"}`,
       `arm mode: ${d.armMode || "idle"}`,
+      `segmented arm enabled in loader: ${d.segmentedArmEnabled ? "yes" : "no"}`,
       `after-sync proof active: ${d.driverProofActive ? "yes" : "no"} ${d.driverProofTarget || ""}`,
       `old proxy/fallback visual hidden: ${d.legacyProxyHidden ? "yes" : "no"}`,
       `current animation clip: ${d.currentClip || "-"}`,

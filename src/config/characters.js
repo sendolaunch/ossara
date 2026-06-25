@@ -18,6 +18,17 @@ export const CHAR_ANIM_LIBS = [
   DIR + "anim/Rig_Medium_MovementBasic.glb", // Walking_A/B/C, Running_A/B, Jump_*
 ];
 
+// Dev-only attack probe library. This is intentionally kept out of
+// CHAR_ANIM_LIBS so normal missions keep the approved procedural Warden swing
+// until a real KayKit attack clip is visually accepted.
+export const CHAR_DEV_ATTACK_ANIM_LIB = DIR + "anim/Rig_Medium_CombatMelee.glb";
+export const CHAR_DEV_ATTACK_CLIPS = [
+  "Melee_1H_Attack_Chop",
+  "Melee_1H_Attack_Slice_Diagonal",
+  "Melee_1H_Attack_Slice_Horizontal",
+  "Melee_1H_Attack_Stab",
+];
+
 // Clip names as they exist in the libraries above (verified by characters.test.mjs).
 export const CHAR_CLIPS = {
   idle: "Idle_A",
