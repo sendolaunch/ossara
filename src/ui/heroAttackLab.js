@@ -101,6 +101,9 @@ export class HeroAttackLab {
         <button data-action="extreme-sword">Extreme sword / E</button>
         <button data-action="extreme-slot">Extreme handslot / H</button>
         <button data-action="extreme-hand">Extreme hand.r / J</button>
+        <button data-action="extreme-lower">Extreme lowerarm.r / K</button>
+        <button data-action="extreme-upper">Extreme upperarm.r / L</button>
+        <button data-action="extreme-armmesh">Extreme arm mesh / M</button>
         <button data-action="reset">Reset / R</button>
       </div>
       <pre id="heroAttackLabDebug" style="margin:0;white-space:pre-wrap;color:${CSS.bone}">loading...</pre>
@@ -159,6 +162,9 @@ export class HeroAttackLab {
     else if (action === "extreme-sword") this._extreme("sword_1handed");
     else if (action === "extreme-slot") this._extreme("handslot.r");
     else if (action === "extreme-hand") this._extreme("hand.r");
+    else if (action === "extreme-lower") this._extreme("lowerarm.r");
+    else if (action === "extreme-upper") this._extreme("upperarm.r");
+    else if (action === "extreme-armmesh") this._extreme("Knight_ArmRight");
     else if (action === "reset") {
       this.ctl?.resetAttackPose?.();
       this.lastAction = "reset";
@@ -182,6 +188,15 @@ export class HeroAttackLab {
     } else if (k === "j") {
       ev.preventDefault();
       this._extreme("hand.r");
+    } else if (k === "k") {
+      ev.preventDefault();
+      this._extreme("lowerarm.r");
+    } else if (k === "l") {
+      ev.preventDefault();
+      this._extreme("upperarm.r");
+    } else if (k === "m") {
+      ev.preventDefault();
+      this._extreme("Knight_ArmRight");
     } else if (k === "r") {
       ev.preventDefault();
       this.ctl?.resetAttackPose?.();
@@ -210,13 +225,16 @@ export class HeroAttackLab {
       `right hand entity found: ${d.rightHandFound ? "yes" : "no"}`,
       `lowerarm.r entity found: ${d.lowerArmFound ? "yes" : "no"}`,
       `upperarm.r entity found: ${d.upperArmFound ? "yes" : "no"}`,
+      `Knight_ArmRight mesh found: ${d.rightArmMeshFound ? "yes" : "no"}`,
       `handslot.r entity found: ${d.handSlotFound ? "yes" : "no"}`,
       `sword_1handed entity found: ${d.swordFound ? "yes" : "no"}`,
       `animated entity: ${d.animatedEntity || "-"}`,
       `before local rotation: ${fmt(d.beforeLocalRot)}`,
       `after local rotation: ${fmt(d.afterLocalRot)}`,
+      `current local rotation: ${fmt(d.currentLocalRot)}`,
       `before world position: ${fmt(d.beforeWorld)}`,
       `after world position: ${fmt(d.afterWorld)}`,
+      `current world position: ${fmt(d.currentWorld)}`,
       "",
       "candidate entities:",
       ...((d.entities || []).map((e) => `- ${e.name} render:${e.hasRender ? "yes" : "no"} children:${e.children} world:${fmt(e.world)}`)),

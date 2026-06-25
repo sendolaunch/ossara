@@ -88,9 +88,9 @@ export const HERO_ATTACK_VARIANTS = [
     strike: { pos: { x: -0.12, y: 0.34, z: -0.22 }, rot: { x: 12, y: 36, z: -44 } },
     followThrough: { pos: { x: -0.34, y: 0.18, z: -0.12 }, rot: { x: 0, y: 58, z: -58 } },
     arm: {
-      windup: { upper: { x: -26, y: -30, z: 36 }, lower: { x: -18, y: -6, z: 48 }, hand: { x: 24, y: -22, z: 48 } },
-      strike: { upper: { x: -18, y: 18, z: -28 }, lower: { x: -12, y: 0, z: -24 }, hand: { x: 10, y: 18, z: -34 } },
-      followThrough: { upper: { x: -8, y: 24, z: -36 }, lower: { x: -6, y: 0, z: -28 }, hand: { x: 4, y: 22, z: -40 } },
+      windup: { upper: { x: -36, y: -38, z: 50 }, lower: { x: -26, y: -10, z: 64 }, hand: { x: 30, y: -28, z: 58 } },
+      strike: { upper: { x: -26, y: 28, z: -40 }, lower: { x: -18, y: 3, z: -38 }, hand: { x: 16, y: 28, z: -48 } },
+      followThrough: { upper: { x: -14, y: 36, z: -50 }, lower: { x: -10, y: 4, z: -42 }, hand: { x: 7, y: 32, z: -52 } },
     },
     body: {
       windup: { yaw: 18, roll: -8, pitch: -5 },
@@ -106,9 +106,9 @@ export const HERO_ATTACK_VARIANTS = [
     strike: { pos: { x: 0.24, y: 0.26, z: -0.2 }, rot: { x: 6, y: -46, z: 44 } },
     followThrough: { pos: { x: 0.34, y: 0.18, z: -0.1 }, rot: { x: 0, y: -58, z: 50 } },
     arm: {
-      windup: { upper: { x: -16, y: 24, z: -28 }, lower: { x: -12, y: 0, z: -24 }, hand: { x: 14, y: 18, z: -30 } },
-      strike: { upper: { x: -16, y: -18, z: 26 }, lower: { x: -10, y: 0, z: 22 }, hand: { x: 10, y: -16, z: 32 } },
-      followThrough: { upper: { x: -6, y: -24, z: 34 }, lower: { x: -5, y: 0, z: 26 }, hand: { x: 4, y: -20, z: 38 } },
+      windup: { upper: { x: -24, y: 32, z: -38 }, lower: { x: -18, y: 2, z: -34 }, hand: { x: 20, y: 24, z: -42 } },
+      strike: { upper: { x: -23, y: -28, z: 38 }, lower: { x: -16, y: 2, z: 34 }, hand: { x: 16, y: -24, z: 44 } },
+      followThrough: { upper: { x: -10, y: -34, z: 46 }, lower: { x: -8, y: 2, z: 38 }, hand: { x: 6, y: -30, z: 50 } },
     },
     body: {
       windup: { yaw: -14, roll: 7, pitch: -4 },
@@ -124,9 +124,9 @@ export const HERO_ATTACK_VARIANTS = [
     strike: { pos: { x: 0.34, y: 0.2, z: -0.17 }, rot: { x: 3, y: 70, z: -18 } },
     followThrough: { pos: { x: 0.42, y: 0.16, z: -0.08 }, rot: { x: 0, y: 82, z: -18 } },
     arm: {
-      windup: { upper: { x: -8, y: -24, z: 14 }, lower: { x: -8, y: 0, z: 16 }, hand: { x: 8, y: -18, z: 20 } },
-      strike: { upper: { x: -10, y: 24, z: -14 }, lower: { x: -8, y: 0, z: -14 }, hand: { x: 8, y: 20, z: -20 } },
-      followThrough: { upper: { x: -4, y: 30, z: -18 }, lower: { x: -4, y: 0, z: -16 }, hand: { x: 3, y: 24, z: -22 } },
+      windup: { upper: { x: -14, y: -32, z: 22 }, lower: { x: -12, y: 2, z: 24 }, hand: { x: 12, y: -26, z: 28 } },
+      strike: { upper: { x: -16, y: 32, z: -24 }, lower: { x: -12, y: 2, z: -24 }, hand: { x: 12, y: 28, z: -30 } },
+      followThrough: { upper: { x: -7, y: 38, z: -28 }, lower: { x: -7, y: 2, z: -26 }, hand: { x: 5, y: 34, z: -32 } },
     },
     body: {
       windup: { yaw: -18, roll: 4, pitch: -3 },
@@ -324,6 +324,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const rightHand = inner.findByName("hand.r");
   const rightLowerArm = inner.findByName("lowerarm.r");
   const rightUpperArm = inner.findByName("upperarm.r");
+  const rightArmMesh = inner.findByName("Knight_ArmRight");
   const rightHandSlot = inner.findByName(HANDSLOT_R);
   const leftHandSlot = inner.findByName(HANDSLOT_L);
   const attackPose = {
@@ -335,6 +336,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
     hand: rightHand || null,
     lowerArm: rightLowerArm || null,
     upperArm: rightUpperArm || null,
+    armMesh: rightArmMesh || null,
     handSlot: rightHandSlot || null,
     sword: null,
     boneBases: {},
@@ -354,6 +356,7 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       rightHand: rightHand?.name || null,
       rightLowerArm: rightLowerArm?.name || null,
       rightUpperArm: rightUpperArm?.name || null,
+      rightArmMesh: rightArmMesh?.name || null,
       rightHandSlot: rightHandSlot?.name || null,
       leftHandSlot: leftHandSlot?.name || null,
     });
@@ -430,6 +433,9 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
   const resolveAttackTarget = (preferred = "") => {
     if (!preferred) return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
     if (preferred === "hand.r") return attackPose.hand;
+    if (preferred === "lowerarm.r") return attackPose.lowerArm;
+    if (preferred === "upperarm.r") return attackPose.upperArm;
+    if (preferred === "Knight_ArmRight") return attackPose.armMesh;
     if (preferred === HANDSLOT_R) return attackPose.handSlot;
     if (preferred === "sword_1handed") return attackPose.sword || inner.findByName("sword_1handed");
     return attackPose.sword || inner.findByName("sword_1handed") || attackPose.handSlot || attackPose.hand;
@@ -588,12 +594,15 @@ export async function loadCharacter(app, classId, { weapon = true } = {}) {
       handSlotFound: !!attackPose.handSlot,
       lowerArmFound: !!attackPose.lowerArm,
       upperArmFound: !!attackPose.upperArm,
+      rightArmMeshFound: !!attackPose.armMesh,
       swordFound: !!(attackPose.sword || inner.findByName("sword_1handed")),
       animatedEntity: attackPose.targetName || "",
       beforeWorld: attackPose.beforeWorld,
       afterWorld: attackPose.lastWorld,
+      currentWorld: worldSnapshot(attackPose.target),
       beforeLocalRot: attackPose.baseRot ? { x: attackPose.baseRot.x, y: attackPose.baseRot.y, z: attackPose.baseRot.z } : null,
       afterLocalRot: attackPose.lastLocalRot,
+      currentLocalRot: localRotSnapshot(attackPose.target),
       entities: matches,
     };
   };

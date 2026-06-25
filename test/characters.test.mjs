@@ -56,6 +56,9 @@ ok(characterSource.includes("playExtremePose"), "character control exposes dev e
 ok(characterSource.includes("getAttackDebug"), "character control exposes attack visual diagnostics");
 ok(characterSource.includes("updateProceduralAttackPose"), "character control can reapply attack pose after animation sync");
 ok(characterSource.includes("lowerarm.r") && characterSource.includes("upperarm.r"), "procedural attack pose can target right arm bones");
+ok(characterSource.includes("if (preferred === \"lowerarm.r\") return attackPose.lowerArm"), "dev proof can directly target lowerarm.r");
+ok(characterSource.includes("if (preferred === \"upperarm.r\") return attackPose.upperArm"), "dev proof can directly target upperarm.r");
+ok(characterSource.includes("if (preferred === \"Knight_ArmRight\") return attackPose.armMesh"), "dev proof can directly target the visible right-arm mesh");
 ok(characterSource.includes("return attackPose.sword || inner.findByName(\"sword_1handed\")"), "procedural attack defaults to the v3-approved sword source of truth");
 ok(characterSource.includes("heroAttackPoseAt"), "character attack uses a shared key-pose calculation");
 ok(characterSource.includes("phase: \"windup\"") && characterSource.includes("phase: \"strike\""), "procedural attack exposes windup and strike phases");
@@ -83,8 +86,12 @@ ok(rendererSource.includes("updateProceduralAttackPose?.()"), "mission renderer 
 ok(rendererSource.includes("HERO_ATTACK_TIMING.total"), "mission renderer syncs sword/body FX duration to attack timing");
 ok(rendererSource.includes("devAttackProxy") && rendererSource.includes("devSlashTrail"), "mission renderer keeps proxy/trail slash helpers behind explicit dev flags");
 ok(rendererSource.includes("if (!this.heroAttackProxyVisible && !this.heroSlashTrailVisible) return"), "normal mission attacks do not spawn proxy or claw trail FX");
+ok(rendererSource.includes("const roll = 0") && rendererSource.includes("const pitch = 0"), "mission renderer does not use root roll/pitch for Warden attack body support");
+ok(rendererSource.includes("pose.yaw * 0.22"), "mission renderer keeps Warden body yaw subtle");
 const labSource = readFileSync(src("ui/heroAttackLab.js"), "utf8");
 ok(labSource.includes("Variant A / 1") && labSource.includes("Variant B / 2") && labSource.includes("Variant C / 3"), "hero attack lab exposes force controls for all variants");
+ok(labSource.includes("Extreme lowerarm.r / K") && labSource.includes("Extreme upperarm.r / L"), "hero attack lab exposes direct right-arm bone proof controls");
+ok(labSource.includes("Extreme arm mesh / M"), "hero attack lab exposes visible arm mesh proof control");
 ok(labSource.includes("pose driver:"), "hero attack lab reports bone/proxy driver state");
 ok(labSource.includes("hand/arm follow active:") && labSource.includes("old proxy/fallback visual hidden:"), "hero attack lab reports v4 follow/proxy state");
 

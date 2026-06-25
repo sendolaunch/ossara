@@ -1359,7 +1359,7 @@ export class PCRenderer {
     // Torso starts a hair before the arm/sword so the slash reads body-driven.
     const t = Math.min(duration, elapsed + 0.035);
     const pose = heroAttackPoseAt(this.heroBodySwing.variant || HERO_ATTACK_VARIANTS[0], t).body;
-    const yaw = pose.yaw * 0.35;
+    const yaw = pose.yaw * 0.22;
     const roll = 0;
     const pitch = 0;
     this.heroEntity.setLocalEulerAngles(pitch, baseYawDeg + yaw, roll);
