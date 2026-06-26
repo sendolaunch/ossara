@@ -208,6 +208,7 @@ export class HUD {
     this.commandCast = null;
     this.commandCastTower = null;
     this.lootDropTooltip = null;
+    this.interactPromptData = null;
     this._build();
   }
 
@@ -249,6 +250,23 @@ export class HUD {
       pointerEvents: "none",
     });
     this.root.appendChild(this.lootTooltip);
+
+    this.interactPrompt = el("div", {
+      position: "absolute",
+      left: "50%",
+      bottom: "92px",
+      transform: "translateX(-50%)",
+      ...panel(),
+      padding: "7px 12px",
+      display: "none",
+      zIndex: "5",
+      pointerEvents: "none",
+      textAlign: "center",
+      minWidth: "170px",
+      borderColor: CSS.gold,
+      boxShadow: "0 0 18px rgba(202,162,76,0.18)",
+    });
+    this.root.appendChild(this.interactPrompt);
 
     // ---- phase banner (top center) ----
     const banner = el("div", { position: "absolute", top: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", pointerEvents: "auto" });
@@ -522,6 +540,24 @@ export class HUD {
     this.lootDropTooltip = data || null;
   }
 
+  setInteractPrompt(data) {
+    this.interactPromptData = data || null;
+    this._renderInteractPrompt();
+  }
+
+  _renderInteractPrompt() {
+    if (!this.interactPrompt) return;
+    const data = this.interactPromptData;
+    if (!data?.title) {
+      this.interactPrompt.style.display = "none";
+      return;
+    }
+    this.interactPrompt.style.display = "block";
+    this.interactPrompt.innerHTML =
+      `<div style="color:${CSS.gold};font:900 12px 'Cinzel',ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase">${data.title}</div>` +
+      `<div style="margin-top:2px;color:${CSS.ash};font-size:11px">${data.body || ""}</div>`;
+  }
+
   _renderLootDropTooltip() {
     if (!this.lootTooltip) return;
     const data = this.lootDropTooltip;
@@ -722,7 +758,9 @@ export class HUD {
     this.commandCast = null;
     this.commandCastTower = null;
     this.lootDropTooltip = null;
+    this.interactPromptData = null;
     this._renderLootDropTooltip();
+    this._renderInteractPrompt();
     this.setActionMenuOpen(false);
     this.overlay.style.display = "none";
   }

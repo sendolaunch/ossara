@@ -12,6 +12,7 @@ import { Input } from "../input/Input.js";
 import { CSS } from "../config/palette.js";
 import { resolveMissionStart } from "../config/missions.js";
 import { lootTooltipData } from "../sim/lootModel.js";
+import { createMissionChests, nearestClosedChest, openMissionChest } from "../sim/missionChests.js";
 import { createWorldDropFromRewardSummary, markWorldDropCollected, selectNearbyWorldDrop, trimWorldDrops } from "../sim/worldDrops.js";
 
 const PLACEMENT_MESSAGES = {
@@ -113,6 +114,7 @@ export class Mission {
     this.running = false;
     this._startToken = 0;
     this.worldDrops = [];
+    this.chests = [];
     this._frame = this._frame.bind(this);
   }
 
@@ -137,11 +139,14 @@ export class Mission {
     this._equipmentStats = opts.equipmentStats || {};
     this.onWin = opts.onWin || null;
     this.onWaveReward = opts.onWaveReward || null;
+    this.onChestReward = opts.onChestReward || null;
     this.onWorldDropPickup = opts.onWorldDropPickup || null;
     this.getLootState = opts.getLootState || (() => null);
     this._wonFired = false;
     this.worldDrops = [];
+    this.chests = createMissionChests(this.level);
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
+    this.world.chests = this.chests;
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
     this.renderer.reset();
@@ -166,7 +171,9 @@ export class Mission {
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
     this.worldDrops = [];
+    this.chests = createMissionChests(this.level || LEVEL);
     this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
+    this.world.chests = this.chests;
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
     this.renderer.reset();
@@ -188,6 +195,7 @@ export class Mission {
     this.running = false;
     this.input?.resetState?.();
     this.worldDrops = [];
+    this.chests = [];
     this._show(false);
     if (this.onExit) this.onExit();
   }
@@ -218,8 +226,10 @@ export class Mission {
       const cmd = this.input.consume();
       if (!first) {
         cmd.slam = false;
+        cmd.interact = false;
         cmd.startWave = false;
       }
+      if (cmd.interact) this._tryOpenChest();
       this.world.update(this.STEP, cmd);
       this._handleWorldEvents();
       this._collectWorldDrops();
@@ -235,7 +245,9 @@ export class Mission {
     }
 
     this.world.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
+    this.world.chests = this.chests;
     this._updateLootDropTooltip();
+    this._updateChestPrompt();
     this.renderer.update(this.world, Math.min(dt, 0.05), heroMoveIntent);
     this.hud.update(this.world);
     requestAnimationFrame(this._frame);
@@ -300,5 +312,51 @@ export class Mission {
       ...lootTooltipData(nearby.drop.item, this.getLootState?.()),
       distance: nearby.distance,
     });
+  }
+
+  _tryOpenChest() {
+    if (!this.world?.hero?.alive || !this.chests.length) return;
+    const point = { x: this.world.hero.x, z: this.world.hero.z, time: typeof performance !== "undefined" ? performance.now() : Date.now() };
+    const nearest = nearestClosedChest(this.chests, point);
+    if (!nearest?.chest) {
+      this.hud.toast("No chest nearby.", CSS.ash);
+      return;
+    }
+    const opened = openMissionChest(this.chests, nearest.chest.id, point);
+    if (!opened.ok) {
+      this.hud.toast(opened.reason === "opened" ? "Chest already opened." : "Move closer to the chest.", CSS.ash);
+      return;
+    }
+    this.hud.setInteractPrompt?.(null);
+    const summary = this.onChestReward ? this.onChestReward(opened.chest) : null;
+    opened.chest.rewardSummary = summary || null;
+    this.hud.toast("Chest opened.", CSS.gold);
+    if (summary?.shouldSpawnWorldDrop) {
+      const hero = this.world?.hero || { x: opened.chest.x, z: opened.chest.z };
+      const dx = opened.chest.x - hero.x;
+      const dz = opened.chest.z - hero.z;
+      const dist = Math.max(0.001, Math.hypot(dx, dz));
+      const popDistance = Math.min(0.95, dist * 0.55);
+      this.spawnWorldDrop(summary, {
+        position: {
+          x: hero.x + (dx / dist) * popDistance,
+          y: 0,
+          z: hero.z + (dz / dist) * popDistance,
+        },
+        pickupDelay: 900,
+      });
+    }
+    if (this.hud.setRewardSummary && summary) this.hud.setRewardSummary({ reward: summary, source: "chest" });
+  }
+
+  _updateChestPrompt() {
+    if (!this.hud?.setInteractPrompt || !this.world?.hero?.alive) return;
+    const point = { x: this.world.hero.x, z: this.world.hero.z };
+    const nearby = nearestClosedChest(this.chests, point);
+    this.hud.setInteractPrompt(nearby?.chest ? {
+      title: "E Open Chest",
+      body: nearby.chest.name,
+      distance: nearby.distance,
+    } : null);
   }
 }

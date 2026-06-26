@@ -143,6 +143,17 @@ function startMission(missionId = "first-breach", selection = {}) {
       if (res.ok) persist();
       return res.summary;
     },
+    onChestReward: (chest) => {
+      const res = grantReward(profile, profile.lootSkeleton, chestRewardDefinition({
+        rewardId: `chest:${rewardRunId}:${chest.id}`,
+        chestId: chest.id,
+        missionId: missionCfg.id,
+      }));
+      if (res.lootState) profile.lootSkeleton = createLootState(res.lootState);
+      if (res.ok) persist();
+      window.OSSARA?.lootSkeletonPanel?.refresh?.();
+      return res.summary;
+    },
     onWorldDropPickup: (drop) => {
       const item = drop.item || FIXED_REWARD_ITEMS_BY_ID[drop.itemId] || null;
       const state = createLootState(profile.lootSkeleton);

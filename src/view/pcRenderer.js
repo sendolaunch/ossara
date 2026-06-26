@@ -262,6 +262,7 @@ export class PCRenderer {
     this.projEntities = new Map();
     this.towerEntities = new Map();
     this.worldDropEntities = new Map();
+    this.chestEntities = new Map();
     this.spawnIndicatorEntities = [];
     this.laneTelegraphEntities = [];
     this.fx = [];
@@ -1246,6 +1247,7 @@ export class PCRenderer {
     this._syncEnemies(world, dt);
     this._syncProjectiles(world);
     this._syncTowers(world);
+    this._syncMissionChests(world, dt);
     this._syncWorldDrops(world, dt);
     this._syncHero(world, heroAnim);
     this._syncCommandTarget(world);
@@ -1352,6 +1354,76 @@ export class PCRenderer {
       if (!seen.has(id)) {
         ent.destroy();
         this.worldDropEntities.delete(id);
+      }
+    }
+  }
+
+  _createMissionChestEntity(chest) {
+    const root = new pc.Entity(`mission-chest-${chest.id}`);
+    root._ossaraChestId = chest.id;
+    root._ossaraChestAge = Math.random() * 10;
+
+    const base = prim("box", mat("ash"));
+    base.name = "chest-base";
+    base.setLocalScale(0.82, 0.42, 0.58);
+    base.setLocalPosition(0, 0.28, 0);
+    root.addChild(base);
+
+    const lid = prim("box", mat("bone"));
+    lid.name = "chest-lid";
+    lid.setLocalScale(0.88, 0.18, 0.62);
+    lid.setLocalPosition(0, 0.62, 0);
+    root.addChild(lid);
+
+    const ward = prim("box", mat("plague", 1.1));
+    ward.name = "chest-ward-lock";
+    ward.setLocalScale(0.16, 0.16, 0.08);
+    ward.setLocalEulerAngles(0, 0, 45);
+    ward.setLocalPosition(0, 0.46, -0.34);
+    root.addChild(ward);
+
+    const ring = prim("torus", translucentMat("gold", 0.75, 0.38));
+    ring.name = "chest-interact-ring";
+    ring.render.castShadows = false;
+    ring.render.receiveShadows = false;
+    ring.setLocalEulerAngles(90, 0, 0);
+    ring.setLocalScale(0.82, 0.82, 0.82);
+    ring.setLocalPosition(0, 0.08, 0);
+    root.addChild(ring);
+
+    root._ossaraChestLid = lid;
+    root._ossaraChestWard = ward;
+    root._ossaraChestRing = ring;
+    this.app.root.addChild(root);
+    return root;
+  }
+
+  _syncMissionChests(world, dt) {
+    const chests = (world.chests || []).filter((chest) => chest && !chest.opened);
+    const seen = new Set();
+    const time = performance.now() * 0.001;
+    for (const chest of chests) {
+      seen.add(chest.id);
+      let ent = this.chestEntities.get(chest.id);
+      if (!ent) {
+        ent = this._createMissionChestEntity(chest);
+        this.chestEntities.set(chest.id, ent);
+      }
+      ent._ossaraChestAge = (ent._ossaraChestAge || 0) + dt;
+      ent.setPosition(chest.x || 0, chest.y || 0, chest.z || 0);
+      if (ent._ossaraChestWard) {
+        const pulse = 1 + Math.sin(time * 4 + ent._ossaraChestAge) * 0.08;
+        ent._ossaraChestWard.setLocalScale(0.16 * pulse, 0.16 * pulse, 0.08);
+      }
+      if (ent._ossaraChestRing) {
+        const s = 0.78 + Math.sin(time * 3.6 + ent._ossaraChestAge) * 0.04;
+        ent._ossaraChestRing.setLocalScale(s, s, s);
+      }
+    }
+    for (const [id, ent] of this.chestEntities) {
+      if (!seen.has(id)) {
+        ent.destroy();
+        this.chestEntities.delete(id);
       }
     }
   }
@@ -1930,6 +2002,8 @@ export class PCRenderer {
     this.towerEntities.clear();
     for (const [, ent] of this.worldDropEntities) ent.destroy();
     this.worldDropEntities.clear();
+    for (const [, ent] of this.chestEntities) ent.destroy();
+    this.chestEntities.clear();
     if (this.commandTargetRing) this.commandTargetRing.enabled = false;
     if (this.commandTargetHalo) this.commandTargetHalo.enabled = false;
     if (this.commandTargetIcon) this.commandTargetIcon.enabled = false;

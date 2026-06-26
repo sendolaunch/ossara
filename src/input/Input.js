@@ -33,6 +33,7 @@ export class Input {
     this.keys = new Set();
     this.pendingSlam = false;
     this.pendingDash = false;
+    this.pendingInteract = false;
     this.pendingAttack = null;
     this.pendingStart = false;
     this.selected = null;
@@ -65,6 +66,7 @@ export class Input {
     if (!opts.preservePending) {
       this.pendingSlam = false;
       this.pendingDash = false;
+      this.pendingInteract = false;
       this.pendingAttack = null;
       this.pendingStart = false;
     }
@@ -92,9 +94,10 @@ export class Input {
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c", "q"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c", "q", "e"].includes(k)) e.preventDefault();
       if (k === "q" && this._canQueueHeroAbility()) this.pendingSlam = true;
       if (k === DASH_KEY && this._canQueueHeroDash()) this.pendingDash = true;
+      if (k === "e" && this._canQueueInteract()) this.pendingInteract = true;
       if (k === "enter" && !this.commandTargetMode) this.pendingStart = true;
       if (k === "escape") {
         if (this.actionMenuOpen) this.closeActionMenu();
@@ -378,6 +381,10 @@ export class Input {
     return !this.selected && !this.commandTargetMode && !this.commandCast && !this.actionMenuOpen;
   }
 
+  _canQueueInteract() {
+    return !this.selected && !this.commandTargetMode && !this.commandCast && !this.actionMenuOpen;
+  }
+
   _cellFromPointer(clientX, clientY, world) {
     if (!world || !this.renderer.pointerToCell || !Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
     return this.renderer.pointerToCell(clientX, clientY, world.level);
@@ -527,11 +534,13 @@ export class Input {
     const pendingAttack = this.pendingAttack;
     const slam = this._canQueueHeroAbility() && this.pendingSlam;
     const dash = this._canQueueHeroDash() && this.pendingDash;
+    const interact = this._canQueueInteract() && this.pendingInteract;
     const out = {
       moveX,
       moveZ,
       slam,
       dash,
+      interact,
       startWave: this.pendingStart,
       attack: !!pendingAttack,
       attackX: pendingAttack?.x,
@@ -539,6 +548,7 @@ export class Input {
     };
     this.pendingSlam = false;
     this.pendingDash = false;
+    this.pendingInteract = false;
     this.pendingAttack = null;
     this.pendingStart = false;
     return out;
