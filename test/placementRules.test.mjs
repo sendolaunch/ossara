@@ -28,6 +28,7 @@ function stateFor(level = LEVEL, patch = {}) {
   const northLane = LEVEL.lanes.find((lane) => lane.id === "north-gate");
   const shoulder = northLane.buildShoulders[0];
   const pathCell = northLane.choke;
+  const blockedCell = { col: LEVEL.blockedZones[0].col, row: LEVEL.blockedZones[0].row };
 
   ok(placementStatus(state, "ballista", shoulder.col, shoulder.row).ok, "valid placement succeeds on a lane shoulder");
   ok(buildableAt(state, shoulder.col, shoulder.row), "buildableAt accepts valid open ground");
@@ -40,7 +41,7 @@ function stateFor(level = LEVEL, patch = {}) {
   ok(placementStatus(state, "barricade", pathCell.col, pathCell.row).ok, "blockade placement remains allowed on path cells");
   ok(placementStatus(state, "trapstake", pathCell.col, pathCell.row).ok, "trap placement remains allowed on path cells");
   ok(placementStatus(state, "censer", pathCell.col, pathCell.row).ok, "aura placement remains allowed on path cells");
-  ok(placementStatus(state, "ballista", 50, 44).reason === "blocked", "blocked ruin cells reject placement");
+  ok(placementStatus(state, "ballista", blockedCell.col, blockedCell.row).reason === "blocked", "blocked ruin cells reject placement");
 
   state.occupied.add(cellKey(shoulder.col, shoulder.row));
   ok(placementStatus(state, "ballista", shoulder.col, shoulder.row).reason === "occupied", "occupied cell blocks overlapping placement");

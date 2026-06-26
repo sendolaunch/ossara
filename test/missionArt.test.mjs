@@ -45,7 +45,7 @@ ok(wardSpecs.length >= 8, "Ward Crystal receives ritual art support");
 ok(wardSpecs.every((spec) => spec.anchorCol === LEVEL.core.col && spec.anchorRow === LEVEL.core.row), "Ward dressing anchors to the configured core");
 
 ok(LEVEL.lanes.length === 5, "art pass does not alter First Breach lane count");
-ok(LEVEL.core.col === 60 && LEVEL.core.row === 45, "art pass leaves Ward Crystal layout unchanged");
+ok(LEVEL.core.col === 36 && LEVEL.core.row === 10, "showcase art follows the compact Ward shrine layout");
 
 console.log(`missionArt: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

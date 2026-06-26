@@ -10,6 +10,8 @@ let pass = 0;
 let fail = 0;
 const ok = (cond, msg) => (cond ? pass++ : (fail++, console.error("  FAIL:", msg)));
 const approx = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
+const NORTH_LANE = LEVEL.lanes.find((lane) => lane.id === "north-gate");
+const NORTH_CHOKE_CELL = NORTH_LANE.choke;
 
 function run(world, steps, dt) {
   for (let i = 0; i < steps; i++) world.update(dt, {});
@@ -51,7 +53,7 @@ function nearestLaneDistance(lane, x, z) {
 {
   const world = new World(LEVEL);
   world.marrow = 999;
-  const placed = world.tryPlaceTower("barricade", 60, 32);
+  const placed = world.tryPlaceTower("barricade", NORTH_CHOKE_CELL.col, NORTH_CHOKE_CELL.row);
   ok(placed.ok, "ranged target test can place a Barricade");
   const bonebow = spawnAt(world, "bonebow", placed.tower.x, placed.tower.z - 3.4);
   const target = selectEnemyRangedTarget(bonebow, world.towers, world.core, world.lane);
@@ -61,7 +63,7 @@ function nearestLaneDistance(lane, x, z) {
 {
   const world = new World(LEVEL);
   world.marrow = 999;
-  const placed = world.tryPlaceTower("barricade", 60, 32);
+  const placed = world.tryPlaceTower("barricade", NORTH_CHOKE_CELL.col, NORTH_CHOKE_CELL.row);
   const barricade = placed.tower;
   const bonebow = spawnAt(world, "bonebow", barricade.x, barricade.z - 3.4);
   const distBefore = bonebow.dist;
@@ -97,7 +99,7 @@ function nearestLaneDistance(lane, x, z) {
 {
   const world = new World(LEVEL);
   world.marrow = 999;
-  const placed = world.tryPlaceTower("barricade", 60, 32);
+  const placed = world.tryPlaceTower("barricade", NORTH_CHOKE_CELL.col, NORTH_CHOKE_CELL.row);
   const barricade = placed.tower;
   const rotling = spawnAt(world, "rotling", barricade.x, barricade.z - 0.6);
   rotling.dist = nearestLaneDistance(world.lane, barricade.x, barricade.z);
@@ -111,7 +113,7 @@ function nearestLaneDistance(lane, x, z) {
 {
   const world = new World(LEVEL);
   world.marrow = 999;
-  const placed = world.tryPlaceTower("barricade", 60, 32);
+  const placed = world.tryPlaceTower("barricade", NORTH_CHOKE_CELL.col, NORTH_CHOKE_CELL.row);
   const gravebreaker = spawnAt(world, "gravebreaker", placed.tower.x, placed.tower.z - 0.6);
   gravebreaker.dist = nearestLaneDistance(world.lane, placed.tower.x, placed.tower.z);
   const slot = computeBlockadeAttackSlot(gravebreaker, placed.tower, world.lane, 0);
