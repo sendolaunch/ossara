@@ -7,6 +7,7 @@ import { World } from "../src/sim/World.js";
 import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
 import { TOWERS } from "../src/config/towers.js";
+import { ENEMIES } from "../src/config/enemies.js";
 import { CLASS_KITS } from "../src/config/kits.js";
 import { MISSION_DASH } from "../src/config/moves.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, pathCellSet, cellKey, worldToGrid, expandWaypoints } from "../src/sim/pathing.js";
@@ -129,17 +130,30 @@ section("pathing");
 // ---------------------------------------------------------------------------
 section("first breach pacing");
 {
+  const waveTypes = (wave) => new Set(wave.groups.map((g) => g.type));
+  const allWaveTypes = new Set(WAVES.flatMap((wave) => wave.groups.map((g) => g.type)));
+  const finalTypes = waveTypes(WAVES[WAVES.length - 1]);
+  const acceptedRoster = ["rotling", "gravebreaker", "bonebow", "plaguewick", "ossuary-acolyte"];
   ok(LEVEL.coreHp >= 24, "first breach gives new players a forgiving Ward health pool");
   ok(LEVEL.startingMarrow >= 180, "first breach starts with enough Marrow for basic coverage");
   ok(WAVES.length === 5, "first breach has five intentional waves");
   ok(WAVES.every((w) => w.name && w.hint && w.warning), "each wave has teaching/pressure HUD copy");
   ok(WAVES[0].prepTime >= 30, "wave 1 gives a long first build phase");
   ok(WAVES[0].groups.every((g) => g.type === "rotling"), "wave 1 teaches with Rotlings only");
-  ok(WAVES[1].groups.some((g) => g.type === "sprinter"), "wave 2 introduces sprinters");
-  ok(WAVES.slice(1, -1).some((w) => w.groups.some((g) => g.type === "gravebreaker" && g.count === 1)), "middle waves include a single Gravebreaker mini-boss moment");
+  ok(waveTypes(WAVES[1]).has("gravebreaker"), "wave 2 introduces Gravebreaker pressure");
+  ok(!waveTypes(WAVES[1]).has("bonebow") && !waveTypes(WAVES[1]).has("plaguewick") && !waveTypes(WAVES[1]).has("ossuary-acolyte"), "wave 2 does not introduce advanced ranged/support roles");
+  ok(!WAVES.slice(0, 2).some((w) => waveTypes(w).has("bonebow")), "Bonebow appears no earlier than wave 3");
+  ok(waveTypes(WAVES[2]).has("bonebow"), "wave 3 introduces Bonebow backline pressure");
+  ok(!WAVES.slice(0, 3).some((w) => waveTypes(w).has("plaguewick")), "Plaguewick appears no earlier than wave 4");
+  ok(waveTypes(WAVES[3]).has("plaguewick"), "wave 4 introduces Plaguewick bomber pressure");
+  ok(!WAVES.slice(0, 4).some((w) => waveTypes(w).has("ossuary-acolyte")), "Ossuary Acolyte appears no earlier than final wave");
   const final = WAVES[WAVES.length - 1];
-  ok(final.name === "Final Stand", "final wave is explicitly framed as a final stand");
-  ok(final.groups.some((g) => g.type === "herald" && g.count === 1 && g.delay >= 15), "final wave ends with a delayed Herald boss");
+  ok(final.name === "Acolyte Support", "final wave is explicitly framed around the support enemy");
+  ok(acceptedRoster.every((type) => finalTypes.has(type)), "final wave includes the full accepted ground roster");
+  ok(acceptedRoster.every((type) => allWaveTypes.has(type)), "first breach wave config includes every accepted enemy role");
+  ok(!allWaveTypes.has("sprinter") && !allWaveTypes.has("herald"), "first breach no longer depends on legacy runner/boss placeholders");
+  ok(WAVES.every((wave) => wave.groups.every((group) => ENEMIES[group.type])), "all configured wave enemies resolve to enemy config");
+  ok(WAVES.some((wave) => new Set(wave.groups.map((g) => g.laneId)).size > 1), "later waves use readable lane variety");
   ok(WAVES.slice(0, -1).every((w) => w.reward > 0), "pre-final waves fund recovery and rebuilding");
 }
 

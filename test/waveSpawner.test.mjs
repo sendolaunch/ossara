@@ -8,6 +8,7 @@ import {
 } from "../src/sim/waveSpawner.js";
 import { LEVEL } from "../src/config/level.js";
 import { ENEMIES } from "../src/config/enemies.js";
+import { WAVES } from "../src/config/waves.js";
 import { World } from "../src/sim/World.js";
 
 let pass = 0;
@@ -38,6 +39,17 @@ const waves = [
   ok(schedule.map((s) => s.time).join(",") === "0,0.5,2,3", "wave schedule sorts spawns by time");
   ok(schedule[0].laneId === "legacy-lane" && schedule[1].laneId === "legacy-lane", "wave schedule fills missing lane ids with default lane");
   ok(schedule[2].laneId === "north-gate", "wave schedule preserves explicit lane ids");
+}
+
+{
+  const finalSchedule = buildWaveSchedule(WAVES[WAVES.length - 1], "north-gate");
+  const scheduledTypes = new Set(finalSchedule.map((spawn) => spawn.type));
+  ok(scheduledTypes.has("rotling"), "final First Breach wave schedules Rotlings");
+  ok(scheduledTypes.has("gravebreaker"), "final First Breach wave schedules Gravebreaker pressure");
+  ok(scheduledTypes.has("bonebow"), "final First Breach wave schedules Bonebow ranged pressure");
+  ok(scheduledTypes.has("plaguewick"), "final First Breach wave schedules Plaguewick bomber pressure");
+  ok(scheduledTypes.has("ossuary-acolyte"), "final First Breach wave schedules Ossuary Acolyte support");
+  ok(finalSchedule.every((spawn) => ENEMIES[spawn.type]), "waveSpawner can schedule every configured First Breach role");
 }
 
 {
