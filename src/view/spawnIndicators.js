@@ -36,6 +36,10 @@ export function spawnIndicatorSpecs(level) {
       name: lane.name || lane.id,
       threatRating: lane.threatRating || 1,
       silhouette: lane.silhouette || "gate",
+      spawnCol: spawn.col,
+      spawnRow: spawn.row,
+      forwardCol: forward.col,
+      forwardRow: forward.row,
       col: marker.col,
       row: marker.row,
       y: 0.95,
@@ -43,6 +47,43 @@ export function spawnIndicatorSpecs(level) {
       z: w.z,
       facing: Math.atan2(forward.col, forward.row || 0.0001),
     };
+  });
+}
+
+export function chokeReadabilitySpecs(level) {
+  return (level.lanes || []).flatMap((lane) => {
+    const out = [];
+    if (lane.choke) {
+      const w = gridToWorld(lane.choke.col, lane.choke.row, level);
+      out.push({
+        id: `${lane.id}-main-choke`,
+        laneId: lane.id,
+        kind: "main",
+        col: lane.choke.col,
+        row: lane.choke.row,
+        x: w.x,
+        z: w.z,
+        y: 0.11,
+        radius: 1.55,
+        threatRating: lane.threatRating || 1,
+      });
+    }
+    if (lane.fallbackChoke) {
+      const w = gridToWorld(lane.fallbackChoke.col, lane.fallbackChoke.row, level);
+      out.push({
+        id: `${lane.id}-fallback-choke`,
+        laneId: lane.id,
+        kind: "fallback",
+        col: lane.fallbackChoke.col,
+        row: lane.fallbackChoke.row,
+        x: w.x,
+        z: w.z,
+        y: 0.1,
+        radius: 1.2,
+        threatRating: lane.threatRating || 1,
+      });
+    }
+    return out;
   });
 }
 

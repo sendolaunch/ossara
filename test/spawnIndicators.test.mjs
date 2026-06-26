@@ -1,6 +1,6 @@
 import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
-import { activeSpawnLaneIds, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "../src/view/spawnIndicators.js";
+import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "../src/view/spawnIndicators.js";
 
 let pass = 0;
 let fail = 0;
@@ -15,6 +15,7 @@ for (const lane of LEVEL.lanes) {
   ok(!!spec, `${lane.id} has a spawn indicator`);
   ok(spec.name === lane.name, `${lane.id} carries lane display name`);
   ok(spec.threatRating === lane.threatRating, `${lane.id} carries threat rating`);
+  ok(spec.spawnCol === lane.spawn.col && spec.spawnRow === lane.spawn.row, `${lane.id} marker records its current spawn anchor`);
   ok(Number.isFinite(spec.x) && Number.isFinite(spec.z), `${lane.id} has world coordinates`);
   ok(spec.y > 0.5, `${lane.id} marker floats above the ground`);
   const next = lane.waypoints[1];
@@ -39,6 +40,19 @@ for (const lane of LEVEL.lanes) {
   ok(spec.segments.length === lane.waypoints.length - 1, `${lane.id} visual strip derives from every lane segment`);
   ok(spec.segments.every((seg) => Number.isFinite(seg.x) && Number.isFinite(seg.z) && Number.isFinite(seg.yaw)), `${lane.id} visual segments have finite world transforms`);
   ok(spec.segments.every((seg) => seg.length > 0 && seg.width === spec.width), `${lane.id} visual segments have positive size`);
+}
+
+const chokeSpecs = chokeReadabilitySpecs(LEVEL);
+ok(chokeSpecs.length === LEVEL.lanes.length * 2, "main and fallback choke readability specs exist for every lane");
+for (const lane of LEVEL.lanes) {
+  const main = chokeSpecs.find((spec) => spec.laneId === lane.id && spec.kind === "main");
+  const fallback = chokeSpecs.find((spec) => spec.laneId === lane.id && spec.kind === "fallback");
+  ok(!!main, `${lane.id} has a main choke visual helper`);
+  ok(!!fallback, `${lane.id} has a fallback choke visual helper`);
+  ok(main.col === lane.choke.col && main.row === lane.choke.row, `${lane.id} main choke helper follows lane choke data`);
+  ok(fallback.col === lane.fallbackChoke.col && fallback.row === lane.fallbackChoke.row, `${lane.id} fallback helper follows lane fallback data`);
+  ok(Number.isFinite(main.x) && Number.isFinite(main.z) && main.radius > 1, `${lane.id} main choke helper has a readable world ring`);
+  ok(Number.isFinite(fallback.x) && Number.isFinite(fallback.z) && fallback.radius > 1, `${lane.id} fallback choke helper has a readable world ring`);
 }
 
 const wardSpec = wardCoreReadabilitySpec(LEVEL);

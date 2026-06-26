@@ -11,7 +11,7 @@ import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
 import { preloadKit, place } from "./dungeonKit.js";
-import { activeSpawnLaneIds, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
+import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
@@ -347,8 +347,8 @@ export class PCRenderer {
     // Readability-only lane language: broad worn strips, faint ward seams, and
     // low direction chips. These are visual aids only; pathing/placement still
     // comes from the sim sets below.
-    const laneBedMat = translucentMat("rot", 0.2, 0.24);
-    const laneEdgeMat = translucentMat("plague", 0.42, 0.18);
+    const laneBedMat = translucentMat("rot", 0.18, 0.2);
+    const laneEdgeMat = translucentMat("plague", 0.38, 0.16);
     const laneChipMat = translucentMat("gold", 0.34, 0.18);
     const addLaneStrip = (seg) => {
       const group = new pc.Entity(`lane-strip-${seg.id}`);
@@ -398,13 +398,13 @@ export class PCRenderer {
     }
 
     // the lane the dead march — worn stone path with a faint green seam
-    const laneMat = mat("rot", 0.28);
+    const laneMat = mat("rot", 0.18);
     for (const key of world.pathSet) {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
       const tile = prim("box", laneMat);
-      tile.setLocalScale(0.86, 0.044, 0.76);
-      tile.setPosition(w.x, 0.048, w.z);
+      tile.setLocalScale(0.76, 0.038, 0.68);
+      tile.setPosition(w.x, 0.046, w.z);
       this.app.root.addChild(tile);
     }
 
@@ -419,6 +419,19 @@ export class PCRenderer {
       tile.setLocalScale(0.82, 0.035, 0.82);
       tile.setPosition(w.x, 0.012, w.z);
       this.app.root.addChild(tile);
+    }
+
+    const mainChokeMat = translucentMat("gold", 0.45, 0.24);
+    const fallbackChokeMat = translucentMat("plague", 0.45, 0.18);
+    for (const spec of chokeReadabilitySpecs(level)) {
+      const ring = prim("torus", spec.kind === "main" ? mainChokeMat : fallbackChokeMat);
+      ring.name = `choke-readability-${spec.id}`;
+      ring.render.castShadows = false;
+      ring.render.receiveShadows = false;
+      ring.setLocalEulerAngles(90, 0, 0);
+      ring.setLocalScale(spec.radius, spec.radius, spec.radius);
+      ring.setPosition(spec.x, spec.y, spec.z);
+      this.app.root.addChild(ring);
     }
 
     // THE BREACH — a glowing tear in the world where the dead pour through
@@ -490,23 +503,34 @@ export class PCRenderer {
     };
     const addLaneMarker = (lane) => {
       const w = gridToWorld(lane.spawn.col, lane.spawn.row, level);
-      if (lane.id === "north-gate") {
-        addGatePortal(lane, w.x, w.z, "north");
-      } else if (lane.id === "northwest-stairs") {
-        addGatePortal(lane, w.x, w.z, "west");
-        for (let i = 0; i < 4; i++) addBox(this.app.root, stairMat, w.x + i * 0.55, w.z + 1.8 + i * 0.45, 2.8 - i * 0.35, 0.14, 0.42, 0.07 + i * 0.04);
-      } else if (lane.id === "northeast-market") {
-        addGatePortal(lane, w.x, w.z, "east");
-        addBox(this.app.root, markerMat, w.x - 2.2, w.z - 1.4, 1.5, 0.45, 0.8);
-        addBox(this.app.root, markerMat, w.x - 2.2, w.z + 1.4, 1.5, 0.45, 0.8);
-      } else if (lane.id === "southwest-crypt") {
-        addGatePortal(lane, w.x, w.z, "west");
-        addBox(this.app.root, gateMat, w.x + 1.8, w.z - 1.8, 0.5, 0.9, 1.2);
-        addBox(this.app.root, gateMat, w.x + 1.8, w.z + 1.8, 0.5, 0.9, 1.2);
-      } else if (lane.id === "southeast-garden") {
-        addGatePortal(lane, w.x, w.z, "east");
-        addBox(this.app.root, markerMat, w.x - 1.8, w.z - 1.8, 1.2, 0.35, 1.2);
-        addBox(this.app.root, markerMat, w.x - 1.8, w.z + 1.8, 1.2, 0.35, 1.2);
+      const next = lane.waypoints?.[1] || lane.spawn;
+      const dc = Math.sign(next.col - lane.spawn.col);
+      const dr = Math.sign(next.row - lane.spawn.row);
+      const gateSide = Math.abs(dc) > Math.abs(dr)
+        ? (dc > 0 ? "west" : "east")
+        : (dr > 0 ? "north" : "south");
+      addGatePortal(lane, w.x, w.z, gateSide);
+      const nw = gridToWorld(next.col, next.row, level);
+      const fdx = nw.x - w.x;
+      const fdz = nw.z - w.z;
+      const fl = Math.max(0.001, Math.hypot(fdx, fdz));
+      const fx = fdx / fl;
+      const fz = fdz / fl;
+      const sx = -fz;
+      const sz = fx;
+      const addAt = (matRef, forward, side, sxScale, syScale, szScale, y = syScale / 2) =>
+        addBox(this.app.root, matRef, w.x + fx * forward + sx * side, w.z + fz * forward + sz * side, sxScale, syScale, szScale, y);
+      if (lane.silhouette === "stairs") {
+        for (let i = 0; i < 4; i++) addAt(stairMat, 1.35 + i * 0.48, 0, 2.6 - i * 0.28, 0.12, 0.38, 0.06 + i * 0.035);
+      } else if (lane.silhouette === "market") {
+        addAt(markerMat, 1.6, -1.45, 1.3, 0.38, 0.72);
+        addAt(markerMat, 2.15, 1.45, 1.05, 0.32, 0.62);
+      } else if (lane.silhouette === "crypt") {
+        addAt(gateMat, 1.35, -1.65, 0.48, 0.86, 1.05);
+        addAt(gateMat, 1.35, 1.65, 0.48, 0.86, 1.05);
+      } else {
+        addAt(markerMat, 1.45, -1.65, 1.0, 0.32, 0.64);
+        addAt(markerMat, 1.45, 1.65, 1.0, 0.32, 0.64);
       }
     };
     for (const lane of level.lanes || []) addLaneMarker(lane);

@@ -25,6 +25,7 @@ for (const spec of specs) {
   ok(assetNames.has(spec.name), `${spec.id} uses a predeclared art asset`);
   ok(allowedPacks.has(missionArtPack(spec.name)), `${spec.id} uses only already-imported allowed packs`);
   ok(Number.isFinite(spec.x) && Number.isFinite(spec.z) && Number.isFinite(spec.y), `${spec.id} has finite world placement`);
+  ok(spec.anchorCol >= 0 && spec.anchorCol < LEVEL.cols && spec.anchorRow >= 0 && spec.anchorRow < LEVEL.rows, `${spec.id} anchors inside the compact First Breach bounds`);
   ok(spec.scale > 0 && spec.scale <= 1.5, `${spec.id} has a conservative scale`);
 }
 
