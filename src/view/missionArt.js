@@ -14,6 +14,8 @@ const SPAWN_DRESSING = {
       { name: "floor_tile_big_grate", dx: 0, dz: 1.35, scale: 0.92 },
       { name: "rubble_half", dx: -3.3, dz: 1.4, scale: 0.64, ry: 20 },
       { name: "rubble_half", dx: 3.3, dz: 1.4, scale: 0.64, ry: -20 },
+      { name: "scaffold_pillars_connected_torch", dx: -3.9, dz: -0.2, scale: 0.52, ry: 8 },
+      { name: "scaffold_pillars_connected_torch", dx: 3.9, dz: -0.2, scale: 0.52, ry: -8 },
     ],
   },
   "northwest-stairs": {
@@ -25,6 +27,8 @@ const SPAWN_DRESSING = {
       { name: "torch_lit", dx: -1.45, dz: -0.95, scale: 0.66 },
       { name: "rocks_decorated", dx: 2.45, dz: 1.6, scale: 0.58, ry: -22 },
       { name: "rubble_large", dx: -2.45, dz: 1.75, scale: 0.52, ry: 16 },
+      { name: "floor_dirt_large_rocky", dx: 0, dz: 1.55, scale: 0.72, ry: 12 },
+      { name: "wall_half", dx: -3.15, dz: 1.15, scale: 0.62, ry: 0 },
     ],
   },
   "northeast-market": {
@@ -36,6 +40,8 @@ const SPAWN_DRESSING = {
       { name: "crate_large_decorated", dx: -2.35, dz: 1.35, scale: 0.64, ry: 18 },
       { name: "barrel_small_stack", dx: 2.35, dz: 1.25, scale: 0.58, ry: -12 },
       { name: "table_medium_broken", dx: 3.05, dz: 2.0, scale: 0.62, ry: 38 },
+      { name: "crate_small", dx: -3.15, dz: 2.25, scale: 0.5, ry: -18 },
+      { name: "floor_tile_small_broken_A", dx: 0, dz: 1.5, scale: 0.82, ry: -12 },
     ],
   },
   "southwest-crypt": {
@@ -47,6 +53,8 @@ const SPAWN_DRESSING = {
       { name: "sword_shield_broken", dx: 2.8, dz: -0.05, scale: 0.62, ry: 90 },
       { name: "pillar_decorated", dx: -2.7, dz: -2.35, scale: 0.72 },
       { name: "rubble_large", dx: 2.85, dz: 2.65, scale: 0.55, ry: -12 },
+      { name: "wall_corner_gated", dx: -0.7, dz: -2.65, scale: 0.62, ry: 90 },
+      { name: "candle_thin_lit", dx: 2.65, dz: 1.0, scale: 0.66, ry: -18 },
     ],
   },
   "southeast-garden": {
@@ -58,6 +66,8 @@ const SPAWN_DRESSING = {
       { name: "banner_shield_green", dx: -1.0, dz: -2.35, scale: 0.76, ry: -90 },
       { name: "rocks_decorated", dx: -3.1, dz: -0.2, scale: 0.62, ry: 22 },
       { name: "rpgtools/lantern", dx: -1.9, dz: 2.25, scale: 0.78, ry: 16 },
+      { name: "wall_corner_gated", dx: 0.7, dz: -2.65, scale: 0.62, ry: -90 },
+      { name: "floor_dirt_small_weeds", dx: -1.25, dz: 0.95, scale: 0.78, ry: -28 },
     ],
   },
 };
@@ -68,6 +78,29 @@ const LANE_FLOOR_ASSETS = [
   "floor_tile_large_rocks",
   "floor_dirt_small_weeds",
 ];
+
+const LANE_SHOULDER_DRESSING = {
+  "north-gate": [
+    { name: "barrier_half", col: 32, row: 47, dx: -0.1, dz: 0.35, scale: 0.5, ry: 90 },
+    { name: "rubble_large", col: 40, row: 47, dx: 0.1, dz: -0.2, scale: 0.46, ry: -22 },
+  ],
+  "northwest-stairs": [
+    { name: "rocks_small", col: 13, row: 44, dx: -0.2, dz: 0.1, scale: 0.5, ry: 10 },
+    { name: "wall_half_endcap", col: 22, row: 45, dx: 0.2, dz: 0, scale: 0.52, ry: 0 },
+  ],
+  "northeast-market": [
+    { name: "crate_large", col: 51, row: 45, dx: -0.1, dz: 0, scale: 0.5, ry: -18 },
+    { name: "barrel_large", col: 59, row: 44, dx: 0.15, dz: -0.1, scale: 0.48, ry: 18 },
+  ],
+  "southwest-crypt": [
+    { name: "shelf_small_candles", col: 10, row: 32, dx: 0.1, dz: 0.2, scale: 0.42, ry: 90 },
+    { name: "rpgtools/shovel", col: 18, row: 26, dx: -0.25, dz: 0.2, scale: 0.44, ry: 38 },
+  ],
+  "southeast-garden": [
+    { name: "floor_tile_small_weeds_B", col: 54, row: 26, dx: 0.15, dz: -0.1, scale: 0.62, ry: -16 },
+    { name: "rocks_decorated", col: 62, row: 32, dx: 0.1, dz: 0.1, scale: 0.5, ry: 24 },
+  ],
+};
 
 const WARD_DRESSING = [
   { name: "candle_lit", dx: 2.9, dz: 0, scale: 0.62 },
@@ -80,26 +113,37 @@ const WARD_DRESSING = [
   { name: "resource/Stone_Bricks_Stack_Small", dx: -2.15, dz: -2.15, scale: 0.5, ry: -45 },
   { name: "sword_shield_broken", dx: 3.65, dz: 1.35, scale: 0.5, ry: 110 },
   { name: "sword_shield_broken", dx: -3.65, dz: -1.35, scale: 0.5, ry: -70 },
+  { name: "candle_thin_lit", dx: 1.25, dz: 3.35, scale: 0.52, ry: 18 },
+  { name: "candle_thin_lit", dx: -1.25, dz: 3.35, scale: 0.52, ry: -18 },
+  { name: "resource/Gem_Small", dx: 3.35, dz: -0.95, scale: 0.38, ry: 35 },
+  { name: "resource/Gem_Small", dx: -3.35, dz: 0.95, scale: 0.38, ry: -35 },
 ];
 
 const BACKGROUND_DRESSING = [
   { id: "rear-left-broken-wall", name: "wall_broken", col: 25, row: 6, dx: 0, dz: 0, scale: 0.82, ry: 12 },
   { id: "rear-right-cracked-wall", name: "wall_cracked", col: 47, row: 6, dx: 0, dz: 0, scale: 0.82, ry: -12 },
+  { id: "rear-left-candle-inset", name: "wall_inset_candles", col: 28, row: 7, dx: 0, dz: 0.35, scale: 0.56, ry: 0 },
+  { id: "rear-right-candle-inset", name: "wall_inset_candles", col: 44, row: 7, dx: 0, dz: 0.35, scale: 0.56, ry: 0 },
   { id: "west-low-barrier", name: "barrier_half", col: 10, row: 38, dx: 0, dz: 0, scale: 0.78, ry: 90 },
   { id: "east-low-barrier", name: "barrier_half", col: 63, row: 38, dx: 0, dz: 0, scale: 0.78, ry: 90 },
+  { id: "west-broken-wall-depth", name: "wall_half_endcap_sloped", col: 7, row: 35, dx: 0, dz: 0, scale: 0.58, ry: 90 },
+  { id: "east-broken-wall-depth", name: "wall_half_endcap_sloped", col: 66, row: 35, dx: 0, dz: 0, scale: 0.58, ry: -90 },
   { id: "front-left-pillar", name: "pillar_decorated", col: 28, row: 51, dx: 0, dz: 0, scale: 0.62, ry: 8 },
   { id: "front-right-pillar", name: "pillar_decorated", col: 44, row: 51, dx: 0, dz: 0, scale: 0.62, ry: -8 },
+  { id: "front-left-ruined-bench", name: "bench", col: 24, row: 50, dx: 0.1, dz: -0.1, scale: 0.5, ry: -10 },
+  { id: "front-right-tools", name: "rpgtools/rope_bundle_A", col: 48, row: 50, dx: -0.1, dz: 0.1, scale: 0.42, ry: 18 },
   { id: "market-crates", name: "crates_stacked", col: 53, row: 41, dx: 1.4, dz: -1.1, scale: 0.52, ry: 24 },
   { id: "market-barrels", name: "barrel_large_decorated", col: 49, row: 37, dx: -1.1, dz: 1.1, scale: 0.48, ry: -18 },
-  { id: "crypt-candles", name: "shelf_small_candles", col: 10, row: 30, dx: -0.6, dz: 1.1, scale: 0.48, ry: 30 },
-  { id: "garden-rocks", name: "rocks_small", col: 62, row: 30, dx: 1.0, dz: 1.0, scale: 0.58, ry: -28 },
-  { id: "field-map", name: "rpgtools/map", col: 36, row: 30, dx: -4.0, dz: -0.8, scale: 0.5, ry: -8 },
-  { id: "field-journal", name: "rpgtools/journal_open", col: 36, row: 30, dx: -3.3, dz: -0.55, scale: 0.42, ry: 14 },
+  { id: "crypt-candles", name: "shelf_small_candles", col: 8, row: 32, dx: -0.4, dz: 0.7, scale: 0.48, ry: 30 },
+  { id: "garden-rocks", name: "rocks_small", col: 64, row: 32, dx: 0.8, dz: 0.7, scale: 0.58, ry: -28 },
+  { id: "field-map", name: "rpgtools/map", col: 30, row: 48, dx: -0.4, dz: -0.8, scale: 0.5, ry: -8 },
+  { id: "field-journal", name: "rpgtools/journal_open", col: 30, row: 48, dx: 0.35, dz: -0.55, scale: 0.42, ry: 14 },
 ];
 
 export const MISSION_ART_ASSET_NAMES = Object.freeze([...new Set([
   ...Object.values(SPAWN_DRESSING).flatMap((lane) => lane.props.map((p) => p.name)),
   ...LANE_FLOOR_ASSETS,
+  ...Object.values(LANE_SHOULDER_DRESSING).flatMap((lane) => lane.map((p) => p.name)),
   ...WARD_DRESSING.map((p) => p.name),
   ...BACKGROUND_DRESSING.map((p) => p.name),
 ])]);
@@ -175,6 +219,23 @@ function addLaneFloorDressing(out, level) {
   }
 }
 
+function addLaneShoulderDressing(out, level) {
+  for (const lane of level.lanes || []) {
+    const props = LANE_SHOULDER_DRESSING[lane.id] || [];
+    props.forEach((prop, index) => {
+      out.push(atCell(level, prop.col, prop.row, {
+        ...prop,
+        id: `${lane.id}-lane-side-${index}`,
+        category: "lane-side",
+        laneId: lane.id,
+        anchorCol: prop.col,
+        anchorRow: prop.row,
+        y: prop.y ?? 0.04,
+      }));
+    });
+  }
+}
+
 function addWardDressing(out, level) {
   for (let i = 0; i < WARD_DRESSING.length; i++) {
     const prop = WARD_DRESSING[i];
@@ -204,6 +265,7 @@ function addBackgroundDressing(out, level) {
 export function missionShowcaseArtSpecs(level) {
   const out = [];
   addLaneFloorDressing(out, level);
+  addLaneShoulderDressing(out, level);
   addSpawnDressing(out, level);
   addWardDressing(out, level);
   addBackgroundDressing(out, level);
