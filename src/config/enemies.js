@@ -65,14 +65,29 @@ const BONEBOW = {
   color: "bone",
 };
 
+const PLAGUEWICK = {
+  id: "plaguewick",
+  name: "Plaguewick",
+  role: "enemy-bomber",
+  hp: 64,
+  speed: 2.2,
+  leak: 2,
+  bounty: 10,
+  radius: 0.25,
+  collisionRadius: 0.32,
+  attackStyle: "bomber",
+  attackDamage: 72,
+  attackRate: 1,
+  attackRange: 0.85,
+  fuseTime: 0.85,
+  explosionRadius: 1.9,
+  explosionDamage: 72,
+  coreExplosionDamage: 5,
+  triggerRange: 0.88,
+  color: "plague",
+};
+
 export const FUTURE_ENEMY_ARCHETYPES = {
-  plaguewick: {
-    id: "plaguewick",
-    name: "Plaguewick",
-    role: "enemy-bomber",
-    enabled: false,
-    plannedBehavior: "suicide runner",
-  },
   ossuaryAcolyte: {
     id: "ossuary-acolyte",
     name: "Ossuary Acolyte",
@@ -85,6 +100,7 @@ export const FUTURE_ENEMY_ARCHETYPES = {
 export const ENEMIES = {
   rotling: ROTLING,
   bonebow: BONEBOW,
+  plaguewick: PLAGUEWICK,
   gravebreaker: GRAVEBREAKER,
   // Legacy ids stay available for older tests/dev tools while waves migrate to
   // the OSSARA-facing archetype names.

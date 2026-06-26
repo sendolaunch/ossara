@@ -20,6 +20,7 @@ import {
   moveToward,
   releaseAttackSlot,
 } from "./enemyMovement.js";
+import { isBomberEnemy, pointInExplosion, selectBomberTarget, startBomberFuse, tickBomberFuse } from "./enemyBomber.js";
 import { isRangedEnemy, selectEnemyRangedTarget } from "./enemyCombat.js";
 import { Pool } from "./pool.js";
 import { createEnemy, resetEnemy } from "./Enemy.js";
@@ -386,6 +387,32 @@ export class World {
       e.rangedAttacking = false;
       e.rangedTargetId = 0;
       e.rangedTargetKind = "";
+      if (e.bomberFusing) {
+        releaseAttackSlot(e);
+        e.blockingTargetId = e.bomberTargetKind === "tower" ? e.bomberTargetId : 0;
+        const fuse = tickBomberFuse(e, dt);
+        if (fuse.ready) this._explodeBomber(e);
+        continue;
+      }
+      const bomberTarget = this._selectBomberTarget(e);
+      if (bomberTarget) {
+        releaseAttackSlot(e);
+        e.blockingTargetId = bomberTarget.kind === "tower" ? bomberTarget.id : 0;
+        if (startBomberFuse(e, bomberTarget)) {
+          this.events.push({
+            kind: "bomberFuseStart",
+            x: e.x,
+            z: e.z,
+            range: e.explosionRadius || 1.8,
+            fuseTime: e.bomberFuseTimer,
+            enemyId: e.id,
+            type: e.type,
+            targetKind: bomberTarget.kind,
+            targetId: bomberTarget.id || 0,
+          });
+        }
+        continue;
+      }
       const rangedTarget = this._selectEnemyRangedTarget(e);
       if (rangedTarget) {
         releaseAttackSlot(e);
@@ -438,6 +465,48 @@ export class World {
   _selectEnemyRangedTarget(e) {
     if (!isRangedEnemy(e)) return null;
     return selectEnemyRangedTarget(e, this.towers, this.core, this.lanePaths[e.laneId] || this.lane);
+  }
+
+  _selectBomberTarget(e) {
+    if (!isBomberEnemy(e)) return null;
+    return selectBomberTarget(e, this.towers, this.core, this.lanePaths[e.laneId] || this.lane);
+  }
+
+  _explodeBomber(e) {
+    if (!isBomberEnemy(e) || !e.alive || e.bomberExploded) return false;
+    const radius = Math.max(0, e.explosionRadius || 0);
+    const damage = Math.max(0, e.explosionDamage || e.attackDamage || 0);
+    e.bomberExploded = true;
+    e.bomberFusing = false;
+    let towersHit = 0;
+    for (const tower of this.towers) {
+      if (!tower.alive || !tower.targetableByEnemies || tower.hp <= 0) continue;
+      if (!pointInExplosion(tower, e.x, e.z, radius)) continue;
+      if (this._damageTower(tower, damage, e)) towersHit++;
+    }
+    let coreHit = false;
+    let coreAmount = 0;
+    if (this.core.hp > 0 && pointInExplosion({ ...this.core, radius: this.core.radius || 0.75 }, e.x, e.z, radius)) {
+      coreAmount = Math.max(1, e.coreExplosionDamage ?? Math.max(e.leak || 1, Math.round(damage / 12)));
+      this.core.hp = Math.max(0, this.core.hp - coreAmount);
+      coreHit = true;
+    }
+    e.counted = true;
+    e.alive = false;
+    releaseAttackSlot(e);
+    this.events.push({
+      kind: "bomberExplosion",
+      x: e.x,
+      z: e.z,
+      range: radius,
+      amount: damage,
+      coreAmount,
+      enemyId: e.id,
+      type: e.type,
+      towersHit,
+      coreHit,
+    });
+    return true;
   }
 
   _fireEnemyProjectile(e, target) {

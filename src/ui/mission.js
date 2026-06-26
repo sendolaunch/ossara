@@ -367,6 +367,53 @@ export class Mission {
     return enemy;
   }
 
+  spawnDebugPlaguewickEncounter() {
+    if (!this.world?.hero?.alive) return null;
+    this.world._spawnEnemy("plaguewick", this.world.defaultLaneId);
+    const enemy = this.world.enemies[this.world.enemies.length - 1] || null;
+    if (!enemy) return null;
+    const lane = this.world.lanePaths[enemy.laneId] || this.world.lane;
+    const defenseTarget = this.world.towers.find((tower) => tower?.alive && tower.targetableByEnemies && tower.hp > 0) || null;
+    if (defenseTarget) {
+      let bestDistance = 0;
+      let bestScore = Infinity;
+      for (let d = 0; d <= lane.total; d += 0.5) {
+        const p = pointAtDistance(lane, d);
+        const score = Math.hypot(p.x - defenseTarget.x, p.z - defenseTarget.z);
+        if (score < bestScore) {
+          bestScore = score;
+          bestDistance = d;
+        }
+      }
+      enemy.dist = Math.max(0, bestDistance - 1.1);
+      const p = pointAtDistance(lane, enemy.dist);
+      enemy.x = p.x;
+      enemy.z = p.z;
+      enemy.hpBarTimer = 6;
+      this.hud.toast("Plaguewick fuse-bearer spawned.", CSS.plague);
+      return enemy;
+    }
+    let bestDistance = 0;
+    let bestScore = Infinity;
+    const hero = this.world.hero;
+    const step = 0.5;
+    for (let d = 0; d <= lane.total; d += step) {
+      const p = pointAtDistance(lane, d);
+      const score = Math.hypot(p.x - hero.x, p.z - hero.z);
+      if (score < bestScore) {
+        bestScore = score;
+        bestDistance = d;
+      }
+    }
+    enemy.dist = Math.max(0, bestDistance - 2.6);
+    const p = pointAtDistance(lane, enemy.dist);
+    enemy.x = p.x;
+    enemy.z = p.z;
+    enemy.hpBarTimer = 6;
+    this.hud.toast("Plaguewick fuse-bearer spawned.", CSS.plague);
+    return enemy;
+  }
+
   _collectWorldDrops() {
     if (!this.worldDrops.length || !this.world?.hero?.alive) return;
     const point = { x: this.world.hero.x, z: this.world.hero.z, time: typeof performance !== "undefined" ? performance.now() : Date.now() };

@@ -1111,7 +1111,7 @@ export class PCRenderer {
     ent._ossaraProceduralTuning = { bobAmplitude, swayAmplitude, leanAmount, visualSmooth, rotationSmooth: cfg.rotationSmooth ?? 0.16 };
     const clipLooksLikeMove = !forcedClip || /walk|run|move|movement|locomotion/i.test(forcedClip);
     const stateLooksLikeMove = !forcedState || forcedState === "walk" || forcedState === "run";
-    const active = !!visual.useProceduralLocomotionFallback && !!moving && !enemy.attackingBlocker && !enemy.rangedAttacking && clipLooksLikeMove && stateLooksLikeMove;
+    const active = !!visual.useProceduralLocomotionFallback && !!moving && !enemy.attackingBlocker && !enemy.rangedAttacking && !enemy.bomberFusing && clipLooksLikeMove && stateLooksLikeMove;
     const blend = smoothFactor(visualSmooth, dt);
     const pose = ent._ossaraProcPose || { bob: 0, sway: 0, lean: 0 };
     if (!active) {
@@ -1298,6 +1298,8 @@ export class PCRenderer {
       }
       else if (ev.kind === "heroDash") this._ring(ev.x, ev.z, ev.range || 1.1, "plague", 0.28);
       else if (ev.kind === "slam") this._wardSlamPulse(ev.x, ev.z, ev.range || 2.25);
+      else if (ev.kind === "bomberFuseStart") this._ring(ev.x, ev.z, ev.range || 1.8, "blood", Math.max(0.25, Math.min(0.55, ev.fuseTime || 0.35)));
+      else if (ev.kind === "bomberExplosion") this._plagueExplosion(ev.x, ev.z, ev.range || 1.8);
       else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
       else if (ev.kind === "towerSold") this._ring(ev.x, ev.z, 0.85, "ash", 0.22);
     }
@@ -1467,6 +1469,13 @@ export class PCRenderer {
     this._ring(x, z, range * 1.05, "plague", 0.46);
     this._ring(x, z, Math.max(0.75, range * 0.52), "gold", 0.32);
     this._spark(x, z, "plague", 0.26);
+  }
+
+  _plagueExplosion(x, z, range) {
+    this._slamDisc(x, z, Math.max(0.8, range), 0.34);
+    this._ring(x, z, range * 1.08, "plague", 0.44);
+    this._ring(x, z, Math.max(0.75, range * 0.55), "blood", 0.28);
+    this._spark(x, z, "plague", 0.36);
   }
 
   _slamDisc(x, z, range, life) {
@@ -1758,6 +1767,19 @@ export class PCRenderer {
         eliteCrown.setLocalEulerAngles(0, 0, 45);
         eliteCrown.enabled = false;
         ent.addChild(eliteCrown);
+        const fuseRing = prim("torus", translucentMat("plague", 1.35, 0.56));
+        fuseRing.name = "bomber-fuse-warning";
+        fuseRing.render.castShadows = false;
+        fuseRing.render.receiveShadows = false;
+        fuseRing.setLocalEulerAngles(90, 0, 0);
+        fuseRing.enabled = false;
+        ent.addChild(fuseRing);
+        const fuseGlow = prim("sphere", translucentMat("plague", 1.65, 0.42));
+        fuseGlow.name = "bomber-fuse-glow";
+        fuseGlow.render.castShadows = false;
+        fuseGlow.render.receiveShadows = false;
+        fuseGlow.enabled = false;
+        ent.addChild(fuseGlow);
         ent._ossaraVisualWrap = visualWrap;
         ent._ossaraVisual = visual;
         ent._ossaraFallbackBody = body;
@@ -1770,6 +1792,8 @@ export class PCRenderer {
         ent._ossaraHitRing = hitRing;
         ent._ossaraEliteRing = eliteRing;
         ent._ossaraEliteCrown = eliteCrown;
+        ent._ossaraFuseRing = fuseRing;
+        ent._ossaraFuseGlow = fuseGlow;
         ent._ossaraDebug = {
         type: e.type,
           modelName: visual.model || "",
@@ -1790,10 +1814,10 @@ export class PCRenderer {
       const progressed = Math.abs((e.dist || 0) - (prev.dist || 0));
       const forcedState = e.previewAnimState || "";
       const forcedClip = e.previewAnimClip || "";
-      const rawMoving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.003 || progressed > 0.003) && !e.attackingBlocker && !e.rangedAttacking;
+      const rawMoving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.003 || progressed > 0.003) && !e.attackingBlocker && !e.rangedAttacking && !e.bomberFusing;
       if (rawMoving) ent._ossaraMoveHold = 0.14;
       else ent._ossaraMoveHold = Math.max(0, (ent._ossaraMoveHold || 0) - dt);
-      const moving = forcedState ? rawMoving : (rawMoving || (ent._ossaraMoveHold || 0) > 0) && !e.attackingBlocker && !e.rangedAttacking;
+      const moving = forcedState ? rawMoving : (rawMoving || (ent._ossaraMoveHold || 0) > 0) && !e.attackingBlocker && !e.rangedAttacking && !e.bomberFusing;
       if (movedDist > 0.001) {
         const yaw = (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI;
         const cfg = ent._ossaraVisual?.proceduralLocomotion || {};
@@ -1805,7 +1829,7 @@ export class PCRenderer {
       else if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
       else {
         ent._ossaraAnim?.setMoving(moving, e.speed >= 2.25);
-        ent._ossaraAnim?.setAttacking(!!e.attackingBlocker || !!e.rangedAttacking);
+        ent._ossaraAnim?.setAttacking(!!e.attackingBlocker || !!e.rangedAttacking || !!e.bomberFusing);
       }
       ent._ossaraAnim?.update(dt);
       if (ent._ossaraVisualWrap) {
@@ -1819,12 +1843,13 @@ export class PCRenderer {
         ent._ossaraDebug.currentState = animState?.currentState || "";
         ent._ossaraDebug.currentTime = animState?.currentTime ?? 0;
         ent._ossaraDebug.playbackSpeed = animState?.playbackSpeed ?? 1;
-        ent._ossaraDebug.desiredState = forcedClip ? `clip:${forcedClip}` : forcedState || (e.attackingBlocker || e.rangedAttacking ? "attack" : moving ? (e.speed >= 2.25 ? "run" : "walk") : "idle");
+        ent._ossaraDebug.desiredState = forcedClip ? `clip:${forcedClip}` : forcedState || (e.attackingBlocker || e.rangedAttacking || e.bomberFusing ? "attack" : moving ? (e.speed >= 2.25 ? "run" : "walk") : "idle");
         ent._ossaraDebug.isMoving = moving;
         ent._ossaraDebug.movementDelta = movedDist;
         ent._ossaraDebug.laneProgressDelta = progressed;
         ent._ossaraDebug.attackingBlocker = !!e.attackingBlocker;
         ent._ossaraDebug.rangedAttacking = !!e.rangedAttacking;
+        ent._ossaraDebug.bomberFusing = !!e.bomberFusing;
         ent._ossaraDebug.animEntityName = animState?.animEntityName || ent._ossaraModel?.name || "";
         ent._ossaraDebug.visibleModelName = animState?.visibleModelName || ent._ossaraModel?.name || ent._ossaraFallbackBody?.name || "";
         ent._ossaraDebug.boneProbeName = animState?.boneProbeName || "";
@@ -1878,6 +1903,26 @@ export class PCRenderer {
         if (e.elite) {
           ent._ossaraEliteCrown.setLocalPosition(0, (ent._ossaraVisual?.hpY || 1.65) + 0.32 + Math.sin(performance.now() * 0.004 + e.id) * 0.04, 0);
           ent._ossaraEliteCrown.setLocalEulerAngles(0, performance.now() * 0.05, 45);
+        }
+      }
+      if (ent._ossaraFuseRing) {
+        ent._ossaraFuseRing.enabled = !!e.bomberFusing;
+        if (e.bomberFusing) {
+          const fuseTotal = Math.max(0.01, e.bomberFuseTime || 0.85);
+          const fuseT = 1 - clamp((e.bomberFuseTimer || 0) / fuseTotal, 0, 1);
+          const pulse = 1 + Math.sin(performance.now() * 0.018 + e.id) * 0.1;
+          const radius = Math.max(0.75, e.explosionRadius || 1.8);
+          const s = (0.45 + radius * (0.28 + fuseT * 0.22)) * pulse;
+          ent._ossaraFuseRing.setLocalScale(s, s, s);
+          ent._ossaraFuseRing.setLocalPosition(0, 0.08, 0);
+        }
+      }
+      if (ent._ossaraFuseGlow) {
+        ent._ossaraFuseGlow.enabled = !!e.bomberFusing;
+        if (e.bomberFusing) {
+          const pulse = 0.3 + Math.sin(performance.now() * 0.024 + e.id) * 0.05;
+          ent._ossaraFuseGlow.setLocalScale(pulse, pulse, pulse);
+          ent._ossaraFuseGlow.setLocalPosition(0, 0.78, 0);
         }
       }
     }

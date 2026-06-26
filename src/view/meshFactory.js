@@ -146,6 +146,9 @@ export function createEnemyMesh(typeId) {
     case "bonebow":
       g = geo("e_bonebow", () => new THREE.ConeGeometry(0.85, 1.65, 5));
       break;
+    case "plaguewick":
+      g = geo("e_plaguewick", () => new THREE.ConeGeometry(0.78, 1.5, 5));
+      break;
     case "brute":
     case "gravebreaker":
       g = geo("e_brute", () => new THREE.IcosahedronGeometry(1, 0));

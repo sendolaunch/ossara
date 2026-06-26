@@ -31,6 +31,18 @@ export function createEnemy() {
     rangedAttacking: false,
     rangedTargetId: 0,
     rangedTargetKind: "",
+    bomberFusing: false,
+    bomberFuseTimer: 0,
+    bomberFuseTime: 0,
+    bomberExploded: false,
+    bomberTargetId: 0,
+    bomberTargetKind: "",
+    bomberTargetX: 0,
+    bomberTargetZ: 0,
+    explosionRadius: 0,
+    explosionDamage: 0,
+    coreExplosionDamage: 0,
+    triggerRange: 0,
     attackSlotIndex: -1,
     attackSlotX: 0,
     attackSlotZ: 0,
@@ -82,6 +94,18 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.rangedAttacking = false;
   e.rangedTargetId = 0;
   e.rangedTargetKind = "";
+  e.bomberFusing = false;
+  e.bomberFuseTimer = 0;
+  e.bomberFuseTime = def.fuseTime ?? 0;
+  e.bomberExploded = false;
+  e.bomberTargetId = 0;
+  e.bomberTargetKind = "";
+  e.bomberTargetX = 0;
+  e.bomberTargetZ = 0;
+  e.explosionRadius = def.explosionRadius ?? 0;
+  e.explosionDamage = def.explosionDamage ?? e.attackDamage;
+  e.coreExplosionDamage = def.coreExplosionDamage ?? Math.max(e.leak || 1, Math.round((e.explosionDamage || e.attackDamage || 0) / 12));
+  e.triggerRange = def.triggerRange ?? e.attackRange;
   e.attackSlotIndex = -1;
   e.attackSlotX = 0;
   e.attackSlotZ = 0;

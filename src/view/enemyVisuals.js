@@ -13,6 +13,7 @@ export const FALLBACK_ENEMY_LOOK = {
   rotling: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
   husk: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
   bonebow: { shape: "cone", color: "bone", scale: 0.58, emissive: 0.15 },
+  plaguewick: { shape: "cone", color: "plague", scale: 0.56, emissive: 0.55 },
   gravebreaker: { shape: "sphere", color: "rot", scale: 1.05, emissive: 0 },
   sprinter: { shape: "cone", color: "plague", scale: 0.55, emissive: 0.3 },
   brute: { shape: "sphere", color: "rot", scale: 0.95, emissive: 0 },

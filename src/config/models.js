@@ -15,5 +15,6 @@ export const MODELS = {
   // monsters + environment get added here in the next step:
   // rotling:      { file: "models/rotling.glb",      scale: 1.0, yaw: 0, y: 0 },
   // bonebow:      { file: "models/bonebow.glb",      scale: 1.0, yaw: 0, y: 0 },
+  // plaguewick:   { file: "models/plaguewick.glb",   scale: 1.0, yaw: 0, y: 0 },
   // gravebreaker: { file: "models/gravebreaker.glb", scale: 1.4, yaw: 0, y: 0 },
 };

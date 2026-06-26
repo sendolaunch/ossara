@@ -28,15 +28,17 @@ ok(ACTIVE_ENEMY_VISUAL_THEME === "ruined_kingdom_plague_v1", "active enemy visua
 ok(!!ENEMY_VISUAL_THEMES[ACTIVE_ENEMY_VISUAL_THEME], "active enemy visual theme exists");
 ok(ENEMIES.rotling?.name === "Rotling" && ENEMIES.rotling.role === "enemy-basic", "Rotling basic enemy config exists");
 ok(ENEMIES.bonebow?.name === "Bonebow" && ENEMIES.bonebow.role === "enemy-ranged", "Bonebow ranged enemy config exists");
+ok(ENEMIES.plaguewick?.name === "Plaguewick" && ENEMIES.plaguewick.role === "enemy-bomber", "Plaguewick bomber enemy config exists");
 ok(ENEMIES.gravebreaker?.name === "Gravebreaker" && ENEMIES.gravebreaker.role === "enemy-brute", "Gravebreaker brute enemy config exists");
 ok(ENEMIES.bonebow.hp > ENEMIES.rotling.hp && ENEMIES.bonebow.hp < ENEMIES.gravebreaker.hp, "Bonebow HP sits between Rotling and Gravebreaker");
 ok(ENEMIES.bonebow.speed < ENEMIES.rotling.speed && ENEMIES.bonebow.speed > ENEMIES.gravebreaker.speed, "Bonebow speed sits between Rotling and Gravebreaker");
 ok(ENEMIES.bonebow.attackStyle === "ranged" && ENEMIES.bonebow.projectileSpeed > 0, "Bonebow mechanics are explicitly ranged");
+ok(ENEMIES.plaguewick.attackStyle === "bomber" && ENEMIES.plaguewick.explosionRadius > 0, "Plaguewick mechanics are explicitly bomber-style");
+ok(ENEMIES.plaguewick.speed > ENEMIES.rotling.speed, "Plaguewick is faster than Rotling");
 ok(ENEMIES.gravebreaker.hp >= ENEMIES.rotling.hp * 5, "Gravebreaker has tank HP relative to Rotling");
 ok(ENEMIES.gravebreaker.speed < ENEMIES.rotling.speed, "Gravebreaker is slower than Rotling");
 ok(ENEMIES.gravebreaker.attackDamage > ENEMIES.rotling.attackDamage, "Gravebreaker has stronger melee pressure than Rotling");
 ok(ENEMIES.husk.aliasOf === "rotling" && ENEMIES.brute.aliasOf === "gravebreaker", "legacy enemy ids remain compatibility aliases");
-ok(FUTURE_ENEMY_ARCHETYPES.plaguewick.enabled === false, "Plaguewick placeholder stays disabled until bomber behavior exists");
 ok(FUTURE_ENEMY_ARCHETYPES.ossuaryAcolyte.enabled === false, "Ossuary Acolyte placeholder stays disabled until support behavior exists");
 
 const rotlingVisual = resolveEnemyVisual("rotling");
@@ -47,6 +49,9 @@ ok(bonebowVisual.animationSet === "skeleton-ranged", "Bonebow uses the ranged sk
 ok(Array.isArray(bonebowVisual.accessories) && bonebowVisual.accessories.length >= 2, "Bonebow has crossbow/quiver visual accessories");
 ok(bonebowVisual.accessories.some((asset) => asset.model === "Skeleton_Crossbow.gltf"), "Bonebow maps to Skeleton_Crossbow accessory");
 ok(bonebowVisual.accessories.some((asset) => asset.model === "Skeleton_Quiver.gltf"), "Bonebow maps to Skeleton_Quiver accessory");
+const plaguewickVisual = resolveEnemyVisual("plaguewick");
+ok(plaguewickVisual.model === "Skeleton_Rogue.glb", "Plaguewick maps to audited Skeleton_Rogue runner body");
+ok(plaguewickVisual.accessories.some((asset) => asset.model === "lantern.gltf" && asset.pack === "rpgtools"), "Plaguewick uses imported lantern prop as fuse silhouette");
 const gravebreakerVisual = resolveEnemyVisual("gravebreaker");
 ok(gravebreakerVisual.model === "Skeleton_Golem.glb", "Gravebreaker maps to audited Skeleton_Golem asset");
 ok(gravebreakerVisual.targetHeight > rotlingVisual.targetHeight, "Gravebreaker visual is larger than Rotling");
@@ -100,7 +105,8 @@ for (const id of Object.keys(ENEMIES)) {
   ok(existsSync(join("public", url)), `${id} model file exists locally`);
   for (const accessory of visual.accessories || []) {
     const assetUrl = enemyAssetUrl(accessory, visual.pack);
-    ok(assetUrl.startsWith("models/skeletons/"), `${id} accessory ${accessory.name || accessory.model} resolves to skeleton asset URL`);
+    const expectedPack = accessory.pack || visual.pack;
+    ok(assetUrl.startsWith(`models/${expectedPack}/`), `${id} accessory ${accessory.name || accessory.model} resolves to configured asset pack URL`);
     ok(existsSync(join("public", assetUrl)), `${id} accessory ${accessory.model} exists locally`);
   }
 }

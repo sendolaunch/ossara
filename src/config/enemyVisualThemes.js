@@ -163,6 +163,51 @@ const BONEBOW_VISUAL = {
   fallbackEmissive: 0.15,
 };
 
+const PLAGUEWICK_VISUAL = {
+  pack: "skeletons",
+  model: "Skeleton_Rogue.glb",
+  scale: 1,
+  targetHeight: 1.34,
+  heightOffset: 0,
+  rotationOffset: 0,
+  animationSet: "skeleton-medium",
+  animationClips: {
+    walk: "Running_B",
+    run: "Running_B",
+    attack: "Use_Item",
+  },
+  animationSpeed: {
+    walk: 1.15,
+    run: 1.22,
+    attack: 1.08,
+  },
+  accessories: [
+    {
+      name: "plague-lantern",
+      pack: "rpgtools",
+      model: "lantern.gltf",
+      position: { x: 0.26, y: 0.72, z: 0.2 },
+      rotation: { x: -10, y: 20, z: -18 },
+      scale: 0.28,
+    },
+  ],
+  useProceduralLocomotionFallback: true,
+  proceduralLocomotion: {
+    proceduralStrength: 0.28,
+    fallbackStrength: 1,
+    bobAmplitude: 0.02,
+    swayAmplitude: 1.6,
+    leanAmount: 3.8,
+    visualSmooth: 0.2,
+    rotationSmooth: 0.18,
+    rate: 5.9,
+  },
+  fallbackShape: "cone",
+  fallbackColor: "plague",
+  fallbackScale: 0.56,
+  fallbackEmissive: 0.55,
+};
+
 export const ENEMY_VISUAL_THEMES = {
   ruined_kingdom_plague_v1: {
     id: "ruined_kingdom_plague_v1",
@@ -171,6 +216,7 @@ export const ENEMY_VISUAL_THEMES = {
       rotling: ROTLING_VISUAL,
       husk: ROTLING_VISUAL,
       bonebow: BONEBOW_VISUAL,
+      plaguewick: PLAGUEWICK_VISUAL,
       sprinter: {
         pack: "skeletons",
         model: "Skeleton_Rogue.glb",
