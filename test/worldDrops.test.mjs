@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { WAVE_CLEAR_GOLD_REWARD, chestRewardDefinition, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
+import { WAVE_CLEAR_GOLD_REWARD, chestRewardDefinition, eliteRewardDefinition, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
 import { createDeterministicRng } from "../src/sim/itemGenerator.js";
 import {
   WORLD_DROP_MAX_ACTIVE,
@@ -76,6 +76,24 @@ function missionRewardSummary() {
   const drop = createWorldDropFromRewardSummary(chest.summary, { position: { x: 2, z: -2 } });
   ok(drop && drop.sourceType === "chest" && drop.sourceId.includes("dev-chest"), "chest reward can produce physical world drop");
   ok(drop.item?.id === chest.summary.itemId, "chest world drop carries generated item instance");
+}
+
+{
+  const account = accountWithWarden();
+  let loot = createLootState();
+  const elite = grantReward(account, loot, eliteRewardDefinition({ rewardId: "drop-elite-source", eliteId: "gate-bruiser", rng: createDeterministicRng(23) }));
+  const drop = createWorldDropFromRewardSummary(elite.summary, { position: { x: -1, z: 2 } });
+  ok(drop && drop.sourceType === "elite" && drop.sourceId.includes("gate-bruiser"), "elite reward creates physical world drop");
+  const pickup = pickupWorldDrop(drop, loot, { x: -1, z: 2 });
+  loot = pickup.lootState;
+  ok(pickup.ok && findLootItem(loot, elite.summary.itemId), "pickup adds elite item once");
+  const duplicate = pickupWorldDrop(drop, loot, { x: -1, z: 2 });
+  ok(!duplicate.ok && duplicate.reason === "collected", "elite item drop cannot be picked up twice");
+  const hero = getActiveHero(account);
+  hero.gold += FORGE_UPGRADE_GOLD_COST;
+  const statKey = Object.keys(drop.item.stats).find((key) => drop.item.stats[key] > 0);
+  const upgraded = upgradeLootItem(loot, elite.summary.itemId, statKey, { availableGold: hero.gold });
+  ok(upgraded.ok, "Forge can upgrade picked-up elite item");
 }
 
 {

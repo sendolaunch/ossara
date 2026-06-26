@@ -1774,7 +1774,7 @@ export class PCRenderer {
       }
       ent._ossaraAnim?.update(dt);
       if (ent._ossaraVisualWrap) {
-        const eliteScale = e.elite ? 1.16 : 1;
+        const eliteScale = e.elite ? (e.eliteScale || 1.18) : 1;
         ent._ossaraVisualWrap.setLocalScale(eliteScale, eliteScale, eliteScale);
       }
       const animState = ent._ossaraAnim?.state?.();
@@ -1810,7 +1810,7 @@ export class PCRenderer {
       ent._ossaraPrevPos = { x: e.x, z: e.z, dist: e.dist || 0 };
       ent.setPosition(e.x, e.radius, e.z);
       const flash = Math.max(0, e.hitFlash || 0);
-      const showHp = e.alive && (e.hp < e.maxHp || (e.hpBarTimer || 0) > 0 || flash > 0);
+      const showHp = e.alive && (e.elite || e.hp < e.maxHp || (e.hpBarTimer || 0) > 0 || flash > 0);
       if (ent._ossaraHpGroup) {
         ent._ossaraHpGroup.enabled = showHp;
         ent._ossaraHpGroup.setEulerAngles(this.cameraEntity.getEulerAngles());

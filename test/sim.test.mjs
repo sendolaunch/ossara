@@ -1352,7 +1352,13 @@ section("mission dash moves and respects cooldown");
 // ---------------------------------------------------------------------------
 section("object pooling reuses dead enemies");
 {
-  const w = new World(LEVEL);
+  const poolingWaves = [{
+    name: "Pool Check",
+    prepTime: 0,
+    reward: 0,
+    groups: [{ type: "husk", laneId: "north-gate", count: 3, interval: 0.2, delay: 0 }],
+  }];
+  const w = new World(LEVEL, poolingWaves);
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
   w.tryPlaceTower("ballista", 55, 31);

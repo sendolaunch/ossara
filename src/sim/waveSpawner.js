@@ -8,6 +8,9 @@ export function buildWaveSchedule(wave, defaultLaneId) {
         time: group.delay + i * group.interval,
         elite: !!group.elite,
         eliteId: group.elite ? String(group.eliteId || `${group.type}-elite`) : "",
+        eliteName: group.elite && group.eliteName ? String(group.eliteName) : "",
+        eliteHpMultiplier: group.elite && group.eliteHpMultiplier ? Number(group.eliteHpMultiplier) : undefined,
+        eliteScale: group.elite && group.eliteScale ? Number(group.eliteScale) : undefined,
       });
     }
   }

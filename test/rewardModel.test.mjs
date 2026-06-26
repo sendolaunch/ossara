@@ -92,6 +92,9 @@ function accountWithWarden() {
   ok(elite.ok && elite.summary.sourceType === "elite", "elite reward source is supported");
   ok(elite.summary.shouldSpawnWorldDrop && elite.summary.items[0]?.sourceType === "elite", "elite reward can generate item with source metadata");
   ok(getActiveHero(account).gold === ELITE_REWARD_GOLD, "elite reward grants controlled Gold");
+  const duplicateElite = grantReward(account, loot, eliteRewardDefinition({ rewardId: "elite-source-test", eliteId: "bone-captain", rng: createDeterministicRng(9) }));
+  ok(!duplicateElite.ok && duplicateElite.duplicate, "duplicate elite death reward cannot double-grant");
+  ok(getActiveHero(account).gold === ELITE_REWARD_GOLD, "duplicate elite reward does not add extra Gold");
   const boss = grantReward(account, loot, bossRewardDefinition({ rewardId: "boss-source-test", bossId: "future-boss", rng: createDeterministicRng(10) }));
   ok(boss.ok && boss.summary.sourceType === "boss", "boss reward source is supported");
   ok(boss.summary.shouldSpawnWorldDrop && boss.summary.goldGranted === BOSS_REWARD_GOLD && boss.summary.items[0]?.sourceType === "boss", "boss reward is future-ready for physical generated drops");

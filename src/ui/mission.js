@@ -14,6 +14,7 @@ import { resolveMissionStart } from "../config/missions.js";
 import { lootTooltipData } from "../sim/lootModel.js";
 import { createMissionChests, nearestClosedChest, openMissionChest } from "../sim/missionChests.js";
 import { cleanupWorldDrops, clearWorldDrops, createWorldDropFromRewardSummary, markWorldDropCollected, selectNearbyWorldDrop } from "../sim/worldDrops.js";
+import { pointAtDistance } from "../sim/pathing.js";
 
 const PLACEMENT_MESSAGES = {
   marrow: "Not enough Marrow.",
@@ -302,6 +303,41 @@ export class Mission {
       window.setTimeout(() => this._collectWorldDrops(), drop.pickupDelay + 80);
     }
     return drop;
+  }
+
+  spawnDebugEliteEncounter() {
+    if (!this.world?.hero?.alive) return null;
+    const eliteId = `debug-gate-bruiser-${Date.now()}`;
+    this.world._spawnEnemy("brute", this.world.defaultLaneId, {
+      elite: true,
+      eliteId,
+      eliteName: "Gate-Bruiser",
+      eliteHpMultiplier: 3,
+      eliteScale: 1.22,
+    });
+    const elite = this.world.enemies[this.world.enemies.length - 1] || null;
+    if (!elite) return null;
+    const lane = this.world.lanePaths[elite.laneId] || this.world.lane;
+    let bestDistance = 0;
+    let bestScore = Infinity;
+    const hero = this.world.hero;
+    const step = 0.5;
+    for (let d = 0; d <= lane.total; d += step) {
+      const p = pointAtDistance(lane, d);
+      const score = Math.hypot(p.x - hero.x, p.z - hero.z);
+      if (score < bestScore) {
+        bestScore = score;
+        bestDistance = d;
+      }
+    }
+    elite.dist = Math.max(0, bestDistance - 2.2);
+    const p = pointAtDistance(lane, elite.dist);
+    elite.x = p.x;
+    elite.z = p.z;
+    elite.speed = Math.min(elite.speed, 0.55);
+    elite.hpBarTimer = 6;
+    this.hud.toast("Elite approaches: Gate-Bruiser.", CSS.gold);
+    return elite;
   }
 
   _collectWorldDrops() {

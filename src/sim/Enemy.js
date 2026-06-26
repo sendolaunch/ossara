@@ -2,10 +2,14 @@
 // reads it. `id` is reassigned on every reuse so the view treats a recycled
 // object as a brand-new entity.
 
+export const DEFAULT_ELITE_HP_MULTIPLIER = 3;
+export const DEFAULT_ELITE_VISUAL_SCALE = 1.18;
+
 export function createEnemy() {
   return {
     id: 0,
     type: "husk",
+    name: "Husk",
     x: 0,
     z: 0,
     dist: 0, // distance travelled along the lane
@@ -28,6 +32,9 @@ export function createEnemy() {
     boss: false,
     elite: false,
     eliteId: "",
+    eliteName: "",
+    eliteHpMultiplier: 1,
+    eliteScale: 1,
     eliteRewardClaimed: false,
     laneId: "",
     laneOffset: 0,
@@ -47,6 +54,7 @@ export function createEnemy() {
 export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.id = id;
   e.type = def.id;
+  e.name = def.name || def.id;
   e.x = startPos.x;
   e.z = startPos.z;
   e.dist = 0;
@@ -69,6 +77,17 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.boss = !!def.boss;
   e.elite = !!opts.elite;
   e.eliteId = opts.eliteId ? String(opts.eliteId) : "";
+  e.eliteName = "";
+  e.eliteHpMultiplier = 1;
+  e.eliteScale = 1;
+  if (e.elite) {
+    e.eliteName = opts.eliteName ? String(opts.eliteName) : e.eliteId ? `Elite ${e.eliteId}` : `Elite ${e.name}`;
+    e.name = e.eliteName;
+    e.eliteHpMultiplier = Math.max(1, Number(opts.eliteHpMultiplier || DEFAULT_ELITE_HP_MULTIPLIER));
+    e.eliteScale = Math.max(1, Number(opts.eliteScale || DEFAULT_ELITE_VISUAL_SCALE));
+    e.maxHp = Math.max(e.maxHp + 1, Math.round(e.maxHp * e.eliteHpMultiplier));
+    e.hp = e.maxHp;
+  }
   e.eliteRewardClaimed = false;
   e.laneId = laneId;
   e.laneOffset = opts.laneOffset || 0;

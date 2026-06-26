@@ -119,7 +119,7 @@ export function lootPanelForgeState(state, selectedItemId = null, availableGold 
 }
 
 export class LootSkeletonPanel {
-  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, devMode = false, initialOpen = false } = {}) {
+  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, onDebugEliteEncounter, devMode = false, initialOpen = false } = {}) {
     this.getState = getState || (() => this.state);
     this.onChange = onChange || (() => {});
     this.state = createLootState(this.getState?.());
@@ -128,6 +128,7 @@ export class LootSkeletonPanel {
     this.devMode = !!devMode;
     this.visible = !!initialOpen;
     this.onDebugReward = this.devMode ? onDebugReward || null : null;
+    this.onDebugEliteEncounter = this.devMode ? onDebugEliteEncounter || null : null;
     this.selectedForgeItemId = null;
     this.forgeMessage = "";
     this.rewardMessage = "";
@@ -238,6 +239,13 @@ export class LootSkeletonPanel {
     this.render();
   }
 
+  spawnDebugEliteEncounter() {
+    if (!this.onDebugEliteEncounter) return;
+    const enemy = this.onDebugEliteEncounter();
+    this.rewardMessage = enemy ? `Elite spawned: ${enemy.name || enemy.eliteId || "Gate-Bruiser"}.` : "Elite spawn failed.";
+    this.render();
+  }
+
   selectForgeItem(itemId) {
     this.selectedForgeItemId = itemId;
     this.forgeMessage = "";
@@ -299,6 +307,7 @@ export class LootSkeletonPanel {
       wrap.appendChild(this.button("Spawn elite reward", () => this.claimDebugReward("elite")));
       wrap.appendChild(this.button("Spawn legendary test drop", () => this.claimDebugReward("legendary")));
     }
+    if (this.onDebugEliteEncounter) wrap.appendChild(this.button("Spawn elite encounter", () => this.spawnDebugEliteEncounter()));
     if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
     const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
     if (!recent.length) {

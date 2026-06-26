@@ -334,6 +334,9 @@ export class World {
       laneOffsetFade: fade,
       elite: !!opts.elite,
       eliteId: opts.eliteId || "",
+      eliteName: opts.eliteName || "",
+      eliteHpMultiplier: opts.eliteHpMultiplier,
+      eliteScale: opts.eliteScale,
     });
   }
 

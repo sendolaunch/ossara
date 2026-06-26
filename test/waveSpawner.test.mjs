@@ -7,6 +7,7 @@ import {
   shouldStartWave,
 } from "../src/sim/waveSpawner.js";
 import { LEVEL } from "../src/config/level.js";
+import { ENEMIES } from "../src/config/enemies.js";
 import { World } from "../src/sim/World.js";
 
 let pass = 0;
@@ -27,7 +28,7 @@ const waves = [
     name: "Two",
     prepTime: 7,
     reward: 20,
-    groups: [{ type: "brute", laneId: "southeast-garden", count: 1, interval: 1, delay: 0, elite: true, eliteId: "test-elite" }],
+    groups: [{ type: "brute", laneId: "southeast-garden", count: 1, interval: 1, delay: 0, elite: true, eliteId: "test-elite", eliteName: "Test Elite", eliteHpMultiplier: 2.5, eliteScale: 1.2 }],
   },
 ];
 
@@ -42,6 +43,7 @@ const waves = [
 {
   const schedule = buildWaveSchedule(waves[1], "legacy-lane");
   ok(schedule.length === 1 && schedule[0].elite && schedule[0].eliteId === "test-elite", "wave schedule preserves controlled elite metadata");
+  ok(schedule[0].eliteName === "Test Elite" && schedule[0].eliteHpMultiplier === 2.5 && schedule[0].eliteScale === 1.2, "wave schedule preserves elite tuning metadata");
 }
 
 {
@@ -87,9 +89,21 @@ const waves = [
   world.update(0.1, {});
   const elite = world.enemies[0];
   ok(elite?.elite && elite.eliteId === "test-elite", "World spawns requested elite enemy metadata");
+  ok(elite.name === "Test Elite" && elite.eliteScale === 1.2, "World spawns requested elite visual identity");
+  ok(elite.maxHp === Math.round(ENEMIES.brute.hp * 2.5) && elite.hp === elite.maxHp, "elite spawns with higher HP than normal equivalent");
   world._damageEnemy(elite, elite.hp + 1);
   const kill = world.events.find((event) => event.kind === "kill");
   ok(kill?.elite && kill.eliteId === "test-elite", "elite kill event carries reward metadata");
+}
+
+{
+  const world = new World(LEVEL, [waves[0]]);
+  world.startWave();
+  world.update(0.1, {});
+  const normal = world.enemies[0];
+  world._damageEnemy(normal, normal.hp + 1);
+  const kill = world.events.find((event) => event.kind === "kill");
+  ok(kill && !kill.elite && !kill.eliteId, "normal enemy kill events do not request physical loot source metadata");
 }
 
 console.log(`waveSpawner: ${pass}/${pass + fail} checks passed`);

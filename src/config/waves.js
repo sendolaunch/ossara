@@ -58,7 +58,7 @@ export const WAVES = [
     reward: 60,
     groups: [
       { type: "husk", laneId: "north-gate", count: 8, interval: 0.9, delay: 0 },
-      { type: "brute", laneId: "north-gate", count: 1, interval: 1, delay: 6, elite: true, eliteId: "gate-bruiser" },
+      { type: "brute", laneId: "north-gate", count: 1, interval: 1, delay: 6, elite: true, eliteId: "gate-bruiser", eliteName: "Gate-Bruiser", eliteHpMultiplier: 3, eliteScale: 1.22 },
     ],
   },
   {
