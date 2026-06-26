@@ -299,3 +299,21 @@ export function getRewardViewerData(account) {
     recent: rewards.summaries.slice().reverse(),
   };
 }
+
+export function missionRewardSummaryData(payload = {}) {
+  const reward = normalizeRewardSummary(payload.reward || payload);
+  const drops = Array.isArray(payload.drops) ? payload.drops : [];
+  const pickups = Array.isArray(payload.pickups) ? payload.pickups.map(normalizeRewardSummaryItem) : [];
+  const items = Array.isArray(reward.items) ? reward.items : [];
+  return {
+    rewardId: reward.rewardId,
+    sourceType: reward.sourceType,
+    label: reward.label,
+    goldEarned: reward.goldGranted,
+    currentGold: reward.currentGold,
+    itemsDropped: reward.shouldSpawnWorldDrop ? items : [],
+    itemsEarned: reward.shouldSpawnWorldDrop ? [] : items,
+    itemsPickedUp: pickups,
+    legacyDropCount: drops.length,
+  };
+}

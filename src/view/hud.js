@@ -6,6 +6,7 @@ import { CSS } from "../config/palette.js";
 import { TOWERS } from "../config/towers.js";
 import { CLASSES } from "../config/classes.js";
 import { MISSION_DASH } from "../config/moves.js";
+import { missionRewardSummaryData } from "../sim/rewardModel.js";
 
 const el = (tag, style = {}, html) => {
   const e = document.createElement(tag);
@@ -587,17 +588,17 @@ export class HUD {
   }
 
   _writeWinSummary(world = null) {
-    const drops = this.rewardSummary?.drops || [];
-    const reward = this.rewardSummary?.reward || this.rewardSummary || {};
-    const dropText = drops.length ? ` Recovered ${drops.length} relic${drops.length === 1 ? "" : "s"}.` : "";
-    const goldText = reward.goldGranted ? ` +${reward.goldGranted} Gold.` : "";
-    const itemNames = reward.items?.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ") || "";
-    const itemText = reward.items?.length
-      ? reward.shouldSpawnWorldDrop ? ` Item dropped: ${itemNames}.` : ` Earned ${itemNames}.`
-      : "";
+    const summary = missionRewardSummaryData(this.rewardSummary || {});
+    const dropText = summary.legacyDropCount ? ` Recovered ${summary.legacyDropCount} relic${summary.legacyDropCount === 1 ? "" : "s"}.` : "";
+    const goldText = summary.goldEarned ? ` +${summary.goldEarned} Gold.` : "";
+    const currentGoldText = summary.currentGold ? ` Current Gold: ${summary.currentGold}.` : "";
+    const itemNames = summary.itemsDropped.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ");
+    const earnedNames = summary.itemsEarned.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ");
+    const pickupText = summary.itemsPickedUp.length ? ` Picked up: ${summary.itemsPickedUp.map((item) => item.name).join(", ")}.` : "";
+    const itemText = itemNames ? ` Item dropped: ${itemNames}.` : earnedNames ? ` Earned ${earnedNames}.` : "";
     const kills = world ? ` ${world.stats.kills} dead put down.` : "";
     const name = this.mission?.name || "The First Seal";
-    this.elEndSub.textContent = `${name} holds.${kills}${goldText}${itemText}${dropText}`;
+    this.elEndSub.textContent = `${name} holds.${kills}${goldText}${currentGoldText}${itemText}${pickupText}${dropText}`;
   }
 
   toast(msg, color = CSS.plague) {

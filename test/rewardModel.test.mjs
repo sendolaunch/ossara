@@ -11,6 +11,7 @@ import {
   eliteRewardDefinition,
   getRewardViewerData,
   grantReward,
+  missionRewardSummaryData,
   missionClearRewardDefinition,
   recordRewardPickup,
   waveClearRewardDefinition,
@@ -55,6 +56,10 @@ function accountWithWarden() {
   ok(res.summary.items[0].stats && Object.values(res.summary.items[0].stats).some((value) => value > 0), "generated mission item reports stats");
   ok(res.summary.shouldSpawnWorldDrop, "mission item reward is flagged for world drop spawning");
   ok(res.summary.delivery === "world-drop", "mission item reward records world-drop delivery");
+  const summary = missionRewardSummaryData({ reward: res.summary });
+  ok(summary.goldEarned === MISSION_CLEAR_GOLD_REWARD, "mission reward summary includes Gold");
+  ok(summary.itemsDropped.length === 1 && summary.itemsDropped[0].id === res.summary.itemId, "mission reward summary includes dropped item");
+  ok(summary.currentGold === MISSION_CLEAR_GOLD_REWARD, "mission reward summary includes current Gold total");
 }
 
 {
@@ -102,6 +107,8 @@ function accountWithWarden() {
   const drop = { dropId: "drop:pickup-log", itemId: item.id, itemInstanceId: item.id, name: item.name, rarity: item.rarity, sourceType: "chest", sourceId: "first-breach:dev-chest" };
   const summary = recordRewardPickup(account, drop, item);
   ok(summary?.delivery === "pickup" && summary.items[0].name === item.name, "pickup reward log distinguishes item pickup");
+  const missionSummary = missionRewardSummaryData({ reward: { rewardId: "mission-pickup-summary", sourceType: "mission", sourceId: "first-breach", goldGranted: 0 }, pickups: summary.items });
+  ok(missionSummary.itemsPickedUp.length === 1 && missionSummary.itemsPickedUp[0].name === item.name, "mission reward summary includes picked-up item");
   const duplicate = recordRewardPickup(account, drop, item);
   ok(duplicate?.duplicate, "pickup reward log is duplicate-protected by drop id");
 }

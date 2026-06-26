@@ -172,10 +172,10 @@ function startMission(missionId = "first-breach", selection = {}) {
       const existing = item ? findLootItem(state, item.id) : null;
       if (item && !existing) addLootItem(state, item);
       profile.lootSkeleton = createLootState(state);
-      if (item) recordRewardPickup(profile, drop, existing || item);
+      const summary = item ? recordRewardPickup(profile, drop, existing || item) : null;
       persist();
       window.OSSARA?.lootSkeletonPanel?.refresh?.();
-      return { ok: !!item, item: existing || item, duplicate: !!existing };
+      return { ok: !!item, item: existing || item, duplicate: !!existing, summary };
     },
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), difficultyCfg.loot);

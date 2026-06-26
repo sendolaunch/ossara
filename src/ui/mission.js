@@ -144,6 +144,7 @@ export class Mission {
     this.onWorldDropPickup = opts.onWorldDropPickup || null;
     this.getLootState = opts.getLootState || (() => null);
     this._wonFired = false;
+    this._rewardSummaryPayload = null;
     this.worldDrops = [];
     this.chests = createMissionChests(this.level);
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
@@ -171,6 +172,7 @@ export class Mission {
     this.input?.resetState?.();
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
+    this._rewardSummaryPayload = null;
     this.worldDrops = [];
     this.chests = createMissionChests(this.level || LEVEL);
     this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
@@ -241,6 +243,10 @@ export class Mission {
     if (this.world.status === "won" && !this._wonFired) {
       this._wonFired = true;
       const reward = this.onWin ? this.onWin() : null;
+      if (reward) {
+        reward.pickups = Array.isArray(reward.pickups) ? reward.pickups : [];
+        this._rewardSummaryPayload = reward;
+      }
       if (reward?.reward?.shouldSpawnWorldDrop) this.spawnWorldDrop(reward.reward);
       if (reward && this.hud.setRewardSummary) this.hud.setRewardSummary(reward);
     }
@@ -307,6 +313,13 @@ export class Mission {
       if (!res.ok) continue;
       const pickup = this.onWorldDropPickup ? this.onWorldDropPickup(drop) : null;
       const itemName = pickup?.item?.name || drop.name;
+      if (pickup?.summary && this._rewardSummaryPayload) {
+        this._rewardSummaryPayload.pickups = this._rewardSummaryPayload.pickups || [];
+        if (!this._rewardSummaryPayload.pickups.some((item) => item.id === pickup.summary.itemId)) {
+          this._rewardSummaryPayload.pickups.push(pickup.summary.items?.[0] || { id: pickup.summary.itemId, name: itemName, rarity: drop.rarity });
+          this.hud.setRewardSummary?.(this._rewardSummaryPayload);
+        }
+      }
       this.hud.toast(pickup?.duplicate ? `${itemName} already picked up.` : `Picked up: ${itemName}`, CSS.gold);
     }
     this.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
