@@ -11,6 +11,7 @@ import { HUD } from "../view/hud.js";
 import { Input } from "../input/Input.js";
 import { CSS } from "../config/palette.js";
 import { resolveMissionStart } from "../config/missions.js";
+import { createWorldDropFromRewardSummary, markWorldDropCollected, trimWorldDrops } from "../sim/worldDrops.js";
 
 const PLACEMENT_MESSAGES = {
   marrow: "Not enough Marrow.",
@@ -110,6 +111,7 @@ export class Mission {
     this.last = 0;
     this.running = false;
     this._startToken = 0;
+    this.worldDrops = [];
     this._frame = this._frame.bind(this);
   }
 
@@ -134,7 +136,9 @@ export class Mission {
     this._equipmentStats = opts.equipmentStats || {};
     this.onWin = opts.onWin || null;
     this.onWaveReward = opts.onWaveReward || null;
+    this.onWorldDropPickup = opts.onWorldDropPickup || null;
     this._wonFired = false;
+    this.worldDrops = [];
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
@@ -159,6 +163,7 @@ export class Mission {
     this.input?.resetState?.();
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
+    this.worldDrops = [];
     this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
@@ -180,6 +185,7 @@ export class Mission {
     this._startToken++;
     this.running = false;
     this.input?.resetState?.();
+    this.worldDrops = [];
     this._show(false);
     if (this.onExit) this.onExit();
   }
@@ -214,6 +220,7 @@ export class Mission {
       }
       this.world.update(this.STEP, cmd);
       this._handleWorldEvents();
+      this._collectWorldDrops();
       this.acc -= this.STEP;
       first = false;
       guard++;
@@ -221,9 +228,11 @@ export class Mission {
     if (this.world.status === "won" && !this._wonFired) {
       this._wonFired = true;
       const reward = this.onWin ? this.onWin() : null;
+      if (reward?.reward?.shouldSpawnWorldDrop) this.spawnWorldDrop(reward.reward);
       if (reward && this.hud.setRewardSummary) this.hud.setRewardSummary(reward);
     }
 
+    this.world.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
     this.renderer.update(this.world, Math.min(dt, 0.05), heroMoveIntent);
     this.hud.update(this.world);
     requestAnimationFrame(this._frame);
@@ -236,5 +245,43 @@ export class Mission {
       const summary = this.onWaveReward(event);
       if (summary?.goldGranted) this.hud.toast(`+${summary.goldGranted} Gold`, CSS.gold);
     }
+  }
+
+  spawnWorldDrop(summary, opts = {}) {
+    const hero = this.world?.hero;
+    const offset = opts.offset || { x: 1.0, z: 0.6 };
+    const drop = createWorldDropFromRewardSummary(summary, {
+      ...opts,
+      position: opts.position || {
+        x: (hero?.x || 0) + offset.x,
+        y: 0,
+        z: (hero?.z || 0) + offset.z,
+      },
+      createdAt: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      pickupDelay: opts.pickupDelay ?? 900,
+    });
+    if (!drop) return null;
+    this.worldDrops = trimWorldDrops([...this.worldDrops, drop]);
+    if (this.world) this.world.worldDrops = this.worldDrops.filter((entry) => !entry.collected);
+    this.hud.toast(`Item dropped: ${drop.name}`, CSS.gold);
+    if (drop.pickupDelay && typeof window !== "undefined") {
+      window.setTimeout(() => this._collectWorldDrops(), drop.pickupDelay + 80);
+    }
+    return drop;
+  }
+
+  _collectWorldDrops() {
+    if (!this.worldDrops.length || !this.world?.hero?.alive) return;
+    const point = { x: this.world.hero.x, z: this.world.hero.z, time: typeof performance !== "undefined" ? performance.now() : Date.now() };
+    for (const drop of this.worldDrops) {
+      if (!drop || drop.collected) continue;
+      if (drop.pickupDelay && point.time - drop.createdAt < drop.pickupDelay) continue;
+      const res = markWorldDropCollected(drop, point);
+      if (!res.ok) continue;
+      const pickup = this.onWorldDropPickup ? this.onWorldDropPickup(drop) : null;
+      const itemName = pickup?.item?.name || drop.name;
+      this.hud.toast(pickup?.duplicate ? `${itemName} already recovered.` : `Recovered ${itemName}.`, CSS.gold);
+    }
+    this.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
   }
 }

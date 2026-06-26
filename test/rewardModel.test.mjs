@@ -33,8 +33,9 @@ function accountWithWarden() {
   loot = res.lootState;
   ok(res.ok, "mission reward grants");
   ok(getActiveHero(account).gold === MISSION_CLEAR_GOLD_REWARD, "mission reward grants larger Gold reward");
-  ok(findLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID), "item reward adds item to inventory");
+  ok(!findLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID), "world-drop item reward waits for pickup before inventory grant");
   ok(res.summary.items.length === 1 && res.summary.items[0].id === FIRST_BREACH_ITEM_REWARD_ID, "reward summary reports item");
+  ok(res.summary.shouldSpawnWorldDrop, "mission item reward is flagged for world drop spawning");
 }
 
 {
@@ -45,7 +46,7 @@ function accountWithWarden() {
   const second = grantReward(account, loot, missionClearRewardDefinition({ rewardId: "mission-test-repeat" }));
   ok(!second.ok && second.duplicate, "no reward granted twice on repeated completion call");
   ok(getActiveHero(account).gold === MISSION_CLEAR_GOLD_REWARD, "repeated completion does not add extra Gold");
-  ok(findLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID), "first completion item remains");
+  ok(!findLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID), "repeated completion still does not auto-grant dropped item");
 }
 
 {

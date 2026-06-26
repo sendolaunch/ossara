@@ -65,7 +65,7 @@ export function missionClearRewardDefinition({ rewardId, missionId = "first-brea
     gold: MISSION_CLEAR_GOLD_REWARD,
     itemId: FIRST_BREACH_ITEM_REWARD_ID,
     rarity: FIXED_REWARD_ITEMS_BY_ID[FIRST_BREACH_ITEM_REWARD_ID]?.rarity || "uncommon",
-    shouldSpawnWorldDrop: false,
+    shouldSpawnWorldDrop: true,
     label: "Breach held",
   });
 }
@@ -100,11 +100,13 @@ export function grantReward(account, lootState, rewardDef, catalog = FIXED_REWAR
 
   const items = [];
   const state = createLootState(lootState);
-  if (reward.itemId && reward.autoClaim) {
+  if (reward.itemId) {
     const item = catalog[reward.itemId] || null;
-    if (item && !findLootItem(state, item.id)) {
-      const res = addLootItem(state, item);
-      if (res.ok) items.push(res.item);
+    if (item) {
+      items.push(item);
+      if (reward.autoClaim && !reward.shouldSpawnWorldDrop && !findLootItem(state, item.id)) {
+        addLootItem(state, item);
+      }
     }
   }
 

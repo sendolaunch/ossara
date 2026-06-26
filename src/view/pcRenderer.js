@@ -12,6 +12,7 @@ import { MODELS } from "../config/models.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
+import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
 
@@ -34,6 +35,19 @@ function mat(colorKey, emissiveAmt = 0) {
     m.emissive = c;
     m.emissiveIntensity = emissiveAmt;
   }
+  m.update();
+  return m;
+}
+
+function translucentMat(colorKey, emissiveAmt = 0.9, opacity = 0.55) {
+  const c = col(colorValue(colorKey));
+  const m = new pc.StandardMaterial();
+  m.diffuse = c;
+  m.emissive = c;
+  m.emissiveIntensity = emissiveAmt;
+  m.opacity = opacity;
+  m.blendType = pc.BLEND_NORMAL;
+  m.depthWrite = false;
   m.update();
   return m;
 }
@@ -247,6 +261,7 @@ export class PCRenderer {
     this.enemyModelWarned = new Set();
     this.projEntities = new Map();
     this.towerEntities = new Map();
+    this.worldDropEntities = new Map();
     this.spawnIndicatorEntities = [];
     this.laneTelegraphEntities = [];
     this.fx = [];
@@ -1231,6 +1246,7 @@ export class PCRenderer {
     this._syncEnemies(world, dt);
     this._syncProjectiles(world);
     this._syncTowers(world);
+    this._syncWorldDrops(world, dt);
     this._syncHero(world, heroAnim);
     this._syncCommandTarget(world);
     this._spawnEventFx(world.events);
@@ -1248,6 +1264,95 @@ export class PCRenderer {
       else if (ev.kind === "slam") this._wardSlamPulse(ev.x, ev.z, ev.range || 2.25);
       else if (ev.kind === "towerUpgraded" || ev.kind === "towerRepaired") this._ring(ev.x, ev.z, 0.95, "gold", 0.28);
       else if (ev.kind === "towerSold") this._ring(ev.x, ev.z, 0.85, "ash", 0.22);
+    }
+  }
+
+  _dropColor(drop) {
+    return WORLD_DROP_RARITY_COLORS[String(drop?.rarity || "common").toLowerCase()] || WORLD_DROP_RARITY_COLORS.common;
+  }
+
+  _createWorldDropEntity(drop) {
+    const color = this._dropColor(drop);
+    const root = new pc.Entity(`world-loot-drop-${drop.dropId}`);
+    root._ossaraDropId = drop.dropId;
+    root._ossaraDropAge = Math.random() * 10;
+
+    const beam = prim("cylinder", translucentMat(color, 1.2, 0.34));
+    beam.name = "rarity-beam";
+    beam.render.castShadows = false;
+    beam.render.receiveShadows = false;
+    beam.setLocalScale(0.08, 2.35, 0.08);
+    beam.setLocalPosition(0, 1.32, 0);
+    root.addChild(beam);
+
+    const ring = prim("torus", translucentMat(color, 1.0, 0.58));
+    ring.name = "loot-ground-ring";
+    ring.render.castShadows = false;
+    ring.render.receiveShadows = false;
+    ring.setLocalEulerAngles(90, 0, 0);
+    ring.setLocalScale(0.7, 0.7, 0.7);
+    ring.setLocalPosition(0, 0.08, 0);
+    root.addChild(ring);
+
+    const glow = prim("sphere", translucentMat(color, 1.4, 0.46));
+    glow.name = "loot-glow";
+    glow.render.castShadows = false;
+    glow.render.receiveShadows = false;
+    glow.setLocalScale(0.34, 0.2, 0.34);
+    glow.setLocalPosition(0, 0.42, 0);
+    root.addChild(glow);
+
+    const item = prim("box", mat(color, 0.65));
+    item.name = "loot-item-placeholder";
+    item.setLocalScale(0.18, 0.12, 0.56);
+    item.setLocalPosition(0, 0.62, 0);
+    root.addChild(item);
+
+    const light = new pc.Entity("loot-light");
+    light.addComponent("light", { type: "point", color: col(colorValue(color)), intensity: 0.45, range: 3.2, castShadows: false });
+    light.setLocalPosition(0, 0.9, 0);
+    root.addChild(light);
+
+    root._ossaraLootItem = item;
+    root._ossaraLootRing = ring;
+    root._ossaraLootGlow = glow;
+    this.app.root.addChild(root);
+    return root;
+  }
+
+  _syncWorldDrops(world, dt) {
+    const drops = (world.worldDrops || []).filter((drop) => drop && !drop.collected);
+    const seen = new Set();
+    const time = performance.now() * 0.001;
+    for (const drop of drops) {
+      seen.add(drop.dropId);
+      let ent = this.worldDropEntities.get(drop.dropId);
+      if (!ent) {
+        ent = this._createWorldDropEntity(drop);
+        this.worldDropEntities.set(drop.dropId, ent);
+      }
+      const pos = drop.position || { x: 0, y: 0, z: 0 };
+      ent.setPosition(pos.x, pos.y || 0, pos.z);
+      ent._ossaraDropAge = (ent._ossaraDropAge || 0) + dt;
+      const bob = Math.sin(time * 3.2 + ent._ossaraDropAge) * 0.08;
+      if (ent._ossaraLootItem) {
+        ent._ossaraLootItem.setLocalPosition(0, 0.62 + bob, 0);
+        ent._ossaraLootItem.setLocalEulerAngles(18, (time * 90 + ent._ossaraDropAge * 40) % 360, 8);
+      }
+      if (ent._ossaraLootRing) {
+        const s = 0.68 + Math.sin(time * 4.5 + ent._ossaraDropAge) * 0.06;
+        ent._ossaraLootRing.setLocalScale(s, s, s);
+      }
+      if (ent._ossaraLootGlow) {
+        const s = 0.34 + Math.sin(time * 4 + ent._ossaraDropAge) * 0.04;
+        ent._ossaraLootGlow.setLocalScale(s, 0.2, s);
+      }
+    }
+    for (const [id, ent] of this.worldDropEntities) {
+      if (!seen.has(id)) {
+        ent.destroy();
+        this.worldDropEntities.delete(id);
+      }
     }
   }
 
@@ -1823,6 +1928,8 @@ export class PCRenderer {
     this.projEntities.clear();
     for (const [, ent] of this.towerEntities) ent.destroy();
     this.towerEntities.clear();
+    for (const [, ent] of this.worldDropEntities) ent.destroy();
+    this.worldDropEntities.clear();
     if (this.commandTargetRing) this.commandTargetRing.enabled = false;
     if (this.commandTargetHalo) this.commandTargetHalo.enabled = false;
     if (this.commandTargetIcon) this.commandTargetIcon.enabled = false;

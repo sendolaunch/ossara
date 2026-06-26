@@ -55,6 +55,11 @@ export class LootSkeletonPanel {
     return result;
   }
 
+  refresh() {
+    this.state = createLootState(this.getState?.());
+    this.render();
+  }
+
   activeHero() {
     return this.getHero?.() || null;
   }
@@ -80,8 +85,9 @@ export class LootSkeletonPanel {
     if (!this.onDebugReward) return;
     const summary = this.onDebugReward();
     this.state = createLootState(this.getState?.());
-    const itemText = summary?.items?.length ? ` + ${summary.items.map((item) => item.name).join(", ")}` : "";
-    this.rewardMessage = summary ? `Claimed +${summary.goldGranted || 0} Gold${itemText}.` : "Reward claim failed.";
+    const itemText = summary?.items?.length ? summary.items.map((item) => item.name).join(", ") : "";
+    const itemPart = itemText ? summary.shouldSpawnWorldDrop ? ` Item dropped: ${itemText}.` : ` + ${itemText}.` : "";
+    this.rewardMessage = summary ? `Claimed +${summary.goldGranted || 0} Gold.${itemPart}` : "Reward claim failed.";
     this.render();
   }
 
@@ -133,7 +139,7 @@ export class LootSkeletonPanel {
     });
     wrap.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Reward Log v1"));
     wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
-      `${rewards.claimedCount || 0} reward claim${rewards.claimedCount === 1 ? "" : "s"} recorded. Common rewards auto-claim; world drops come later.`));
+      `${rewards.claimedCount || 0} reward claim${rewards.claimedCount === 1 ? "" : "s"} recorded. Common rewards auto-claim; important items can drop in-world.`));
     if (this.onDebugReward) wrap.appendChild(this.button("Dev reward claim", () => this.claimDebugReward()));
     if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
     const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
@@ -142,7 +148,8 @@ export class LootSkeletonPanel {
       return wrap;
     }
     for (const summary of recent) {
-      const itemText = summary.items?.length ? ` | ${summary.items.map((item) => item.name).join(", ")}` : "";
+      const itemNames = summary.items?.map((item) => item.name).join(", ") || "";
+      const itemText = itemNames ? summary.shouldSpawnWorldDrop ? ` | Item dropped: ${itemNames}` : ` | ${itemNames}` : "";
       const goldText = summary.goldGranted ? `+${summary.goldGranted} Gold` : "No Gold";
       wrap.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" },
         `${summary.sourceType}: ${goldText}${itemText}`));

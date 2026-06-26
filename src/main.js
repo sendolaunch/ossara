@@ -8,11 +8,12 @@ import { Mission } from "./ui/mission.js";
 import { Hub } from "./ui/hub3d.js";
 import { MapSelect } from "./ui/mapselect.js";
 import { CSS } from "./config/palette.js";
+import { FIXED_REWARD_ITEMS_BY_ID } from "./config/items.js";
 import { mountVersionBadge } from "./ui/versionBadge.js";
 import { loadProfile, saveProfile, addItem, getActiveHero, getBonuses, setActive } from "./sim/profile.js";
 import { makeRng } from "./sim/rng.js";
 import { rollMissionDrops } from "./sim/loot.js";
-import { createLootState, getAppliedLootStats } from "./sim/lootModel.js";
+import { addLootItem, createLootState, findLootItem, getAppliedLootStats } from "./sim/lootModel.js";
 import {
   ensureRewardState,
   FIRST_BREACH_ITEM_REWARD_ID,
@@ -138,6 +139,16 @@ function startMission(missionId = "first-breach", selection = {}) {
       if (res.ok) persist();
       return res.summary;
     },
+    onWorldDropPickup: (drop) => {
+      const item = FIXED_REWARD_ITEMS_BY_ID[drop.itemId] || null;
+      const state = createLootState(profile.lootSkeleton);
+      const existing = item ? findLootItem(state, item.id) : null;
+      if (item && !existing) addLootItem(state, item);
+      profile.lootSkeleton = createLootState(state);
+      persist();
+      window.OSSARA?.lootSkeletonPanel?.refresh?.();
+      return { ok: !!item, item: existing || item, duplicate: !!existing };
+    },
     onWin: () => {
       const drops = rollMissionDrops(makeRng(), difficultyCfg.loot);
       drops.forEach((d) => addItem(profile, d));
@@ -261,11 +272,12 @@ if (devLoot) {
         gold: 8,
         itemId: FIRST_BREACH_ITEM_REWARD_ID,
         rarity: "uncommon",
-        shouldSpawnWorldDrop: false,
+        shouldSpawnWorldDrop: true,
         label: "Dev reward",
       });
       if (res.lootState) profile.lootSkeleton = createLootState(res.lootState);
       if (res.ok) persist();
+      if (res.summary?.shouldSpawnWorldDrop && mission) mission.spawnWorldDrop(res.summary);
       return res.summary;
     },
     onChange: (state) => {
