@@ -16,8 +16,9 @@ export class WardCharge {
     this.overlay = document.createElement("div");
     Object.assign(this.overlay.style, {
       position: "absolute", inset: "0", pointerEvents: "none", zIndex: "6",
-      opacity: "0", transition: "opacity .12s",
+      display: "none", opacity: "0", transition: "opacity .12s",
     });
+    this.overlay.setAttribute("aria-hidden", "true");
 
     this.label = document.createElement("div");
     Object.assign(this.label.style, {
@@ -46,6 +47,8 @@ export class WardCharge {
     if (this.active) return;
     this.active = true;
     this.t = 0;
+    this.overlay.style.display = "block";
+    this.overlay.setAttribute("aria-hidden", "false");
     this.overlay.style.opacity = "1";
     this._render(0);
   }
@@ -54,6 +57,8 @@ export class WardCharge {
     this.active = false;
     this.t = 0;
     this.overlay.style.opacity = "0";
+    this.overlay.style.display = "none";
+    this.overlay.setAttribute("aria-hidden", "true");
   }
 
   // call each frame while active; returns progress 0..1
@@ -65,6 +70,8 @@ export class WardCharge {
     if (p >= 1) {
       this.active = false;
       this.overlay.style.opacity = "0";
+      this.overlay.style.display = "none";
+      this.overlay.setAttribute("aria-hidden", "true");
       this.onComplete();
     }
     return p;

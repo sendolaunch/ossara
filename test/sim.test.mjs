@@ -145,6 +145,7 @@ section("first breach pacing");
   ok(WAVES.every((w) => w.name && w.hint && w.warning), "each wave has teaching/pressure HUD copy");
   ok(!`${WAVES[0].hint} ${WAVES[0].warning}`.includes("Main Gate"), "wave 1 copy avoids stale pre-refit lane names");
   ok(`${WAVES[0].hint} ${WAVES[0].warning}`.includes("Central Stair"), "wave 1 copy points at the current central route");
+  ok(WAVES[0].hint.includes("[1]/[2]") && WAVES[0].hint.includes("Enter"), "wave 1 copy explains build selection and start controls");
   ok(WAVES[0].prepTime >= 30, "wave 1 gives a long first build phase");
   ok(WAVES[0].groups.every((g) => g.type === "rotling"), "wave 1 teaches with Rotlings only");
   ok(waveTypes(WAVES[1]).has("gravebreaker"), "wave 2 introduces Gravebreaker pressure");

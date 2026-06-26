@@ -110,7 +110,7 @@ ok(abilityReady.text === "Q Ward Slam READY", "ability HUD data uses the short Q
 const abilityCooling = abilityPanelData({ alive: true, abilityCd: 2.4, ability: { name: "Ward Slam", cooldown: 5 } });
 ok(!abilityCooling.ready && abilityCooling.ratio > 0 && abilityCooling.ratio < 1 && abilityCooling.status === "2.4s" && abilityCooling.text === "Q Ward Slam 2.4s", "ability HUD data reports Q cooldown state");
 
-ok(heroKitHintData({ id: "warden", name: "Warden" }) === "Warden: hold lanes, slam crowds, reposition with Dash", "Warden kit hint explains the current role");
+ok(heroKitHintData({ id: "warden", name: "Warden" }) === "Warden: left-click strike, Q slam crowds, Space dash", "Warden kit hint explains the current role and keys");
 ok(heroKitHintData({ id: "hunter", name: "Hunter" }) === "", "non-Warden kit hint stays quiet for now");
 
 const flowWorld = {
@@ -128,7 +128,7 @@ const buildPhase = wavePhaseBannerData(flowWorld);
 ok(buildPhase.phaseText === "BUILD - WAVE 3/5 - Bonebow Backline - 19s", "build phase banner includes wave number, name, and timer");
 ok(buildPhase.hintText === "Build to answer range." && buildPhase.startVisible, "build phase data exposes hint and start button state");
 const fallbackBuildPhase = wavePhaseBannerData({ phase: "prep", waveIndex: 0, totalWaves: 1, prepTimer: 9, waves: [{ name: "Fallback" }] });
-ok(fallbackBuildPhase.hintText === "Build near a green lane choke, then start the wave.", "fallback build hint matches current lane readability language");
+ok(fallbackBuildPhase.hintText === "Use [1]/[2], click a green choke, then Start Wave or Enter.", "fallback build hint explains build selection and wave start controls");
 const combatPhase = wavePhaseBannerData({ ...flowWorld, phase: "active", prepTimer: 0 });
 ok(combatPhase.phaseText === "COMBAT - WAVE 3/5 - Bonebow Backline", "combat phase banner includes wave number and name");
 ok(combatPhase.hintText === "Bonebows are firing." && !combatPhase.startVisible, "combat phase data exposes warning and hides start button");

@@ -113,6 +113,8 @@ const item = (id, slot, stats = {}) => ({
   ok(playerClosed.title === "Inventory / Forge", "player-facing inventory Forge panel is available outside devLoot");
   ok(!playerClosed.debugControlsVisible, "debug reward controls are hidden outside devLoot");
   ok(playerClosed.toggleLabel === "Inventory / Forge", "closed player panel exposes open label");
+  ok(playerClosed.subtitle.includes("Picked-up drops") && playerClosed.subtitle.includes("Forge"), "player panel subtitle explains drops and Forge");
+  ok(!playerClosed.subtitle.toLowerCase().includes("debug"), "player panel subtitle avoids dev-only language");
 
   const playerOpen = lootPanelAccessData({ devMode: false, visible: true });
   ok(playerOpen.toggleLabel === "Close Inventory / Forge", "open player panel exposes close label");

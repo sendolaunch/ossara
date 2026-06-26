@@ -33,7 +33,7 @@ export const TUTORIAL_WAVES = [
 export const WAVES = [
   {
     name: "Rotlings",
-    hint: "Build near the Central Stair choke, then start the wave when you are ready.",
+    hint: "Use [1]/[2], click a green Central Stair choke, then Start Wave or Enter.",
     warning: "Rotlings only. Basic lane pressure down the Central Stair.",
     prepTime: 34,
     reward: 45,

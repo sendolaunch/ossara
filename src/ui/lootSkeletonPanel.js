@@ -39,7 +39,7 @@ export function lootPanelAccessData({ devMode = false, visible = false } = {}) {
     title: devMode ? "Loot Dev Panel" : "Inventory / Forge",
     subtitle: devMode
       ? "Dev-only equipment and reward controls. Player inventory/Forge flow is shown below."
-      : "Manage equipment and upgrade owned items. Debug rewards stay hidden.",
+      : "Picked-up drops appear here. Equip gear or select one for Forge upgrades.",
     debugControlsVisible: !!devMode,
     toggleLabel: visible ? "Close Inventory / Forge" : "Inventory / Forge",
   };
@@ -459,7 +459,7 @@ export class LootSkeletonPanel {
 
     const items = el("div", { marginTop: "10px" });
     items.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, `Inventory (${this.state.items.length})`));
-    if (!this.state.items.length) items.appendChild(el("div", { color: CSS.ash }, "No skeleton items yet."));
+    if (!this.state.items.length) items.appendChild(el("div", { color: CSS.ash }, "No items yet. Open chests or pick up glowing drops."));
     const itemRows = lootPanelItemRows(this.state, this.selectedForgeItemId);
     for (const row of itemRows) {
       const card = el("div", {

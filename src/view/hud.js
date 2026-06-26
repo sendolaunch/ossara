@@ -188,7 +188,7 @@ export function abilityPanelData(hero) {
 
 export function heroKitHintData(hero) {
   if (!hero) return "";
-  if (hero.id === "warden" || hero.name === "Warden") return "Warden: hold lanes, slam crowds, reposition with Dash";
+  if (hero.id === "warden" || hero.name === "Warden") return "Warden: left-click strike, Q slam crowds, Space dash";
   return "";
 }
 
@@ -202,7 +202,7 @@ export function wavePhaseBannerData(world) {
     const t = Math.max(0, Math.ceil(world.prepTimer || 0));
     return {
       phaseText: `BUILD - WAVE ${waveNumber}/${total} - ${waveName} - ${t}s`,
-      hintText: currentWave.hint || "Build near a green lane choke, then start the wave.",
+      hintText: currentWave.hint || "Use [1]/[2], click a green choke, then Start Wave or Enter.",
       startVisible: true,
       color: CSS.plague,
     };
@@ -297,25 +297,27 @@ export class HUD {
     const tl = el("div", { position: "absolute", top: "12px", left: "12px", pointerEvents: "auto", ...panel(), padding: "10px 14px", minWidth: "200px" });
     this.elMission = el("div", { font: "700 12px 'Cinzel',serif", letterSpacing: "1px", color: CSS.gold, marginBottom: "6px" }, "THE FIRST SEAL");
     this.elDifficulty = el("div", { color: CSS.ash, fontSize: "11px", margin: "-4px 0 6px" }, "Initiate");
+    this.elObjective = el("div", { color: CSS.plague, fontSize: "11px", lineHeight: "1.35", margin: "-2px 0 7px", fontWeight: "800" }, "Protect the Ward Crystal");
     const statRow = (iconHtml, label) => {
       const r = el("div", { display: "flex", alignItems: "center", gap: "8px", margin: "3px 0" });
       const ic = el("span", { display: "inline-flex", width: "16px" }, iconHtml);
+      const name = el("span", { flex: "1", color: CSS.ash, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }, label);
       const v = el("span", { fontWeight: "700", letterSpacing: "0.5px" });
-      r.append(ic, v);
+      r.append(ic, name, v);
       return { row: r, val: v };
     };
-    const w1 = statRow(ICON.wave(CSS.ash), "wave");
+    const w1 = statRow(ICON.wave(CSS.ash), "Wave");
     this.elWave = w1.val;
-    const w2 = statRow(ICON.ward(CSS.plague), "ward");
+    const w2 = statRow(ICON.ward(CSS.plague), "Ward Crystal");
     this.elWard = w2.val;
     // ward bar
     this.wardBarOuter = el("div", { background: "#1a1c15", borderRadius: "4px", height: "6px", margin: "2px 0 4px 24px", overflow: "hidden" });
     this.wardBar = el("div", { background: CSS.plague, height: "100%", width: "100%" });
     this.wardBarOuter.appendChild(this.wardBar);
-    const w3 = statRow(ICON.marrow(CSS.gold), "marrow");
+    const w3 = statRow(ICON.marrow(CSS.gold), "Marrow");
     this.elMarrow = w3.val;
     this.elMarrow.style.color = CSS.gold;
-    tl.append(this.elMission, this.elDifficulty, w1.row, w2.row, this.wardBarOuter, w3.row);
+    tl.append(this.elMission, this.elDifficulty, this.elObjective, w1.row, w2.row, this.wardBarOuter, w3.row);
     this.root.appendChild(tl);
 
     this.lootTooltip = el("div", {
@@ -352,7 +354,7 @@ export class HUD {
     const banner = el("div", { position: "absolute", top: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", pointerEvents: "auto" });
     this.elPhase = el("div", { ...panel(), padding: "8px 20px", font: "700 15px 'Cinzel', ui-monospace, monospace", letterSpacing: "3px" });
     this.elStart = el("button", { cursor: "pointer", padding: "7px 18px", borderRadius: "9px", border: "none", background: CSS.plague, color: CSS.void, font: "700 13px ui-monospace, monospace", letterSpacing: "1px" });
-    this.elStart.textContent = "START WAVE ▸";
+    this.elStart.textContent = "START WAVE (ENTER)";
     this.elStart.onclick = () => {
       this.elStart.blur?.();
       this.cb.onStart();
@@ -376,7 +378,7 @@ export class HUD {
     this.elDashBar = el("div", { background: CSS.plague, height: "100%", width: "100%" });
     dashOuter.appendChild(this.elDashBar);
     this.elDashLabel = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "3px", fontWeight: "800", letterSpacing: "0.2px" }, "Space Dash READY");
-    this.elKitHint = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "5px", lineHeight: "1.25", maxWidth: "218px" }, "Warden: hold lanes, slam crowds, reposition with Dash");
+    this.elKitHint = el("div", { fontSize: "10px", color: CSS.ash, marginTop: "5px", lineHeight: "1.25", maxWidth: "218px" }, "Warden: left-click strike, Q slam crowds, Space dash");
     hrInfo.append(this.elHeroName, hpOuter, abOuter, this.elAbLabel, dashOuter, this.elDashLabel, this.elKitHint);
     hr.append(this.heroIcon, hrInfo);
     this.root.appendChild(hr);
