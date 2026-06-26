@@ -33,8 +33,8 @@ export const TUTORIAL_WAVES = [
 export const WAVES = [
   {
     name: "Rotlings",
-    hint: "Build beside the Main Gate lane. Learn where your defenses can reach.",
-    warning: "Rotlings only. Basic lane pressure from the Main Gate.",
+    hint: "Build near the Central Stair choke, then start the wave when you are ready.",
+    warning: "Rotlings only. Basic lane pressure down the Central Stair.",
     prepTime: 34,
     reward: 45,
     groups: [{ type: "rotling", laneId: "north-gate", count: 7, interval: 1.35, delay: 0 }],

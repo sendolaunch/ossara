@@ -202,7 +202,7 @@ export function wavePhaseBannerData(world) {
     const t = Math.max(0, Math.ceil(world.prepTimer || 0));
     return {
       phaseText: `BUILD - WAVE ${waveNumber}/${total} - ${waveName} - ${t}s`,
-      hintText: currentWave.hint || "Build beside the lane, then start the wave.",
+      hintText: currentWave.hint || "Build near a green lane choke, then start the wave.",
       startVisible: true,
       color: CSS.plague,
     };

@@ -126,6 +126,8 @@ const flowWorld = {
 const buildPhase = wavePhaseBannerData(flowWorld);
 ok(buildPhase.phaseText === "BUILD - WAVE 3/5 - Bonebow Backline - 19s", "build phase banner includes wave number, name, and timer");
 ok(buildPhase.hintText === "Build to answer range." && buildPhase.startVisible, "build phase data exposes hint and start button state");
+const fallbackBuildPhase = wavePhaseBannerData({ phase: "prep", waveIndex: 0, totalWaves: 1, prepTimer: 9, waves: [{ name: "Fallback" }] });
+ok(fallbackBuildPhase.hintText === "Build near a green lane choke, then start the wave.", "fallback build hint matches current lane readability language");
 const combatPhase = wavePhaseBannerData({ ...flowWorld, phase: "active", prepTimer: 0 });
 ok(combatPhase.phaseText === "COMBAT - WAVE 3/5 - Bonebow Backline", "combat phase banner includes wave number and name");
 ok(combatPhase.hintText === "Bonebows are firing." && !combatPhase.startVisible, "combat phase data exposes warning and hides start button");

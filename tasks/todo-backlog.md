@@ -125,6 +125,10 @@ rules: NO pay-to-win / staking / token-grind / burn. Platform: BAGS.
   plague-green inlay/accent, worn ancient feel, transparent background, readable at small sizes
   on dark UI. Need one clean single-coin icon; optional stacked-coin version for menus/rewards.
 - **[P3]** Marketplace (player trading, 2% fee).
+- **[P3]** Later, after the core vertical slice and map art are farther along, do a
+  multiplayer/server architecture deep dive for how OSSARA should support many concurrent
+  players while each active lobby/world only has around 4 players. Research
+  lobby/session/world-server patterns from other games. Do not implement now.
 - **[P3]** On-chain: Solana wallet connect, $OSSA mint (public mint addr OK in client; NO
   private keys / paid RPC keys in `src/` — use a serverless proxy). Smart contracts. **Test
   exhaustively on devnet before anything touches a live wallet** (real money, design §6.9/§11).
