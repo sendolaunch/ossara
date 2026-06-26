@@ -1,4 +1,17 @@
-import { abilityPanelData, commandCastPanelData, commandTargetPanelData, dashPanelData, defensePanelData, defenseTypeLabel, heroKitHintData, selectedDefensePanelData } from "../src/view/hud.js";
+import {
+  abilityPanelData,
+  commandCastPanelData,
+  commandTargetPanelData,
+  dashPanelData,
+  defensePanelData,
+  defenseTypeLabel,
+  heroKitHintData,
+  missionVictoryPanelData,
+  selectedDefensePanelData,
+  waveClearToastText,
+  wavePhaseBannerData,
+  waveStartToastText,
+} from "../src/view/hud.js";
 
 let pass = 0;
 let fail = 0;
@@ -98,6 +111,48 @@ ok(!abilityCooling.ready && abilityCooling.ratio > 0 && abilityCooling.ratio < 1
 
 ok(heroKitHintData({ id: "warden", name: "Warden" }) === "Warden: hold lanes, slam crowds, reposition with Dash", "Warden kit hint explains the current role");
 ok(heroKitHintData({ id: "hunter", name: "Hunter" }) === "", "non-Warden kit hint stays quiet for now");
+
+const flowWorld = {
+  phase: "prep",
+  waveIndex: 2,
+  totalWaves: 5,
+  prepTimer: 18.2,
+  waves: [
+    { name: "Rotlings", hint: "Wave one hint", warning: "Wave one warning" },
+    { name: "Gravebreaker Pressure", hint: "Wave two hint", warning: "Wave two warning" },
+    { name: "Bonebow Backline", hint: "Build to answer range.", warning: "Bonebows are firing." },
+  ],
+};
+const buildPhase = wavePhaseBannerData(flowWorld);
+ok(buildPhase.phaseText === "BUILD - WAVE 3/5 - Bonebow Backline - 19s", "build phase banner includes wave number, name, and timer");
+ok(buildPhase.hintText === "Build to answer range." && buildPhase.startVisible, "build phase data exposes hint and start button state");
+const combatPhase = wavePhaseBannerData({ ...flowWorld, phase: "active", prepTimer: 0 });
+ok(combatPhase.phaseText === "COMBAT - WAVE 3/5 - Bonebow Backline", "combat phase banner includes wave number and name");
+ok(combatPhase.hintText === "Bonebows are firing." && !combatPhase.startVisible, "combat phase data exposes warning and hides start button");
+ok(waveStartToastText(flowWorld.waves[2], 3).includes("Wave 3: Bonebow Backline"), "wave start toast names the current wave");
+ok(waveClearToastText({ wave: 3, reward: 60 }, flowWorld.waves) === "Wave 3 held: Bonebow Backline. +60 Marrow", "wave clear toast includes name and reward");
+
+const victory = missionVictoryPanelData(
+  { id: "first-breach", name: "The First Seal" },
+  {
+    reward: {
+      rewardId: "mission:first-breach:test",
+      sourceType: "mission",
+      sourceId: "first-breach",
+      label: "Breach held",
+      goldGranted: 35,
+      currentGold: 91,
+      shouldSpawnWorldDrop: true,
+      items: [{ id: "blade", name: "Wardforged Blade", rarity: "uncommon", slot: "weapon" }],
+    },
+    pickups: [{ id: "blade", name: "Wardforged Blade", rarity: "uncommon", slot: "weapon" }],
+  },
+  { stats: { kills: 27 } },
+);
+ok(victory.title === "FIRST BREACH CLEARED", "victory title clearly names First Breach completion");
+ok(victory.subtitle.includes("The Ward holds.") && victory.subtitle.includes("Gold +35.") && victory.subtitle.includes("Current Gold: 91."), "victory subtitle includes Ward and Gold summary");
+ok(victory.subtitle.includes("Item dropped: Wardforged Blade") && victory.subtitle.includes("Picked up: Wardforged Blade"), "victory subtitle includes item drop and pickup summary");
+ok(victory.returnLabel === "Return to Tavern", "victory return action points back to the Tavern");
 
 console.log(`hudData: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

@@ -192,6 +192,69 @@ export function heroKitHintData(hero) {
   return "";
 }
 
+export function wavePhaseBannerData(world) {
+  if (!world) return { phaseText: "", hintText: "", startVisible: false };
+  const total = world.totalWaves || world.waves?.length || 1;
+  const waveNumber = Math.min((world.waveIndex || 0) + 1, total);
+  const currentWave = world.waves?.[Math.min(world.waveIndex || 0, total - 1)] || {};
+  const waveName = currentWave.name || `Wave ${waveNumber}`;
+  if (world.phase === "prep") {
+    const t = Math.max(0, Math.ceil(world.prepTimer || 0));
+    return {
+      phaseText: `BUILD - WAVE ${waveNumber}/${total} - ${waveName} - ${t}s`,
+      hintText: currentWave.hint || "Build beside the lane, then start the wave.",
+      startVisible: true,
+      color: CSS.plague,
+    };
+  }
+  if (world.phase === "active") {
+    return {
+      phaseText: `COMBAT - WAVE ${waveNumber}/${total} - ${waveName}`,
+      hintText: currentWave.warning || "Hold the breach. Move with WASD and use Q when enemies cluster.",
+      startVisible: false,
+      color: CSS.gold,
+    };
+  }
+  return { phaseText: "", hintText: "", startVisible: false, color: CSS.ash };
+}
+
+export function waveStartToastText(wave, waveNumber) {
+  const name = wave?.name || `Wave ${waveNumber}`;
+  const warning = wave?.warning || "";
+  return warning ? `Wave ${waveNumber}: ${name}. ${warning}` : `Wave ${waveNumber}: ${name}`;
+}
+
+export function waveClearToastText(event, waves = []) {
+  const waveNumber = Number(event?.wave || 0);
+  const wave = waves[Math.max(0, waveNumber - 1)] || {};
+  const name = wave.name ? `: ${wave.name}` : "";
+  const reward = event?.reward ? ` +${event.reward} Marrow` : "";
+  return `Wave ${waveNumber} held${name}.${reward}`;
+}
+
+export function missionVictoryPanelData(mission, rewardPayload = {}, world = null) {
+  const summary = missionRewardSummaryData(rewardPayload || {});
+  const missionId = mission?.id || "";
+  const missionName = mission?.name || mission?.title || "Mission";
+  const title = missionId === "first-breach" ? "FIRST BREACH CLEARED" : `${missionName} CLEARED`.toUpperCase();
+  const details = ["The Ward holds."];
+  if (world?.stats?.kills) details.push(`${world.stats.kills} enemies defeated.`);
+  if (summary.goldEarned) details.push(`Gold +${summary.goldEarned}.`);
+  if (summary.currentGold) details.push(`Current Gold: ${summary.currentGold}.`);
+  const dropped = summary.itemsDropped.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ");
+  const earned = summary.itemsEarned.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ");
+  const picked = summary.itemsPickedUp.map((item) => item.name).join(", ");
+  if (dropped) details.push(`Item dropped: ${dropped}.`);
+  else if (earned) details.push(`Earned: ${earned}.`);
+  if (picked) details.push(`Picked up: ${picked}.`);
+  if (summary.legacyDropCount) details.push(`Recovered ${summary.legacyDropCount} relic${summary.legacyDropCount === 1 ? "" : "s"}.`);
+  return {
+    title,
+    subtitle: details.join(" "),
+    returnLabel: "Return to Tavern",
+  };
+}
+
 export class HUD {
   constructor(root, cb) {
     this.cb = cb;
@@ -452,7 +515,7 @@ export class HUD {
     const btnRow = el("div", { display: "flex", gap: "12px", marginTop: "6px" });
     const retry = el("button", { cursor: "pointer", padding: "12px 24px", borderRadius: "9px", border: "none", background: CSS.plague, color: CSS.void, font: "700 15px ui-monospace,monospace" }, "Retry breach");
     retry.onclick = () => this.cb.onRestart();
-    const exit = el("button", { cursor: "pointer", padding: "12px 24px", borderRadius: "9px", border: `1px solid ${CSS.rot}`, background: "rgba(7,8,6,0.6)", color: CSS.bone, font: "700 15px ui-monospace,monospace" }, "Return to Undercroft");
+    const exit = el("button", { cursor: "pointer", padding: "12px 24px", borderRadius: "9px", border: `1px solid ${CSS.rot}`, background: "rgba(7,8,6,0.6)", color: CSS.bone, font: "700 15px ui-monospace,monospace" }, "Return to Tavern");
     exit.onclick = () => this.cb.onExit && this.cb.onExit();
     btnRow.append(retry, exit);
     this.overlay.append(this.elEndTitle, this.elEndSub, btnRow);
@@ -588,17 +651,9 @@ export class HUD {
   }
 
   _writeWinSummary(world = null) {
-    const summary = missionRewardSummaryData(this.rewardSummary || {});
-    const dropText = summary.legacyDropCount ? ` Recovered ${summary.legacyDropCount} relic${summary.legacyDropCount === 1 ? "" : "s"}.` : "";
-    const goldText = summary.goldEarned ? ` +${summary.goldEarned} Gold.` : "";
-    const currentGoldText = summary.currentGold ? ` Current Gold: ${summary.currentGold}.` : "";
-    const itemNames = summary.itemsDropped.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ");
-    const earnedNames = summary.itemsEarned.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ");
-    const pickupText = summary.itemsPickedUp.length ? ` Picked up: ${summary.itemsPickedUp.map((item) => item.name).join(", ")}.` : "";
-    const itemText = itemNames ? ` Item dropped: ${itemNames}.` : earnedNames ? ` Earned ${earnedNames}.` : "";
-    const kills = world ? ` ${world.stats.kills} dead put down.` : "";
-    const name = this.mission?.name || "The First Seal";
-    this.elEndSub.textContent = `${name} holds.${kills}${goldText}${currentGoldText}${itemText}${pickupText}${dropText}`;
+    const data = missionVictoryPanelData(this.mission, this.rewardSummary || {}, world);
+    this.elEndTitle.textContent = data.title;
+    this.elEndSub.textContent = data.subtitle;
   }
 
   toast(msg, color = CSS.plague) {
@@ -612,6 +667,7 @@ export class HUD {
   update(world) {
     const wv = Math.min(world.waveIndex + 1, world.totalWaves);
     const currentWave = world.waves[Math.min(world.waveIndex, world.totalWaves - 1)] || {};
+    const phaseData = wavePhaseBannerData(world);
     this.elWave.textContent = `WAVE ${wv} / ${world.totalWaves}`;
     const wardRatio = Math.max(0, world.core.hp / world.core.maxHp);
     this.elWard.textContent = `${Math.max(0, Math.ceil(world.core.hp))} / ${world.core.maxHp}`;
@@ -657,24 +713,18 @@ export class HUD {
       if (this.infoPanel) this.infoPanel.style.display = showInfo ? "block" : "none";
     }
     // phase banner
-    if (world.phase === "prep") {
-      const t = Math.max(0, Math.ceil(world.prepTimer));
-      this.elPhase.textContent = `BUILD · ${wv}/${world.totalWaves} · ${currentWave.name || "Prepare"} · ${t}s`;
-      this.elPhase.style.color = CSS.plague;
-      this.elStart.style.display = "";
-      this.elHint.textContent = currentWave.hint || "Build beside the lane, then start the wave.";
-    } else if (world.phase === "active") {
-      this.elPhase.textContent = `COMBAT · ${currentWave.name || `WAVE ${wv}`}`;
-      this.elPhase.style.color = CSS.gold;
-      this.elStart.style.display = "none";
-      this.elHint.textContent = currentWave.warning || "Hold the breach. Move with WASD and use Q when enemies cluster.";
+    if (world.phase === "prep" || world.phase === "active") {
+      this.elPhase.textContent = phaseData.phaseText;
+      this.elPhase.style.color = phaseData.color;
+      this.elStart.style.display = phaseData.startVisible ? "" : "none";
+      this.elHint.textContent = phaseData.hintText;
     } else {
       this.elStart.style.display = "none";
     }
 
     if (world.phase !== this._lastPhase || world.waveIndex !== this._lastWaveIndex) {
       if (world.phase === "prep" && currentWave.hint) this.toast(currentWave.hint, CSS.plague);
-      if (world.phase === "active" && currentWave.warning) this.toast(currentWave.warning, wv === world.totalWaves ? CSS.gold : CSS.plague);
+      if (world.phase === "active") this.toast(waveStartToastText(currentWave, wv), wv === world.totalWaves ? CSS.gold : CSS.plague);
       this._lastPhase = world.phase;
       this._lastWaveIndex = world.waveIndex;
     }
@@ -725,7 +775,7 @@ export class HUD {
 
     // toasts
     for (const ev of world.events) {
-      if (ev.kind === "waveCleared") this.toast(`Wave ${ev.wave} held.` + (ev.reward ? `  +${ev.reward} Marrow` : ""), CSS.plague);
+      if (ev.kind === "waveCleared") this.toast(waveClearToastText(ev, world.waves), CSS.plague);
       if (ev.kind === "kill" && ev.boss) this.toast("The Herald falls.", CSS.gold);
     }
 
@@ -734,7 +784,6 @@ export class HUD {
       this._lastStatus = world.status;
       if (world.status === "won") {
         this.overlay.style.display = "flex";
-        this.elEndTitle.textContent = "BREACH HELD";
         this.elEndTitle.style.color = CSS.plague;
         this._writeWinSummary(world);
       } else if (world.status === "lost") {
