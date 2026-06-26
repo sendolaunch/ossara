@@ -28,6 +28,20 @@ export const ENEMY_ANIMATION_SETS = {
       death: "Death_A",
     },
   },
+  "skeleton-caster": {
+    libs: [
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_General.glb",
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_MovementBasic.glb",
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_CombatRanged.glb",
+    ],
+    clips: {
+      idle: "Idle_A",
+      walk: "Walking_A",
+      run: "Running_A",
+      attack: "Ranged_Magic_Shoot",
+      death: "Death_A",
+    },
+  },
   "skeleton-large": {
     libs: [
       "models/skeletons/anim/Rig_Large/Rig_Large_General.glb",
@@ -208,6 +222,41 @@ const PLAGUEWICK_VISUAL = {
   fallbackEmissive: 0.55,
 };
 
+const OSSUARY_ACOLYTE_VISUAL = {
+  pack: "skeletons",
+  model: "Necromancer.glb",
+  scale: 1,
+  targetHeight: 1.72,
+  heightOffset: 0,
+  rotationOffset: 0,
+  animationSet: "skeleton-caster",
+  animationClips: {
+    walk: "Walking_A",
+    run: "Running_A",
+    attack: "Ranged_Magic_Shoot",
+  },
+  animationSpeed: {
+    walk: 0.82,
+    run: 0.88,
+    attack: 0.78,
+  },
+  useProceduralLocomotionFallback: true,
+  proceduralLocomotion: {
+    proceduralStrength: 0.22,
+    fallbackStrength: 1,
+    bobAmplitude: 0.012,
+    swayAmplitude: 0.78,
+    leanAmount: 1.7,
+    visualSmooth: 0.16,
+    rotationSmooth: 0.14,
+    rate: 3.1,
+  },
+  fallbackShape: "sphere",
+  fallbackColor: "plague",
+  fallbackScale: 0.72,
+  fallbackEmissive: 0.75,
+};
+
 export const ENEMY_VISUAL_THEMES = {
   ruined_kingdom_plague_v1: {
     id: "ruined_kingdom_plague_v1",
@@ -217,6 +266,8 @@ export const ENEMY_VISUAL_THEMES = {
       husk: ROTLING_VISUAL,
       bonebow: BONEBOW_VISUAL,
       plaguewick: PLAGUEWICK_VISUAL,
+      "ossuary-acolyte": OSSUARY_ACOLYTE_VISUAL,
+      ossuaryAcolyte: OSSUARY_ACOLYTE_VISUAL,
       sprinter: {
         pack: "skeletons",
         model: "Skeleton_Rogue.glb",

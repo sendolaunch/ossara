@@ -61,6 +61,7 @@ const BONEBOW = {
   attackRate: 0.65,
   attackRange: 4.4,
   projectileSpeed: 8.5,
+  projectileShape: "bolt",
   projectileColor: "bone",
   color: "bone",
 };
@@ -87,20 +88,37 @@ const PLAGUEWICK = {
   color: "plague",
 };
 
-export const FUTURE_ENEMY_ARCHETYPES = {
-  ossuaryAcolyte: {
-    id: "ossuary-acolyte",
-    name: "Ossuary Acolyte",
-    role: "enemy-caster",
-    enabled: false,
-    plannedBehavior: "support mage",
-  },
+const OSSUARY_ACOLYTE = {
+  id: "ossuary-acolyte",
+  name: "Ossuary Acolyte",
+  role: "enemy-caster",
+  hp: 104,
+  speed: 1.05,
+  leak: 2,
+  bounty: 20,
+  radius: 0.32,
+  collisionRadius: 0.4,
+  attackStyle: "caster",
+  attackDamage: 14,
+  attackRate: 0.5,
+  attackRange: 5.0,
+  projectileSpeed: 7.2,
+  projectileShape: "orb",
+  projectileColor: "plague",
+  healRadius: 3.6,
+  healAmount: 14,
+  healCooldown: 5.0,
+  color: "plague",
 };
+
+export const FUTURE_ENEMY_ARCHETYPES = {};
 
 export const ENEMIES = {
   rotling: ROTLING,
   bonebow: BONEBOW,
   plaguewick: PLAGUEWICK,
+  "ossuary-acolyte": OSSUARY_ACOLYTE,
+  ossuaryAcolyte: OSSUARY_ACOLYTE,
   gravebreaker: GRAVEBREAKER,
   // Legacy ids stay available for older tests/dev tools while waves migrate to
   // the OSSARA-facing archetype names.

@@ -119,7 +119,7 @@ export function lootPanelForgeState(state, selectedItemId = null, availableGold 
 }
 
 export class LootSkeletonPanel {
-  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, onDebugEliteEncounter, onDebugBonebowEncounter, onDebugPlaguewickEncounter, devMode = false, initialOpen = false } = {}) {
+  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, onDebugEliteEncounter, onDebugBonebowEncounter, onDebugPlaguewickEncounter, onDebugAcolyteEncounter, devMode = false, initialOpen = false } = {}) {
     this.getState = getState || (() => this.state);
     this.onChange = onChange || (() => {});
     this.state = createLootState(this.getState?.());
@@ -131,6 +131,7 @@ export class LootSkeletonPanel {
     this.onDebugEliteEncounter = this.devMode ? onDebugEliteEncounter || null : null;
     this.onDebugBonebowEncounter = this.devMode ? onDebugBonebowEncounter || null : null;
     this.onDebugPlaguewickEncounter = this.devMode ? onDebugPlaguewickEncounter || null : null;
+    this.onDebugAcolyteEncounter = this.devMode ? onDebugAcolyteEncounter || null : null;
     this.selectedForgeItemId = null;
     this.forgeMessage = "";
     this.rewardMessage = "";
@@ -262,6 +263,13 @@ export class LootSkeletonPanel {
     this.render();
   }
 
+  spawnDebugAcolyteEncounter() {
+    if (!this.onDebugAcolyteEncounter) return;
+    const enemy = this.onDebugAcolyteEncounter();
+    this.rewardMessage = enemy ? `Acolyte spawned: ${enemy.name || "Ossuary Acolyte"}.` : "Acolyte spawn failed.";
+    this.render();
+  }
+
   selectForgeItem(itemId) {
     this.selectedForgeItemId = itemId;
     this.forgeMessage = "";
@@ -326,6 +334,7 @@ export class LootSkeletonPanel {
     if (this.onDebugEliteEncounter) wrap.appendChild(this.button("Spawn elite encounter", () => this.spawnDebugEliteEncounter()));
     if (this.onDebugBonebowEncounter) wrap.appendChild(this.button("Spawn Bonebow", () => this.spawnDebugBonebowEncounter()));
     if (this.onDebugPlaguewickEncounter) wrap.appendChild(this.button("Spawn Plaguewick", () => this.spawnDebugPlaguewickEncounter()));
+    if (this.onDebugAcolyteEncounter) wrap.appendChild(this.button("Spawn Acolyte", () => this.spawnDebugAcolyteEncounter()));
     if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
     const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
     if (!recent.length) {

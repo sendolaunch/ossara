@@ -25,12 +25,18 @@ export function createEnemy() {
     attackRange: 0.6,
     attackCd: 0,
     projectileSpeed: 0,
+    projectileShape: "orb",
     projectileColor: "bone",
     blockingTargetId: 0,
     attackingBlocker: false,
     rangedAttacking: false,
     rangedTargetId: 0,
     rangedTargetKind: "",
+    casterCasting: false,
+    casterHealCd: 0,
+    healRadius: 0,
+    healAmount: 0,
+    healCooldown: 0,
     bomberFusing: false,
     bomberFuseTimer: 0,
     bomberFuseTime: 0,
@@ -88,12 +94,18 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.attackRange = def.attackRange ?? 0.6;
   e.attackCd = 0;
   e.projectileSpeed = def.projectileSpeed ?? 0;
+  e.projectileShape = def.projectileShape || "orb";
   e.projectileColor = def.projectileColor || def.color || "bone";
   e.blockingTargetId = 0;
   e.attackingBlocker = false;
   e.rangedAttacking = false;
   e.rangedTargetId = 0;
   e.rangedTargetKind = "";
+  e.casterCasting = false;
+  e.casterHealCd = 0;
+  e.healRadius = def.healRadius ?? 0;
+  e.healAmount = def.healAmount ?? 0;
+  e.healCooldown = def.healCooldown ?? 0;
   e.bomberFusing = false;
   e.bomberFuseTimer = 0;
   e.bomberFuseTime = def.fuseTime ?? 0;

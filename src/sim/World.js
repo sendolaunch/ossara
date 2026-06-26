@@ -21,6 +21,7 @@ import {
   releaseAttackSlot,
 } from "./enemyMovement.js";
 import { isBomberEnemy, pointInExplosion, selectBomberTarget, startBomberFuse, tickBomberFuse } from "./enemyBomber.js";
+import { applyCasterHealPulse, isCasterEnemy, selectCasterAttackTarget } from "./enemyCaster.js";
 import { isRangedEnemy, selectEnemyRangedTarget } from "./enemyCombat.js";
 import { Pool } from "./pool.js";
 import { createEnemy, resetEnemy } from "./Enemy.js";
@@ -383,10 +384,12 @@ export class World {
       e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
       e.hpBarTimer = Math.max(0, (e.hpBarTimer || 0) - dt);
       e.attackCd -= dt;
+      e.casterHealCd = Math.max(0, (e.casterHealCd || 0) - dt);
       e.attackingBlocker = false;
       e.rangedAttacking = false;
       e.rangedTargetId = 0;
       e.rangedTargetKind = "";
+      e.casterCasting = false;
       if (e.bomberFusing) {
         releaseAttackSlot(e);
         e.blockingTargetId = e.bomberTargetKind === "tower" ? e.bomberTargetId : 0;
@@ -412,6 +415,39 @@ export class World {
           });
         }
         continue;
+      }
+      if (isCasterEnemy(e)) {
+        const pulse = applyCasterHealPulse(e, this.enemies);
+        if (pulse) {
+          releaseAttackSlot(e);
+          e.blockingTargetId = 0;
+          e.casterCasting = true;
+          this.events.push({
+            kind: "casterHealPulse",
+            x: pulse.x,
+            z: pulse.z,
+            range: pulse.range,
+            amount: pulse.amount,
+            enemyId: e.id,
+            type: e.type,
+            healed: pulse.healed,
+          });
+          continue;
+        }
+        const casterTarget = this._selectCasterAttackTarget(e);
+        if (casterTarget) {
+          releaseAttackSlot(e);
+          e.blockingTargetId = casterTarget.kind === "tower" ? casterTarget.id : 0;
+          e.rangedAttacking = true;
+          e.casterCasting = true;
+          e.rangedTargetId = casterTarget.id || 0;
+          e.rangedTargetKind = casterTarget.kind;
+          if (e.attackCd <= 0) {
+            this._fireEnemyProjectile(e, casterTarget);
+            e.attackCd = 1 / Math.max(0.01, e.attackRate || 1);
+          }
+          continue;
+        }
       }
       const rangedTarget = this._selectEnemyRangedTarget(e);
       if (rangedTarget) {
@@ -472,6 +508,11 @@ export class World {
     return selectBomberTarget(e, this.towers, this.core, this.lanePaths[e.laneId] || this.lane);
   }
 
+  _selectCasterAttackTarget(e) {
+    if (!isCasterEnemy(e)) return null;
+    return selectCasterAttackTarget(e, this.towers, this.core, this.lanePaths[e.laneId] || this.lane);
+  }
+
   _explodeBomber(e) {
     if (!isBomberEnemy(e) || !e.alive || e.bomberExploded) return false;
     const radius = Math.max(0, e.explosionRadius || 0);
@@ -516,7 +557,7 @@ export class World {
       damage: e.attackDamage || 1,
       splash: 0,
       color: e.projectileColor || e.color || "bone",
-      shape: "bolt",
+      shape: e.projectileShape || "bolt",
     };
     const projectile = this.projPool.acquire(this._nextId++, { x: e.x, z: e.z }, target.id || 0, projectileDef, {
       targetKind: target.kind,
@@ -525,7 +566,7 @@ export class World {
       targetRadius: target.radius || 0.45,
       sourceKind: "enemy",
       sourceId: e.id,
-      shape: "bolt",
+      shape: e.projectileShape || "bolt",
     });
     this.events.push({ kind: "enemyShoot", x1: e.x, z1: e.z, x2: target.x, z2: target.z, targetKind: target.kind, targetId: target.id || 0, enemyId: e.id, type: e.type });
     return projectile;

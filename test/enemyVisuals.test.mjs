@@ -29,17 +29,20 @@ ok(!!ENEMY_VISUAL_THEMES[ACTIVE_ENEMY_VISUAL_THEME], "active enemy visual theme 
 ok(ENEMIES.rotling?.name === "Rotling" && ENEMIES.rotling.role === "enemy-basic", "Rotling basic enemy config exists");
 ok(ENEMIES.bonebow?.name === "Bonebow" && ENEMIES.bonebow.role === "enemy-ranged", "Bonebow ranged enemy config exists");
 ok(ENEMIES.plaguewick?.name === "Plaguewick" && ENEMIES.plaguewick.role === "enemy-bomber", "Plaguewick bomber enemy config exists");
+ok(ENEMIES.ossuaryAcolyte?.name === "Ossuary Acolyte" && ENEMIES.ossuaryAcolyte.role === "enemy-caster", "Ossuary Acolyte caster enemy config exists");
 ok(ENEMIES.gravebreaker?.name === "Gravebreaker" && ENEMIES.gravebreaker.role === "enemy-brute", "Gravebreaker brute enemy config exists");
 ok(ENEMIES.bonebow.hp > ENEMIES.rotling.hp && ENEMIES.bonebow.hp < ENEMIES.gravebreaker.hp, "Bonebow HP sits between Rotling and Gravebreaker");
 ok(ENEMIES.bonebow.speed < ENEMIES.rotling.speed && ENEMIES.bonebow.speed > ENEMIES.gravebreaker.speed, "Bonebow speed sits between Rotling and Gravebreaker");
 ok(ENEMIES.bonebow.attackStyle === "ranged" && ENEMIES.bonebow.projectileSpeed > 0, "Bonebow mechanics are explicitly ranged");
 ok(ENEMIES.plaguewick.attackStyle === "bomber" && ENEMIES.plaguewick.explosionRadius > 0, "Plaguewick mechanics are explicitly bomber-style");
 ok(ENEMIES.plaguewick.speed > ENEMIES.rotling.speed, "Plaguewick is faster than Rotling");
+ok(ENEMIES.ossuaryAcolyte.attackStyle === "caster" && ENEMIES.ossuaryAcolyte.healRadius > 0, "Ossuary Acolyte mechanics are explicitly support-caster style");
+ok(ENEMIES.ossuaryAcolyte.speed < ENEMIES.rotling.speed, "Ossuary Acolyte is slower than Rotling");
 ok(ENEMIES.gravebreaker.hp >= ENEMIES.rotling.hp * 5, "Gravebreaker has tank HP relative to Rotling");
 ok(ENEMIES.gravebreaker.speed < ENEMIES.rotling.speed, "Gravebreaker is slower than Rotling");
 ok(ENEMIES.gravebreaker.attackDamage > ENEMIES.rotling.attackDamage, "Gravebreaker has stronger melee pressure than Rotling");
 ok(ENEMIES.husk.aliasOf === "rotling" && ENEMIES.brute.aliasOf === "gravebreaker", "legacy enemy ids remain compatibility aliases");
-ok(FUTURE_ENEMY_ARCHETYPES.ossuaryAcolyte.enabled === false, "Ossuary Acolyte placeholder stays disabled until support behavior exists");
+ok(!FUTURE_ENEMY_ARCHETYPES.ossuaryAcolyte, "Ossuary Acolyte is no longer a disabled future placeholder");
 
 const rotlingVisual = resolveEnemyVisual("rotling");
 ok(rotlingVisual.model === "Skeleton_Minion.glb", "Rotling maps to audited Skeleton_Minion asset");
@@ -52,6 +55,10 @@ ok(bonebowVisual.accessories.some((asset) => asset.model === "Skeleton_Quiver.gl
 const plaguewickVisual = resolveEnemyVisual("plaguewick");
 ok(plaguewickVisual.model === "Skeleton_Rogue.glb", "Plaguewick maps to audited Skeleton_Rogue runner body");
 ok(plaguewickVisual.accessories.some((asset) => asset.model === "lantern.gltf" && asset.pack === "rpgtools"), "Plaguewick uses imported lantern prop as fuse silhouette");
+const acolyteVisual = resolveEnemyVisual("ossuary-acolyte");
+ok(acolyteVisual.model === "Necromancer.glb", "Ossuary Acolyte maps to audited Necromancer caster body");
+ok(acolyteVisual.animationSet === "skeleton-caster", "Ossuary Acolyte uses the caster skeleton animation set");
+ok(acolyteVisual.animationClips.attack === "Ranged_Magic_Shoot", "Ossuary Acolyte maps to a magic casting attack clip");
 const gravebreakerVisual = resolveEnemyVisual("gravebreaker");
 ok(gravebreakerVisual.model === "Skeleton_Golem.glb", "Gravebreaker maps to audited Skeleton_Golem asset");
 ok(gravebreakerVisual.targetHeight > rotlingVisual.targetHeight, "Gravebreaker visual is larger than Rotling");
@@ -114,6 +121,7 @@ for (const id of Object.keys(ENEMIES)) {
 ok(!!ENEMY_ANIMATION_SETS["skeleton-medium"], "skeleton medium animation set exists");
 ok(!!ENEMY_ANIMATION_SETS["skeleton-large"], "skeleton large animation set exists");
 ok(!!ENEMY_ANIMATION_SETS["skeleton-ranged"], "skeleton ranged animation set exists");
+ok(!!ENEMY_ANIMATION_SETS["skeleton-caster"], "skeleton caster animation set exists");
 ok(enemyAnimationSet({ animationSet: "missing-set" }) === null, "missing animation set falls back safely");
 ok(enemyModelUrl({ model: "Nope.glb" }) === null, "missing model pack returns no model URL");
 ok(enemyAssetUrl({ model: "Nope.gltf" }) === null, "missing accessory pack returns no asset URL");

@@ -434,6 +434,47 @@ export class Mission {
     return enemy;
   }
 
+  spawnDebugAcolyteEncounter() {
+    if (!this.world?.hero?.alive) return null;
+    this.world._spawnEnemy("ossuaryAcolyte", this.world.defaultLaneId);
+    const acolyte = this.world.enemies[this.world.enemies.length - 1] || null;
+    if (!acolyte) return null;
+    const lane = this.world.lanePaths[acolyte.laneId] || this.world.lane;
+    const defenseTarget = this.world.towers.find((tower) => tower?.alive && tower.targetableByEnemies && tower.hp > 0) || null;
+    let bestDistance = 0;
+    let bestScore = Infinity;
+    const anchor = defenseTarget || this.world.hero;
+    for (let d = 0; d <= lane.total; d += 0.5) {
+      const p = pointAtDistance(lane, d);
+      const score = Math.hypot(p.x - anchor.x, p.z - anchor.z);
+      if (score < bestScore) {
+        bestScore = score;
+        bestDistance = d;
+      }
+    }
+    const offset = defenseTarget ? Math.max(3.6, (acolyte.attackRange || 5) - 1.0) : Math.max(8.0, (acolyte.attackRange || 5) + 3.0);
+    const safeCoreBuffer = Math.max(10, (acolyte.attackRange || 5) + 6);
+    const safeMaxDistance = defenseTarget ? lane.total : Math.max(0, lane.total - safeCoreBuffer);
+    acolyte.dist = Math.max(0, Math.min(bestDistance - offset, safeMaxDistance));
+    const p = pointAtDistance(lane, acolyte.dist);
+    acolyte.x = p.x;
+    acolyte.z = p.z;
+    acolyte.hpBarTimer = 6;
+
+    this.world._spawnEnemy("rotling", acolyte.laneId);
+    const ally = this.world.enemies[this.world.enemies.length - 1] || null;
+    if (ally) {
+      ally.dist = Math.min(lane.total, acolyte.dist + 0.85);
+      const allyPoint = pointAtDistance(lane, ally.dist);
+      ally.x = allyPoint.x;
+      ally.z = allyPoint.z;
+      ally.hp = Math.max(1, ally.maxHp - 16);
+      ally.hpBarTimer = 6;
+    }
+    this.hud.toast("Ossuary Acolyte raises a ward hymn.", CSS.plague);
+    return acolyte;
+  }
+
   _collectWorldDrops() {
     if (!this.worldDrops.length || !this.world?.hero?.alive) return;
     const point = { x: this.world.hero.x, z: this.world.hero.z, time: typeof performance !== "undefined" ? performance.now() : Date.now() };
