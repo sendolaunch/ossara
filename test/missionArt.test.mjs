@@ -1,5 +1,10 @@
 import { existsSync } from "node:fs";
 import { LEVEL } from "../src/config/level.js";
+import {
+  WARD_CRYSTAL_FALLBACK_NAME,
+  WARD_CRYSTAL_MODEL_PATH,
+  WARD_CRYSTAL_MODEL_URL,
+} from "../src/config/wardCrystal.js";
 import { expandRects, pathCellSet } from "../src/sim/pathing.js";
 import {
   MISSION_ART_ALLOWED_PACKS,
@@ -68,6 +73,10 @@ ok(wardSpecs.every((spec) => spec.anchorCol === LEVEL.core.col && spec.anchorRow
 
 ok(LEVEL.lanes.length === 5, "art pass does not alter First Breach lane count");
 ok(LEVEL.core.col === 36 && LEVEL.core.row === 10, "showcase art follows the compact Ward shrine layout");
+ok(LEVEL.coreHp === 24, "Ward Crystal visual work does not change core health");
+ok(WARD_CRYSTAL_MODEL_URL === "models/resource/Gem_Large.gltf", "Ward Crystal uses the imported Gem_Large runtime URL");
+ok(existsSync(WARD_CRYSTAL_MODEL_PATH), "Ward Crystal Gem_Large asset exists in an already-imported runtime folder");
+ok(WARD_CRYSTAL_FALLBACK_NAME === "ward-crystal-fallback", "Ward Crystal primitive fallback remains explicitly named");
 
 console.log(`missionArt: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

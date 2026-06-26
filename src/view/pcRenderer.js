@@ -9,6 +9,7 @@ import { TOWERS } from "../config/towers.js";
 import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
+import { WARD_CRYSTAL_FALLBACK_NAME, WARD_CRYSTAL_GEM_NAME, WARD_CRYSTAL_MODEL_URL } from "../config/wardCrystal.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
 import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
@@ -91,6 +92,16 @@ function fitRenderEntityToHeight(entity, targetHeight = 1, scaleMul = 1, yOffset
   } catch (err) {
     entity.setLocalScale(scaleMul, scaleMul, scaleMul);
     entity.setLocalPosition(0, yOffset, 0);
+  }
+}
+
+function applyRenderMaterial(entity, material, { castShadow = true, receiveShadow = true } = {}) {
+  for (const render of entity?.findComponents?.("render") || []) {
+    for (const mesh of render.meshInstances || []) {
+      mesh.material = material;
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+    }
   }
 }
 
@@ -265,6 +276,10 @@ export class PCRenderer {
     this.towerEntities = new Map();
     this.worldDropEntities = new Map();
     this.chestEntities = new Map();
+    this.coreEntity = null;
+    this.coreGemEntity = null;
+    this.coreFallbackEntity = null;
+    this._wardCrystalToken = null;
     this.spawnIndicatorEntities = [];
     this.laneTelegraphEntities = [];
     this.fx = [];
@@ -580,11 +595,14 @@ export class PCRenderer {
     ring.setPosition(cw.x, 0.35, cw.z);
     this.app.root.addChild(ring);
     this.coreEntity = prim("sphere", mat("plague", 1.2));
+    this.coreEntity.name = WARD_CRYSTAL_FALLBACK_NAME;
     this.coreEntity.setLocalScale(1.0, 1.5, 1.0);
     this.coreEntity.setPosition(cw.x, 1.2, cw.z);
     this.app.root.addChild(this.coreEntity);
+    this.coreFallbackEntity = this.coreEntity;
+    this._loadWardCrystalGem(cw);
     const coreLight = new pc.Entity();
-    coreLight.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 1.8, range: 14 });
+    coreLight.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 2.15, range: 15 });
     coreLight.setPosition(cw.x, 2.2, cw.z);
     this.app.root.addChild(coreLight);
 
@@ -733,6 +751,32 @@ export class PCRenderer {
         console.log(`[missionArt] placed ${placed}/${missionShowcaseArtSpecs(level).length} props`);
       })
       .catch((err) => console.warn("[missionArt] showcase art skipped:", err));
+  }
+
+  _loadWardCrystalGem(cw) {
+    const fallback = this.coreFallbackEntity;
+    const token = Symbol("ward-crystal-gem");
+    this._wardCrystalToken = token;
+    loadGlb(this.app, WARD_CRYSTAL_MODEL_URL)
+      .then((gem) => {
+        if (this._wardCrystalToken !== token || !gem || !fallback) return;
+        const root = new pc.Entity(WARD_CRYSTAL_GEM_NAME);
+        root.setPosition(cw.x, 0.25, cw.z);
+        root.setLocalEulerAngles(0, 35, 0);
+        const gemMat = mat("plague", 1.75);
+        gemMat.gloss = 0.78;
+        gemMat.update();
+        applyRenderMaterial(gem, gemMat, { castShadow: true, receiveShadow: true });
+        fitRenderEntityToHeight(gem, 2.55, 1.0, -0.03);
+        root.addChild(gem);
+        this.app.root.addChild(root);
+        this.coreGemEntity = root;
+        this.coreEntity = root;
+        fallback.enabled = false;
+      })
+      .catch((err) => {
+        console.warn("[pcRenderer] Ward Crystal Gem_Large failed; keeping primitive fallback.", err);
+      });
   }
 
   _buildSpawnIndicators(level) {
