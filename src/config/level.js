@@ -217,13 +217,14 @@ export const LEVEL = {
   // Metadata for lane teaching/readability. With openBuildable enabled, these
   // are hints and tests anchors, not tiny build islands.
   buildableZones: [
-    { id: "ward-platform-apron", laneId: "core", col: 27, row: 14, w: 19, h: 13 },
-    { id: "main-choke-line", laneId: "north-gate", col: 25, row: 31, w: 23, h: 9 },
-    { id: "left-front-choke", laneId: "northwest-stairs", col: 20, row: 31, w: 17, h: 10 },
-    { id: "right-front-choke", laneId: "northeast-market", col: 36, row: 31, w: 17, h: 10 },
-    { id: "left-crypt-choke", laneId: "southwest-crypt", col: 18, row: 24, w: 17, h: 9 },
-    { id: "right-crypt-choke", laneId: "southeast-garden", col: 38, row: 24, w: 17, h: 9 },
-    { id: "fallback-choke-line", laneId: "core", col: 27, row: 18, w: 19, h: 9 },
+    { id: "ward-platform-apron", laneId: "core", col: 26, row: 14, w: 21, h: 10 },
+    { id: "fallback-left-shoulders", laneId: "core", col: 27, row: 20, w: 10, h: 7 },
+    { id: "fallback-right-shoulders", laneId: "core", col: 36, row: 20, w: 10, h: 7 },
+    { id: "central-main-choke", laneId: "north-gate", col: 30, row: 32, w: 13, h: 9 },
+    { id: "left-front-main-choke", laneId: "northwest-stairs", col: 22, row: 31, w: 14, h: 10 },
+    { id: "right-front-main-choke", laneId: "northeast-market", col: 37, row: 31, w: 14, h: 10 },
+    { id: "left-crypt-main-choke", laneId: "southwest-crypt", col: 20, row: 24, w: 15, h: 9 },
+    { id: "right-crypt-main-choke", laneId: "southeast-garden", col: 38, row: 24, w: 15, h: 9 },
   ],
 
   blockedZones: [
@@ -241,6 +242,7 @@ export const LEVEL = {
 
   reservedZones: [
     { id: "core-reserve", col: 33, row: 7, w: 7, h: 7 },
+    { id: "hero-spawn-reserve", col: 29, row: 19, w: 3, h: 3 },
     { id: "central-stair-reserve", laneId: "north-gate", col: 33, row: 53, w: 7, h: 4 },
     { id: "left-front-reserve", laneId: "northwest-stairs", col: 13, row: 49, w: 7, h: 7 },
     { id: "right-front-reserve", laneId: "northeast-market", col: 53, row: 49, w: 7, h: 7 },

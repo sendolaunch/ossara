@@ -43,6 +43,14 @@ function stateFor(level = LEVEL, patch = {}) {
   ok(placementStatus(state, "censer", pathCell.col, pathCell.row).ok, "aura placement remains allowed on path cells");
   ok(placementStatus(state, "ballista", blockedCell.col, blockedCell.row).reason === "blocked", "blocked ruin cells reject placement");
 
+  for (const lane of LEVEL.lanes) {
+    for (const [label, cell] of [["main choke", lane.choke], ["fallback choke", lane.fallbackChoke]]) {
+      ok(placementStatus(state, "barricade", cell.col, cell.row).ok, `${lane.id} ${label} accepts Barricade`);
+      ok(placementStatus(state, "spikegate", cell.col, cell.row).ok, `${lane.id} ${label} accepts Spike-gate`);
+      ok(placementStatus(state, "ballista", cell.col, cell.row).reason === "path", `${lane.id} ${label} still rejects turrets on the path`);
+    }
+  }
+
   state.occupied.add(cellKey(shoulder.col, shoulder.row));
   ok(placementStatus(state, "ballista", shoulder.col, shoulder.row).reason === "occupied", "occupied cell blocks overlapping placement");
   state.occupied.clear();

@@ -428,6 +428,23 @@ section("building rules");
     const shoulderWorld = new World(LEVEL);
     const rShoulder = shoulderWorld.tryPlaceTower("ballista", shoulder.col, shoulder.row);
     ok(rShoulder.ok, `valid placement succeeds on ${lane.id} shoulder`);
+
+    for (const [label, cell] of [["main choke", lane.choke], ["fallback choke", lane.fallbackChoke]]) {
+      const blockerWorld = new World(LEVEL);
+      blockerWorld.marrow = 999;
+      const barricade = blockerWorld.tryPlaceTower("barricade", cell.col, cell.row);
+      ok(barricade.ok, `Barricade can hold ${lane.id} ${label}`);
+
+      const spikeWorld = new World(LEVEL);
+      spikeWorld.marrow = 999;
+      const spike = spikeWorld.tryPlaceTower("spikegate", cell.col, cell.row);
+      ok(spike.ok, `Spike-gate can hold ${lane.id} ${label}`);
+
+      const turretWorld = new World(LEVEL);
+      turretWorld.marrow = 999;
+      const turret = turretWorld.tryPlaceTower("ballista", cell.col, cell.row);
+      ok(!turret.ok && turret.reason === "path", `turrets stay off ${lane.id} ${label}`);
+    }
   }
 
   const before = w.marrow;
