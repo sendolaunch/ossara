@@ -1,9 +1,11 @@
 import assert from "node:assert";
-import { FIRST_BREACH_ITEM_REWARD_ID, WAVE_CLEAR_GOLD_REWARD, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
+import { FIRST_BREACH_ITEM_REWARD_ID, WAVE_CLEAR_GOLD_REWARD, chestRewardDefinition, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
 import {
+  WORLD_DROP_MAX_ACTIVE,
   collectNearbyWorldDrops,
   createWorldDropFromRewardSummary,
   pickupWorldDrop,
+  trimWorldDrops,
 } from "../src/sim/worldDrops.js";
 import { createLootState, findLootItem, grantStarterLoot } from "../src/sim/lootModel.js";
 import { createAccount, getActiveHero, setActive } from "../src/sim/heroes.js";
@@ -60,6 +62,25 @@ function missionRewardSummary() {
   const wave = grantReward(account, loot, waveClearRewardDefinition({ rewardId: "gold-stays-auto", wave: 1 }));
   ok(wave.ok && !wave.summary.shouldSpawnWorldDrop, "Gold-only wave reward does not spawn world drop");
   ok(getActiveHero(account).gold === WAVE_CLEAR_GOLD_REWARD, "Gold rewards still auto-grant");
+}
+
+{
+  const account = accountWithWarden();
+  const loot = createLootState();
+  const chest = grantReward(account, loot, chestRewardDefinition({ rewardId: "drop-chest-source", chestId: "dev-chest" }));
+  const drop = createWorldDropFromRewardSummary(chest.summary, { position: { x: 2, z: -2 } });
+  ok(drop && drop.sourceType === "chest" && drop.sourceId.includes("dev-chest"), "chest reward can produce physical world drop");
+}
+
+{
+  const summary = missionRewardSummary();
+  const drops = [];
+  for (let i = 0; i < WORLD_DROP_MAX_ACTIVE + 3; i += 1) {
+    drops.push(createWorldDropFromRewardSummary(summary, { dropId: `drop-limit-${i}`, position: { x: i, z: 0 } }));
+  }
+  const trimmed = trimWorldDrops(drops);
+  ok(trimmed.length === WORLD_DROP_MAX_ACTIVE, "active world drop limit trims old drops");
+  ok(trimmed[0].dropId === "drop-limit-3", "drop limit keeps newest active drops");
 }
 
 {

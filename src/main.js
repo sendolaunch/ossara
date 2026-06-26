@@ -17,9 +17,12 @@ import { addLootItem, createLootState, findLootItem, getAppliedLootStats } from 
 import {
   ensureRewardState,
   FIRST_BREACH_ITEM_REWARD_ID,
+  chestRewardDefinition,
+  eliteRewardDefinition,
   getRewardViewerData,
   grantReward,
   missionClearRewardDefinition,
+  recordRewardPickup,
   waveClearRewardDefinition,
 } from "./sim/rewardModel.js";
 import { normalizeProgress, recordBreachClear } from "./sim/progress.js";
@@ -145,6 +148,7 @@ function startMission(missionId = "first-breach", selection = {}) {
       const existing = item ? findLootItem(state, item.id) : null;
       if (item && !existing) addLootItem(state, item);
       profile.lootSkeleton = createLootState(state);
+      if (item) recordRewardPickup(profile, drop, existing || item);
       persist();
       window.OSSARA?.lootSkeletonPanel?.refresh?.();
       return { ok: !!item, item: existing || item, duplicate: !!existing };
@@ -264,17 +268,25 @@ if (devLoot) {
     getState: () => profile.lootSkeleton,
     getHero: () => getActiveHero(profile),
     getRewards: () => getRewardViewerData(profile),
-    onDebugReward: () => {
-      const res = grantReward(profile, profile.lootSkeleton, {
-        rewardId: `debug:${Date.now()}:${Math.random().toString(36).slice(2)}`,
-        sourceType: "debug",
-        sourceId: "devLoot",
-        gold: 8,
-        itemId: FIRST_BREACH_ITEM_REWARD_ID,
-        rarity: "uncommon",
-        shouldSpawnWorldDrop: true,
-        label: "Dev reward",
-      });
+    onDebugReward: (sourceType = "mission") => {
+      const id = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
+      const rewardDef = sourceType === "chest"
+        ? chestRewardDefinition({ rewardId: `chest:dev:${id}`, chestId: `dev-chest-${id}` })
+        : sourceType === "elite"
+          ? eliteRewardDefinition({ rewardId: `elite:dev:${id}`, eliteId: `dev-elite-${id}` })
+          : sourceType === "debug"
+            ? {
+                rewardId: `debug:${id}`,
+                sourceType: "debug",
+                sourceId: "devLoot",
+                gold: 8,
+                itemId: FIRST_BREACH_ITEM_REWARD_ID,
+                rarity: "uncommon",
+                shouldSpawnWorldDrop: true,
+                label: "Dev reward",
+              }
+            : missionClearRewardDefinition({ rewardId: `mission:dev:${id}`, missionId: "first-breach", difficultyId: "dev" });
+      const res = grantReward(profile, profile.lootSkeleton, rewardDef);
       if (res.lootState) profile.lootSkeleton = createLootState(res.lootState);
       if (res.ok) persist();
       if (res.summary?.shouldSpawnWorldDrop && mission) mission.spawnWorldDrop(res.summary);

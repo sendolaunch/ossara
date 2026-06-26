@@ -81,9 +81,9 @@ export class LootSkeletonPanel {
     this.render();
   }
 
-  claimDebugReward() {
+  claimDebugReward(sourceType = "mission") {
     if (!this.onDebugReward) return;
-    const summary = this.onDebugReward();
+    const summary = this.onDebugReward(sourceType);
     this.state = createLootState(this.getState?.());
     const itemText = summary?.items?.length ? summary.items.map((item) => item.name).join(", ") : "";
     const itemPart = itemText ? summary.shouldSpawnWorldDrop ? ` Item dropped: ${itemText}.` : ` + ${itemText}.` : "";
@@ -140,7 +140,11 @@ export class LootSkeletonPanel {
     wrap.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Reward Log v1"));
     wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
       `${rewards.claimedCount || 0} reward claim${rewards.claimedCount === 1 ? "" : "s"} recorded. Common rewards auto-claim; important items can drop in-world.`));
-    if (this.onDebugReward) wrap.appendChild(this.button("Dev reward claim", () => this.claimDebugReward()));
+    if (this.onDebugReward) {
+      wrap.appendChild(this.button("Grant mission reward", () => this.claimDebugReward("mission")));
+      wrap.appendChild(this.button("Spawn chest reward", () => this.claimDebugReward("chest")));
+      wrap.appendChild(this.button("Spawn elite reward", () => this.claimDebugReward("elite")));
+    }
     if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
     const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
     if (!recent.length) {
@@ -149,7 +153,9 @@ export class LootSkeletonPanel {
     }
     for (const summary of recent) {
       const itemNames = summary.items?.map((item) => item.name).join(", ") || "";
-      const itemText = itemNames ? summary.shouldSpawnWorldDrop ? ` | Item dropped: ${itemNames}` : ` | ${itemNames}` : "";
+      const itemText = itemNames
+        ? summary.delivery === "pickup" ? ` | Item picked up: ${itemNames}` : summary.shouldSpawnWorldDrop ? ` | Item dropped: ${itemNames}` : ` | ${itemNames}`
+        : "";
       const goldText = summary.goldGranted ? `+${summary.goldGranted} Gold` : "No Gold";
       wrap.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" },
         `${summary.sourceType}: ${goldText}${itemText}`));

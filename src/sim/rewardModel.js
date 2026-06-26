@@ -6,8 +6,13 @@ export const REWARD_MODEL_VERSION = 1;
 export const WAVE_CLEAR_GOLD_REWARD = 4;
 export const MISSION_CLEAR_GOLD_REWARD = 35;
 export const FIRST_BREACH_ITEM_REWARD_ID = "reward-first-breach-wardforged-blade";
+export const CHEST_REWARD_GOLD = 12;
+export const ELITE_REWARD_GOLD = 18;
+export const BOSS_REWARD_GOLD = 45;
+export const NORMAL_ENEMY_PHYSICAL_DROPS_ENABLED = false;
 
 const SOURCE_TYPES = new Set(["wave", "mission", "chest", "elite", "boss", "debug"]);
+const SUMMARY_DELIVERIES = new Set(["auto", "inventory", "world-drop", "pickup"]);
 
 export function createRewardState(data = {}) {
   data = data && typeof data === "object" ? data : {};
@@ -70,6 +75,45 @@ export function missionClearRewardDefinition({ rewardId, missionId = "first-brea
   });
 }
 
+export function chestRewardDefinition({ rewardId, chestId = "dev-chest", missionId = "first-breach" } = {}) {
+  return createPhysicalItemRewardDefinition({
+    rewardId: rewardId || `chest:${missionId}:${chestId}`,
+    sourceType: "chest",
+    sourceId: `${missionId}:${chestId}`,
+    gold: CHEST_REWARD_GOLD,
+    label: "Chest opened",
+  });
+}
+
+export function eliteRewardDefinition({ rewardId, eliteId = "dev-elite", missionId = "first-breach" } = {}) {
+  return createPhysicalItemRewardDefinition({
+    rewardId: rewardId || `elite:${missionId}:${eliteId}`,
+    sourceType: "elite",
+    sourceId: `${missionId}:${eliteId}`,
+    gold: ELITE_REWARD_GOLD,
+    label: "Elite defeated",
+  });
+}
+
+export function bossRewardDefinition({ rewardId, bossId = "dev-boss", missionId = "first-breach" } = {}) {
+  return createPhysicalItemRewardDefinition({
+    rewardId: rewardId || `boss:${missionId}:${bossId}`,
+    sourceType: "boss",
+    sourceId: `${missionId}:${bossId}`,
+    gold: BOSS_REWARD_GOLD,
+    label: "Boss defeated",
+  });
+}
+
+function createPhysicalItemRewardDefinition(def = {}) {
+  return createRewardDefinition({
+    itemId: FIRST_BREACH_ITEM_REWARD_ID,
+    rarity: FIXED_REWARD_ITEMS_BY_ID[FIRST_BREACH_ITEM_REWARD_ID]?.rarity || "uncommon",
+    shouldSpawnWorldDrop: true,
+    ...def,
+  });
+}
+
 export function waveClearRewardDefinition({ rewardId, missionId = "first-breach", wave = 1 } = {}) {
   return createRewardDefinition({
     rewardId: rewardId || `wave:${missionId}:${wave}`,
@@ -121,6 +165,57 @@ export function grantReward(account, lootState, rewardDef, catalog = FIXED_REWAR
   return { ok: true, reward, summary, lootState: state };
 }
 
+export function recordRewardPickup(account, drop, item) {
+  if (!account || !drop) return null;
+  const itemInfo = item ? {
+    id: item.id || drop.itemId,
+    name: item.name || drop.name || drop.itemId,
+    rarity: item.rarity || drop.rarity || "common",
+    slot: item.slot || "",
+  } : {
+    id: drop.itemId,
+    name: drop.name || drop.itemId,
+    rarity: drop.rarity || "common",
+    slot: "",
+  };
+  const rewards = ensureRewardState(account);
+  const pickupId = `pickup:${drop.dropId || drop.rewardId || drop.itemInstanceId || drop.itemId}`;
+  if (rewards.claimedIds.includes(pickupId)) {
+    return normalizeRewardSummary({
+      rewardId: pickupId,
+      sourceType: drop.sourceType,
+      sourceId: drop.sourceId,
+      rarity: itemInfo.rarity,
+      itemId: itemInfo.id,
+      instanceId: drop.itemInstanceId || itemInfo.id,
+      delivery: "pickup",
+      label: "Item picked up",
+      duplicate: true,
+      currentGold: getActiveHero(account)?.gold || 0,
+      items: [itemInfo],
+    });
+  }
+  rewards.claimedIds.push(pickupId);
+  const summary = normalizeRewardSummary({
+    rewardId: pickupId,
+    sourceType: drop.sourceType,
+    sourceId: drop.sourceId,
+    rarity: itemInfo.rarity,
+    itemId: itemInfo.id,
+    instanceId: drop.itemInstanceId || itemInfo.id,
+    shouldSpawnWorldDrop: false,
+    autoClaim: true,
+    delivery: "pickup",
+    label: "Item picked up",
+    duplicate: false,
+    currentGold: getActiveHero(account)?.gold || 0,
+    items: [itemInfo],
+  });
+  rewards.summaries.push(summary);
+  rewards.summaries = rewards.summaries.slice(-12);
+  return summary;
+}
+
 export function createRewardSummary(rewardDef, result = {}) {
   const reward = createRewardDefinition(rewardDef);
   return normalizeRewardSummary({
@@ -133,6 +228,7 @@ export function createRewardSummary(rewardDef, result = {}) {
     shouldSpawnWorldDrop: reward.shouldSpawnWorldDrop,
     autoClaim: reward.autoClaim,
     label: reward.label,
+    delivery: result.delivery || (reward.shouldSpawnWorldDrop ? "world-drop" : reward.itemId ? "inventory" : "auto"),
     duplicate: !!result.duplicate,
     goldGranted: Math.max(0, Math.floor(Number(result.goldGranted || 0))),
     currentGold: Math.max(0, Math.floor(Number(result.currentGold || 0))),
@@ -156,6 +252,7 @@ export function normalizeRewardSummary(summary = {}) {
     shouldSpawnWorldDrop: !!summary.shouldSpawnWorldDrop,
     autoClaim: summary.autoClaim !== false,
     label: String(summary.label || ""),
+    delivery: SUMMARY_DELIVERIES.has(summary.delivery) ? summary.delivery : summary.shouldSpawnWorldDrop ? "world-drop" : summary.itemId ? "inventory" : "auto",
     duplicate: !!summary.duplicate,
     goldGranted: Math.max(0, Math.floor(Number(summary.goldGranted || 0))),
     currentGold: Math.max(0, Math.floor(Number(summary.currentGold || 0))),

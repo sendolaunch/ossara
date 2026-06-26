@@ -1,5 +1,21 @@
 import assert from "node:assert";
-import { FIRST_BREACH_ITEM_REWARD_ID, MISSION_CLEAR_GOLD_REWARD, WAVE_CLEAR_GOLD_REWARD, getRewardViewerData, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
+import {
+  BOSS_REWARD_GOLD,
+  CHEST_REWARD_GOLD,
+  ELITE_REWARD_GOLD,
+  FIRST_BREACH_ITEM_REWARD_ID,
+  MISSION_CLEAR_GOLD_REWARD,
+  NORMAL_ENEMY_PHYSICAL_DROPS_ENABLED,
+  WAVE_CLEAR_GOLD_REWARD,
+  bossRewardDefinition,
+  chestRewardDefinition,
+  eliteRewardDefinition,
+  getRewardViewerData,
+  grantReward,
+  missionClearRewardDefinition,
+  recordRewardPickup,
+  waveClearRewardDefinition,
+} from "../src/sim/rewardModel.js";
 import { createLootState, findLootItem, grantStarterLoot } from "../src/sim/lootModel.js";
 import { createAccount, getActiveHero, setActive } from "../src/sim/heroes.js";
 import { FORGE_UPGRADE_GOLD_COST, upgradeLootItem } from "../src/sim/forgeModel.js";
@@ -21,6 +37,7 @@ function accountWithWarden() {
   ok(res.ok, "Gold reward grants once");
   ok(getActiveHero(account).gold === WAVE_CLEAR_GOLD_REWARD, "Gold reward credits active hero Gold");
   ok(res.summary.goldGranted === WAVE_CLEAR_GOLD_REWARD && res.summary.currentGold === WAVE_CLEAR_GOLD_REWARD, "reward summary reports Gold and current total");
+  ok(!res.summary.itemId && !res.summary.shouldSpawnWorldDrop && res.summary.delivery === "auto", "wave reward grants Gold only without physical item drop");
   const dup = grantReward(account, loot, waveClearRewardDefinition({ rewardId: "wave-test-1", wave: 1 }));
   ok(!dup.ok && dup.reason === "duplicate", "duplicate reward id does not grant twice");
   ok(getActiveHero(account).gold === WAVE_CLEAR_GOLD_REWARD, "duplicate reward does not change Gold");
@@ -36,6 +53,7 @@ function accountWithWarden() {
   ok(!findLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID), "world-drop item reward waits for pickup before inventory grant");
   ok(res.summary.items.length === 1 && res.summary.items[0].id === FIRST_BREACH_ITEM_REWARD_ID, "reward summary reports item");
   ok(res.summary.shouldSpawnWorldDrop, "mission item reward is flagged for world drop spawning");
+  ok(res.summary.delivery === "world-drop", "mission item reward records world-drop delivery");
 }
 
 {
@@ -47,6 +65,43 @@ function accountWithWarden() {
   ok(!second.ok && second.duplicate, "no reward granted twice on repeated completion call");
   ok(getActiveHero(account).gold === MISSION_CLEAR_GOLD_REWARD, "repeated completion does not add extra Gold");
   ok(!findLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID), "repeated completion still does not auto-grant dropped item");
+}
+
+{
+  const account = accountWithWarden();
+  const loot = createLootState();
+  const chest = grantReward(account, loot, chestRewardDefinition({ rewardId: "chest-source-test", chestId: "locked-coffer" }));
+  ok(chest.ok && chest.summary.sourceType === "chest", "chest reward source is supported");
+  ok(chest.summary.shouldSpawnWorldDrop && chest.summary.itemId === FIRST_BREACH_ITEM_REWARD_ID, "chest reward produces a physical item drop");
+  ok(getActiveHero(account).gold === CHEST_REWARD_GOLD, "chest reward grants controlled Gold");
+  const duplicate = grantReward(account, loot, chestRewardDefinition({ rewardId: "chest-source-test", chestId: "locked-coffer" }));
+  ok(!duplicate.ok && duplicate.duplicate, "duplicate chest reward cannot double-grant");
+}
+
+{
+  const account = accountWithWarden();
+  const loot = createLootState();
+  const elite = grantReward(account, loot, eliteRewardDefinition({ rewardId: "elite-source-test", eliteId: "bone-captain" }));
+  ok(elite.ok && elite.summary.sourceType === "elite", "elite reward source is supported");
+  ok(elite.summary.shouldSpawnWorldDrop, "elite reward can produce future physical drops");
+  ok(getActiveHero(account).gold === ELITE_REWARD_GOLD, "elite reward grants controlled Gold");
+  const boss = grantReward(account, loot, bossRewardDefinition({ rewardId: "boss-source-test", bossId: "future-boss" }));
+  ok(boss.ok && boss.summary.sourceType === "boss", "boss reward source is supported");
+  ok(boss.summary.shouldSpawnWorldDrop && boss.summary.goldGranted === BOSS_REWARD_GOLD, "boss reward is future-ready for physical drops");
+}
+
+{
+  ok(NORMAL_ENEMY_PHYSICAL_DROPS_ENABLED === false, "normal enemy physical drops are disabled by default");
+}
+
+{
+  const account = accountWithWarden();
+  const item = { id: FIRST_BREACH_ITEM_REWARD_ID, name: "Wardforged Breach Blade", rarity: "uncommon", slot: "weapon" };
+  const drop = { dropId: "drop:pickup-log", itemId: item.id, itemInstanceId: item.id, name: item.name, rarity: item.rarity, sourceType: "chest", sourceId: "first-breach:dev-chest" };
+  const summary = recordRewardPickup(account, drop, item);
+  ok(summary?.delivery === "pickup" && summary.items[0].name === item.name, "pickup reward log distinguishes item pickup");
+  const duplicate = recordRewardPickup(account, drop, item);
+  ok(duplicate?.duplicate, "pickup reward log is duplicate-protected by drop id");
 }
 
 {
