@@ -38,12 +38,15 @@ export function normalizeLootItem(item) {
   const upgradeLevel = Math.max(0, Math.min(maxUpgradeLevel, Math.floor(Number(item?.upgradeLevel || 0))));
   return {
     id: String(item?.id || ""),
+    instanceId: String(item?.instanceId || item?.id || ""),
     name: String(item?.name || "Unnamed Relic"),
     slot: String(item?.slot || ""),
     rarity: String(item?.rarity || "common"),
     itemLevel: Math.max(1, Number(item?.itemLevel || item?.ilvl || 1)),
     levelRequirement: Math.max(1, Number(item?.levelRequirement || 1)),
     setId: item?.setId ? String(item.setId) : null,
+    sourceType: item?.sourceType ? String(item.sourceType) : null,
+    sourceId: item?.sourceId ? String(item.sourceId) : null,
     upgradeLevel,
     maxUpgradeLevel,
     stats,

@@ -85,7 +85,7 @@ export class LootSkeletonPanel {
     if (!this.onDebugReward) return;
     const summary = this.onDebugReward(sourceType);
     this.state = createLootState(this.getState?.());
-    const itemText = summary?.items?.length ? summary.items.map((item) => item.name).join(", ") : "";
+    const itemText = summary?.items?.length ? summary.items.map((item) => `${item.name} (${item.rarity})`).join(", ") : "";
     const itemPart = itemText ? summary.shouldSpawnWorldDrop ? ` Item dropped: ${itemText}.` : ` + ${itemText}.` : "";
     this.rewardMessage = summary ? `Claimed +${summary.goldGranted || 0} Gold.${itemPart}` : "Reward claim failed.";
     this.render();
@@ -144,6 +144,7 @@ export class LootSkeletonPanel {
       wrap.appendChild(this.button("Grant mission reward", () => this.claimDebugReward("mission")));
       wrap.appendChild(this.button("Spawn chest reward", () => this.claimDebugReward("chest")));
       wrap.appendChild(this.button("Spawn elite reward", () => this.claimDebugReward("elite")));
+      wrap.appendChild(this.button("Spawn legendary test drop", () => this.claimDebugReward("legendary")));
     }
     if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
     const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
@@ -152,7 +153,7 @@ export class LootSkeletonPanel {
       return wrap;
     }
     for (const summary of recent) {
-      const itemNames = summary.items?.map((item) => item.name).join(", ") || "";
+      const itemNames = summary.items?.map((item) => `${item.name} (${item.rarity})`).join(", ") || "";
       const itemText = itemNames
         ? summary.delivery === "pickup" ? ` | Item picked up: ${itemNames}` : summary.shouldSpawnWorldDrop ? ` | Item dropped: ${itemNames}` : ` | ${itemNames}`
         : "";

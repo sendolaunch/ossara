@@ -143,7 +143,7 @@ function startMission(missionId = "first-breach", selection = {}) {
       return res.summary;
     },
     onWorldDropPickup: (drop) => {
-      const item = FIXED_REWARD_ITEMS_BY_ID[drop.itemId] || null;
+      const item = drop.item || FIXED_REWARD_ITEMS_BY_ID[drop.itemId] || null;
       const state = createLootState(profile.lootSkeleton);
       const existing = item ? findLootItem(state, item.id) : null;
       if (item && !existing) addLootItem(state, item);
@@ -274,6 +274,8 @@ if (devLoot) {
         ? chestRewardDefinition({ rewardId: `chest:dev:${id}`, chestId: `dev-chest-${id}` })
         : sourceType === "elite"
           ? eliteRewardDefinition({ rewardId: `elite:dev:${id}`, eliteId: `dev-elite-${id}` })
+          : sourceType === "legendary"
+            ? eliteRewardDefinition({ rewardId: `elite:legendary-dev:${id}`, eliteId: `legendary-test-${id}`, rarity: "legendary" })
           : sourceType === "debug"
             ? {
                 rewardId: `debug:${id}`,

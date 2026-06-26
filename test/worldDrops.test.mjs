@@ -1,5 +1,6 @@
 import assert from "node:assert";
-import { FIRST_BREACH_ITEM_REWARD_ID, WAVE_CLEAR_GOLD_REWARD, chestRewardDefinition, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
+import { WAVE_CLEAR_GOLD_REWARD, chestRewardDefinition, grantReward, missionClearRewardDefinition, waveClearRewardDefinition } from "../src/sim/rewardModel.js";
+import { createDeterministicRng } from "../src/sim/itemGenerator.js";
 import {
   WORLD_DROP_MAX_ACTIVE,
   collectNearbyWorldDrops,
@@ -23,14 +24,15 @@ function accountWithWarden() {
 function missionRewardSummary() {
   const account = accountWithWarden();
   const loot = createLootState();
-  return grantReward(account, loot, missionClearRewardDefinition({ rewardId: "drop-summary-test" })).summary;
+  return grantReward(account, loot, missionClearRewardDefinition({ rewardId: "drop-summary-test", rng: createDeterministicRng(21) })).summary;
 }
 
 {
   const summary = missionRewardSummary();
   const drop = createWorldDropFromRewardSummary(summary, { position: { x: 3, z: 4 } });
-  ok(drop && drop.itemId === FIRST_BREACH_ITEM_REWARD_ID, "world drop can be created from reward summary");
+  ok(drop && drop.itemId === summary.itemId, "world drop can be created from reward summary");
   ok(drop.rarity === "uncommon" && drop.sourceType === "mission" && drop.sourceId === "first-breach", "world drop has rarity/source metadata");
+  ok(drop.item?.id === summary.itemId && Object.values(drop.item.stats).some((value) => value > 0), "world drop carries generated item stats");
   ok(drop.position.x === 3 && drop.position.z === 4, "world drop stores position");
 }
 
@@ -40,10 +42,10 @@ function missionRewardSummary() {
   const loot = createLootState();
   const far = pickupWorldDrop(drop, loot, { x: 5, z: 0 });
   ok(!far.ok && far.reason === "range", "pickup outside radius does not grant item");
-  ok(!findLootItem(far.lootState, FIRST_BREACH_ITEM_REWARD_ID), "outside-radius pickup leaves inventory unchanged");
+  ok(!findLootItem(far.lootState, summary.itemId), "outside-radius pickup leaves inventory unchanged");
   const near = pickupWorldDrop(drop, loot, { x: 0.6, z: 0.6 });
   ok(near.ok, "pickup within radius grants item");
-  ok(findLootItem(near.lootState, FIRST_BREACH_ITEM_REWARD_ID), "picked-up item appears in inventory");
+  ok(findLootItem(near.lootState, summary.itemId), "picked-up item appears in inventory");
   const again = pickupWorldDrop(drop, near.lootState, { x: 0, z: 0 });
   ok(!again.ok && again.reason === "collected", "collected drop cannot be collected twice");
 }
@@ -53,7 +55,7 @@ function missionRewardSummary() {
   const drop = createWorldDropFromRewardSummary(summary, { position: { x: 1, z: 1 }, pickupRadius: 1.5 });
   const res = collectNearbyWorldDrops([drop], createLootState(), { x: 1.2, z: 1.1 });
   ok(res.collected.length === 1, "nearby collector picks up matching drop");
-  ok(findLootItem(res.lootState, FIRST_BREACH_ITEM_REWARD_ID), "nearby collector grants item through lootModel");
+  ok(findLootItem(res.lootState, summary.itemId), "nearby collector grants item through lootModel");
 }
 
 {
@@ -67,9 +69,10 @@ function missionRewardSummary() {
 {
   const account = accountWithWarden();
   const loot = createLootState();
-  const chest = grantReward(account, loot, chestRewardDefinition({ rewardId: "drop-chest-source", chestId: "dev-chest" }));
+  const chest = grantReward(account, loot, chestRewardDefinition({ rewardId: "drop-chest-source", chestId: "dev-chest", rng: createDeterministicRng(22) }));
   const drop = createWorldDropFromRewardSummary(chest.summary, { position: { x: 2, z: -2 } });
   ok(drop && drop.sourceType === "chest" && drop.sourceId.includes("dev-chest"), "chest reward can produce physical world drop");
+  ok(drop.item?.id === chest.summary.itemId, "chest world drop carries generated item instance");
 }
 
 {
@@ -93,7 +96,8 @@ function missionRewardSummary() {
   loot = pickup.lootState;
   const hero = getActiveHero(account);
   hero.gold += FORGE_UPGRADE_GOLD_COST;
-  const upgraded = upgradeLootItem(loot, FIRST_BREACH_ITEM_REWARD_ID, "heroDamage", { availableGold: hero.gold });
+  const statKey = Object.keys(drop.item.stats).find((key) => drop.item.stats[key] > 0);
+  const upgraded = upgradeLootItem(loot, summary.itemId, statKey, { availableGold: hero.gold });
   ok(upgraded.ok, "Forge can upgrade picked-up item after collection");
 }
 

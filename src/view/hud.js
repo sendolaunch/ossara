@@ -502,8 +502,9 @@ export class HUD {
     const reward = this.rewardSummary?.reward || this.rewardSummary || {};
     const dropText = drops.length ? ` Recovered ${drops.length} relic${drops.length === 1 ? "" : "s"}.` : "";
     const goldText = reward.goldGranted ? ` +${reward.goldGranted} Gold.` : "";
+    const itemNames = reward.items?.map((item) => `${item.name}${item.rarity ? ` (${item.rarity})` : ""}`).join(", ") || "";
     const itemText = reward.items?.length
-      ? reward.shouldSpawnWorldDrop ? ` Item dropped: ${reward.items.map((item) => item.name).join(", ")}.` : ` Earned ${reward.items.map((item) => item.name).join(", ")}.`
+      ? reward.shouldSpawnWorldDrop ? ` Item dropped: ${itemNames}.` : ` Earned ${itemNames}.`
       : "";
     const kills = world ? ` ${world.stats.kills} dead put down.` : "";
     const name = this.mission?.name || "The First Seal";

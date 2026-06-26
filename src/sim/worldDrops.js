@@ -1,5 +1,5 @@
 import { FIXED_REWARD_ITEMS_BY_ID } from "../config/items.js";
-import { addLootItem, createLootState, findLootItem } from "./lootModel.js";
+import { addLootItem, createLootState, findLootItem, normalizeLootItem } from "./lootModel.js";
 
 export const WORLD_DROP_PICKUP_RADIUS = 1.45;
 export const WORLD_DROP_MAX_ACTIVE = 12;
@@ -19,13 +19,15 @@ export const WORLD_DROP_RARITY_COLORS = {
 export function createWorldDropFromRewardSummary(summary, opts = {}) {
   if (!summary?.shouldSpawnWorldDrop || !summary.itemId) return null;
   const item = summary.items?.find((entry) => entry.id === summary.itemId) || summary.items?.[0] || {};
+  const normalizedItem = item?.id ? normalizeLootItem(item) : null;
   const position = normalizeDropPosition(opts.position || summary.position || { x: 0, y: 0, z: 0 });
   return {
     dropId: String(opts.dropId || `drop:${summary.rewardId}:${summary.itemId}`),
     itemId: String(summary.itemId),
     itemInstanceId: String(summary.instanceId || summary.itemId),
-    name: String(item.name || summary.itemId),
-    rarity: String(summary.rarity || item.rarity || "common"),
+    name: String(normalizedItem?.name || item.name || summary.itemId),
+    rarity: String(summary.rarity || normalizedItem?.rarity || item.rarity || "common"),
+    item: normalizedItem,
     position,
     sourceType: String(summary.sourceType || "debug"),
     sourceId: String(summary.sourceId || ""),
@@ -72,7 +74,7 @@ export function pickupWorldDrop(drop, lootState, point, catalog = FIXED_REWARD_I
   if (!drop) return { ok: false, reason: "missing", lootState: createLootState(lootState) };
   if (drop.collected) return { ok: false, reason: "collected", drop, lootState: createLootState(lootState) };
   if (!isPointInPickupRadius(drop, point)) return { ok: false, reason: "range", drop, lootState: createLootState(lootState) };
-  const item = catalog[drop.itemId] || null;
+  const item = drop.item || catalog[drop.itemId] || null;
   if (!item) return { ok: false, reason: "item", drop, lootState: createLootState(lootState) };
   const state = createLootState(lootState);
   const existing = findLootItem(state, item.id);

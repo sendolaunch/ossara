@@ -1,6 +1,7 @@
 import { FIXED_REWARD_ITEMS_BY_ID } from "../config/items.js";
 import { getActiveHero } from "./heroes.js";
-import { addLootItem, createLootState, findLootItem } from "./lootModel.js";
+import { generateRewardItemForSource } from "./itemGenerator.js";
+import { addLootItem, createLootState, findLootItem, normalizeLootItem } from "./lootModel.js";
 
 export const REWARD_MODEL_VERSION = 1;
 export const WAVE_CLEAR_GOLD_REWARD = 4;
@@ -46,15 +47,17 @@ export function createRewardDefinition(def = {}) {
   const rewardId = String(def.rewardId || "").trim();
   const sourceType = SOURCE_TYPES.has(def.sourceType) ? def.sourceType : "debug";
   const sourceId = String(def.sourceId || sourceType);
-  const itemId = def.itemId ? String(def.itemId) : null;
-  const rarity = String(def.rarity || (itemId && FIXED_REWARD_ITEMS_BY_ID[itemId]?.rarity) || "common");
+  const item = def.item || def.generatedItem ? normalizeLootItem(def.item || def.generatedItem) : null;
+  const itemId = item?.id || (def.itemId ? String(def.itemId) : null);
+  const rarity = String(def.rarity || item?.rarity || (itemId && FIXED_REWARD_ITEMS_BY_ID[itemId]?.rarity) || "common");
   return {
     rewardId,
     sourceType,
     sourceId,
     gold: Math.max(0, Math.floor(Number(def.gold || 0))),
     itemId,
-    instanceId: def.instanceId ? String(def.instanceId) : itemId,
+    item,
+    instanceId: def.instanceId ? String(def.instanceId) : item?.instanceId || itemId,
     rarity,
     shouldSpawnWorldDrop: !!def.shouldSpawnWorldDrop,
     autoClaim: def.autoClaim !== false,
@@ -62,53 +65,68 @@ export function createRewardDefinition(def = {}) {
   };
 }
 
-export function missionClearRewardDefinition({ rewardId, missionId = "first-breach", difficultyId = "initiate" } = {}) {
-  return createRewardDefinition({
+export function missionClearRewardDefinition({ rewardId, missionId = "first-breach", difficultyId = "initiate", rng, rarity } = {}) {
+  return createPhysicalItemRewardDefinition({
     rewardId: rewardId || `mission:${missionId}:${difficultyId}`,
     sourceType: "mission",
     sourceId: missionId,
     gold: MISSION_CLEAR_GOLD_REWARD,
-    itemId: FIRST_BREACH_ITEM_REWARD_ID,
-    rarity: FIXED_REWARD_ITEMS_BY_ID[FIRST_BREACH_ITEM_REWARD_ID]?.rarity || "uncommon",
-    shouldSpawnWorldDrop: true,
+    rng,
+    rarity,
     label: "Breach held",
   });
 }
 
-export function chestRewardDefinition({ rewardId, chestId = "dev-chest", missionId = "first-breach" } = {}) {
+export function chestRewardDefinition({ rewardId, chestId = "dev-chest", missionId = "first-breach", rng, rarity } = {}) {
   return createPhysicalItemRewardDefinition({
     rewardId: rewardId || `chest:${missionId}:${chestId}`,
     sourceType: "chest",
     sourceId: `${missionId}:${chestId}`,
     gold: CHEST_REWARD_GOLD,
+    rng,
+    rarity,
     label: "Chest opened",
   });
 }
 
-export function eliteRewardDefinition({ rewardId, eliteId = "dev-elite", missionId = "first-breach" } = {}) {
+export function eliteRewardDefinition({ rewardId, eliteId = "dev-elite", missionId = "first-breach", rng, rarity } = {}) {
   return createPhysicalItemRewardDefinition({
     rewardId: rewardId || `elite:${missionId}:${eliteId}`,
     sourceType: "elite",
     sourceId: `${missionId}:${eliteId}`,
     gold: ELITE_REWARD_GOLD,
+    rng,
+    rarity,
     label: "Elite defeated",
   });
 }
 
-export function bossRewardDefinition({ rewardId, bossId = "dev-boss", missionId = "first-breach" } = {}) {
+export function bossRewardDefinition({ rewardId, bossId = "dev-boss", missionId = "first-breach", rng, rarity } = {}) {
   return createPhysicalItemRewardDefinition({
     rewardId: rewardId || `boss:${missionId}:${bossId}`,
     sourceType: "boss",
     sourceId: `${missionId}:${bossId}`,
     gold: BOSS_REWARD_GOLD,
+    rng,
+    rarity,
     label: "Boss defeated",
   });
 }
 
 function createPhysicalItemRewardDefinition(def = {}) {
+  const sourceType = SOURCE_TYPES.has(def.sourceType) ? def.sourceType : "debug";
+  const sourceId = String(def.sourceId || sourceType);
+  const item = def.item || def.generatedItem || generateRewardItemForSource(sourceType, {
+    sourceId,
+    rng: def.rng,
+    rarity: def.rarity,
+    itemLevel: def.itemLevel,
+  });
   return createRewardDefinition({
-    itemId: FIRST_BREACH_ITEM_REWARD_ID,
-    rarity: FIXED_REWARD_ITEMS_BY_ID[FIRST_BREACH_ITEM_REWARD_ID]?.rarity || "uncommon",
+    item,
+    itemId: item.id,
+    instanceId: item.instanceId || item.id,
+    rarity: item.rarity,
     shouldSpawnWorldDrop: true,
     ...def,
   });
@@ -145,7 +163,7 @@ export function grantReward(account, lootState, rewardDef, catalog = FIXED_REWAR
   const items = [];
   const state = createLootState(lootState);
   if (reward.itemId) {
-    const item = catalog[reward.itemId] || null;
+    const item = reward.item || catalog[reward.itemId] || null;
     if (item) {
       items.push(item);
       if (reward.autoClaim && !reward.shouldSpawnWorldDrop && !findLootItem(state, item.id)) {
@@ -232,12 +250,7 @@ export function createRewardSummary(rewardDef, result = {}) {
     duplicate: !!result.duplicate,
     goldGranted: Math.max(0, Math.floor(Number(result.goldGranted || 0))),
     currentGold: Math.max(0, Math.floor(Number(result.currentGold || 0))),
-    items: Array.isArray(result.items) ? result.items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      rarity: item.rarity,
-      slot: item.slot,
-    })) : [],
+    items: Array.isArray(result.items) ? result.items.map(normalizeRewardSummaryItem) : [],
   });
 }
 
@@ -256,12 +269,26 @@ export function normalizeRewardSummary(summary = {}) {
     duplicate: !!summary.duplicate,
     goldGranted: Math.max(0, Math.floor(Number(summary.goldGranted || 0))),
     currentGold: Math.max(0, Math.floor(Number(summary.currentGold || 0))),
-    items: Array.isArray(summary.items) ? summary.items.map((item) => ({
-      id: String(item.id || ""),
-      name: String(item.name || item.id || "Reward Item"),
-      rarity: String(item.rarity || "common"),
-      slot: String(item.slot || ""),
-    })) : [],
+    items: Array.isArray(summary.items) ? summary.items.map(normalizeRewardSummaryItem) : [],
+  };
+}
+
+function normalizeRewardSummaryItem(item = {}) {
+  const normalized = normalizeLootItem(item);
+  return {
+    id: normalized.id,
+    instanceId: normalized.instanceId || normalized.id,
+    name: normalized.name,
+    slot: normalized.slot,
+    rarity: normalized.rarity,
+    itemLevel: normalized.itemLevel,
+    levelRequirement: normalized.levelRequirement,
+    setId: normalized.setId,
+    sourceType: normalized.sourceType,
+    sourceId: normalized.sourceId,
+    upgradeLevel: normalized.upgradeLevel,
+    maxUpgradeLevel: normalized.maxUpgradeLevel,
+    stats: { ...normalized.stats },
   };
 }
 
