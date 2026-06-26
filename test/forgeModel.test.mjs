@@ -17,7 +17,7 @@ import {
   getAppliedLootStats,
   grantStarterLoot,
 } from "../src/sim/lootModel.js";
-import { lootPanelAccessData } from "../src/ui/lootSkeletonPanel.js";
+import { lootPanelAccessData, lootPanelForgeState, lootPanelItemRows } from "../src/ui/lootSkeletonPanel.js";
 import { World } from "../src/sim/World.js";
 
 let passed = 0;
@@ -119,6 +119,30 @@ const item = (id, slot, stats = {}) => ({
 
   const devOpen = lootPanelAccessData({ devMode: true, visible: true });
   ok(devOpen.title === "Loot Dev Panel" && devOpen.debugControlsVisible, "devLoot keeps debug controls visible");
+}
+
+{
+  const state = createLootState();
+  addLootItem(state, item("boots", "boots", { abilityPower: 2 }));
+  equipLootItem(state, "boots");
+  const rows = lootPanelItemRows(state, "boots");
+  ok(rows.length === 1 && rows[0].selected, "panel data marks selected item");
+  ok(rows[0].equipped, "panel data marks equipped item");
+  ok(rows[0].statsText.includes("+2 abilityPower"), "panel data exposes readable item stat text");
+}
+
+{
+  const state = createLootState();
+  addLootItem(state, item("boots", "boots", { abilityPower: 2 }));
+  ok(lootPanelForgeState(state, null, 999).status === "missing", "Forge panel prompts for missing item selection");
+  const poor = lootPanelForgeState(state, "boots", 0);
+  ok(poor.status === "gold" && !poor.canUpgrade, "Forge panel exposes not-enough-Gold state");
+  ok(poor.upgradeableStats[0].disabled && poor.upgradeableStats[0].reason === "Not enough Gold", "Forge upgrade button data disables when Gold is missing");
+  const ready = lootPanelForgeState(state, "boots", FORGE_UPGRADE_GOLD_COST);
+  ok(ready.status === "ready" && ready.canUpgrade, "Forge panel exposes ready upgrade state");
+  state.items[0].upgradeLevel = state.items[0].maxUpgradeLevel;
+  const maxed = lootPanelForgeState(state, "boots", 999);
+  ok(maxed.status === "max" && !maxed.canUpgrade, "Forge panel exposes max-level state");
 }
 
 console.log(`forgeModel: ${passed}/${passed} checks passed`);

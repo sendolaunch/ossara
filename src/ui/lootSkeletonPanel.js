@@ -16,6 +16,24 @@ const el = (tag, styles = {}, text = "") => {
   return node;
 };
 
+const RARITY_COLORS = {
+  common: "#d8d8d8",
+  uncommon: CSS.plague,
+  rare: "#6ea8ff",
+  epic: "#b66cff",
+  legendary: CSS.gold,
+  mythic: "#ff6edb",
+};
+
+const rarityColor = (rarity = "common") => RARITY_COLORS[String(rarity).toLowerCase()] || CSS.bone;
+
+export function lootItemStatsText(item) {
+  const stats = LOOT_STAT_KEYS
+    .filter((key) => Number(item?.stats?.[key] || 0) !== 0)
+    .map((key) => `+${Number(item.stats[key] || 0)} ${key}`);
+  return stats.length ? stats.join(" | ") : "No stats";
+}
+
 export function lootPanelAccessData({ devMode = false, visible = false } = {}) {
   return {
     title: devMode ? "Loot Dev Panel" : "Inventory / Forge",
@@ -24,6 +42,79 @@ export function lootPanelAccessData({ devMode = false, visible = false } = {}) {
       : "Manage equipment and upgrade owned items. Debug rewards stay hidden.",
     debugControlsVisible: !!devMode,
     toggleLabel: visible ? "Close Inventory / Forge" : "Inventory / Forge",
+  };
+}
+
+export function lootPanelItemRows(state, selectedItemId = null) {
+  const lootState = createLootState(state);
+  return lootState.items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    slot: item.slot,
+    rarity: item.rarity,
+    rarityColor: rarityColor(item.rarity),
+    itemLevel: item.itemLevel,
+    upgradeLevel: item.upgradeLevel,
+    maxUpgradeLevel: item.maxUpgradeLevel,
+    setId: item.setId,
+    statsText: lootItemStatsText(item),
+    selected: item.id === selectedItemId,
+    equipped: lootState.equipped[item.slot] === item.id,
+  }));
+}
+
+export function lootPanelForgeState(state, selectedItemId = null, availableGold = 0) {
+  if (!selectedItemId) {
+    return {
+      status: "missing",
+      message: "Select an owned item to upgrade it.",
+      canUpgrade: false,
+      selected: null,
+      upgradeableStats: [],
+      availableGold: Number(availableGold || 0),
+    };
+  }
+  const lootState = createLootState(state);
+  const selectedItem = lootState.items.find((item) => item.id === selectedItemId) || null;
+  const forgeData = selectedItem
+    ? getForgeViewerData(lootState, selectedItem.id)
+    : { selected: null };
+  const selected = forgeData.selected;
+  if (!selected) {
+    return {
+      status: "missing",
+      message: "Select an owned item to upgrade it.",
+      canUpgrade: false,
+      selected: null,
+      upgradeableStats: [],
+      availableGold: Number(availableGold || 0),
+    };
+  }
+  const canAfford = Number(availableGold || 0) >= selected.cost;
+  let status = "ready";
+  let message = `Choose one existing stat to upgrade for ${selected.cost} Gold.`;
+  if (selected.atMax) {
+    status = "max";
+    message = "This item is fully upgraded.";
+  } else if (!selected.upgradeableStats.length) {
+    status = "stat";
+    message = "This item has no upgradeable stats yet.";
+  } else if (!canAfford) {
+    status = "gold";
+    message = `Need ${selected.cost} Gold. You have ${Number(availableGold || 0)}.`;
+  }
+  return {
+    status,
+    message,
+    canUpgrade: status === "ready",
+    selected,
+    upgradeableStats: selected.upgradeableStats.map((statKey) => ({
+      statKey,
+      label: `+1 ${statKey}`,
+      disabled: status !== "ready",
+      reason: status === "gold" ? "Not enough Gold" : status === "max" ? "Max level" : status === "stat" ? "No stat" : "",
+    })),
+    availableGold: Number(availableGold || 0),
   };
 }
 
@@ -60,9 +151,13 @@ export class LootSkeletonPanel {
       position: "absolute",
       right: "14px",
       bottom: "76px",
-      width: "300px",
-      maxHeight: "58vh",
+      width: "min(340px, calc(100vw - 28px))",
+      maxWidth: "calc(100vw - 28px)",
+      maxHeight: "min(68vh, calc(100vh - 132px))",
       overflowY: "auto",
+      overflowX: "hidden",
+      overscrollBehavior: "contain",
+      scrollbarGutter: "stable",
       zIndex: "18",
       padding: "12px",
       border: `1px solid ${CSS.gold}`,
@@ -72,6 +167,9 @@ export class LootSkeletonPanel {
       font: "12px ui-sans-serif, system-ui",
       boxShadow: "0 12px 30px rgba(0,0,0,0.45)",
     });
+    this.root.addEventListener("wheel", (event) => event.stopPropagation(), { passive: true });
+    this.root.addEventListener("mousedown", (event) => event.stopPropagation());
+    this.root.addEventListener("contextmenu", (event) => event.preventDefault());
     root.appendChild(this.root);
     this.render();
   }
@@ -162,18 +260,24 @@ export class LootSkeletonPanel {
     });
   }
 
-  button(label, onClick) {
+  button(label, onClick, opts = {}) {
     const button = el("button", {
       margin: "6px 6px 0 0",
-      padding: "5px 8px",
+      padding: opts.large ? "7px 10px" : "5px 8px",
+      minHeight: "28px",
       borderRadius: "6px",
-      border: `1px solid ${CSS.gold}`,
-      background: "rgba(200,161,74,0.16)",
-      color: CSS.bone,
-      cursor: "pointer",
+      border: `1px solid ${opts.active ? CSS.plague : CSS.gold}`,
+      background: opts.active ? "rgba(110,230,90,0.2)" : opts.disabled ? "rgba(143,136,111,0.08)" : "rgba(200,161,74,0.16)",
+      color: opts.disabled ? CSS.ash : CSS.bone,
+      cursor: opts.disabled ? "not-allowed" : "pointer",
       font: "700 11px 'Cinzel', serif",
+      opacity: opts.disabled ? "0.62" : "1",
+      whiteSpace: "normal",
+      textAlign: "center",
     }, label);
-    button.onclick = onClick;
+    button.disabled = !!opts.disabled;
+    button.title = opts.title || "";
+    button.onclick = opts.disabled ? null : onClick;
     return button;
   }
 
@@ -214,16 +318,12 @@ export class LootSkeletonPanel {
   }
 
   renderForge() {
-    let forgeData = getForgeViewerData(this.state, this.selectedForgeItemId);
-    if (!forgeData.selectedItem && this.state.items[0]) {
-      this.selectedForgeItemId = this.state.items[0].id;
-      forgeData = getForgeViewerData(this.state, this.selectedForgeItemId);
-    }
+    const forgeState = lootPanelForgeState(this.state, this.selectedForgeItemId, this.heroGold());
     const wrap = el("div", {
       marginTop: "10px",
       padding: "8px",
       borderRadius: "7px",
-      border: `1px solid rgba(200,161,74,0.45)`,
+      border: `1px solid ${forgeState.canUpgrade ? "rgba(200,161,74,0.55)" : "rgba(143,136,111,0.35)"}`,
       background: "rgba(200,161,74,0.07)",
     });
     wrap.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Forge v1"));
@@ -233,24 +333,27 @@ export class LootSkeletonPanel {
       `Active hero Gold: ${this.heroGold()}`));
     if (this.devMode) wrap.appendChild(this.button("Dev +50 Gold", () => this.grantTestGold(50)));
 
-    if (!forgeData.selected) {
-      wrap.appendChild(el("div", { color: CSS.ash, marginTop: "8px" }, "Grant or own an item to use the Forge."));
+    if (!forgeState.selected) {
+      wrap.appendChild(el("div", { color: CSS.ash, marginTop: "8px", lineHeight: "1.35" }, forgeState.message));
       if (this.forgeMessage) wrap.appendChild(el("div", { color: CSS.gold, marginTop: "6px", fontSize: "11px" }, this.forgeMessage));
       return wrap;
     }
 
-    const selected = forgeData.selected;
+    const selected = forgeState.selected;
     this.selectedForgeItemId = selected.item.id;
-    wrap.appendChild(el("div", { color: CSS.bone, fontWeight: "700", marginTop: "8px" }, selected.item.name));
+    wrap.appendChild(el("div", { color: rarityColor(selected.item.rarity), fontWeight: "800", marginTop: "8px" }, selected.item.name));
     wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
-      `${selected.item.slot} | +${selected.upgradeLevel}/${selected.maxUpgradeLevel}`));
-    if (selected.atMax) {
-      wrap.appendChild(el("div", { color: CSS.gold, marginTop: "6px", fontSize: "11px" }, "Max upgrade reached."));
-    } else if (!selected.upgradeableStats.length) {
-      wrap.appendChild(el("div", { color: CSS.ash, marginTop: "6px", fontSize: "11px" }, "No existing stats can be upgraded."));
-    } else {
+      `${selected.item.slot} | ${selected.item.rarity} | +${selected.upgradeLevel}/${selected.maxUpgradeLevel}`));
+    wrap.appendChild(el("div", { color: forgeState.canUpgrade ? CSS.plague : forgeState.status === "gold" ? CSS.blood : CSS.gold, marginTop: "6px", fontSize: "11px", lineHeight: "1.35", fontWeight: "700" }, forgeState.message));
+    if (forgeState.upgradeableStats.length) {
       const choices = el("div", { marginTop: "4px" });
-      for (const statKey of selected.upgradeableStats) choices.appendChild(this.button(`+1 ${statKey}`, () => this.upgradeForgeStat(statKey)));
+      for (const option of forgeState.upgradeableStats) {
+        choices.appendChild(this.button(option.label, () => this.upgradeForgeStat(option.statKey), {
+          disabled: option.disabled,
+          title: option.reason,
+          large: true,
+        }));
+      }
       wrap.appendChild(choices);
     }
     if (this.forgeMessage) wrap.appendChild(el("div", { color: CSS.gold, marginTop: "6px", fontSize: "11px", lineHeight: "1.35" }, this.forgeMessage));
@@ -302,8 +405,17 @@ export class LootSkeletonPanel {
     equipped.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Equipped"));
     for (const slot of LOOT_EQUIPMENT_SLOTS) {
       const item = data.equippedItems[slot];
-      const row = el("div", { color: item ? CSS.bone : CSS.ash, margin: "3px 0" },
-        `${slot}: ${item ? item.name : "empty"}`);
+      const row = el("div", {
+        color: item ? CSS.bone : CSS.ash,
+        margin: "4px 0",
+        padding: "5px 6px",
+        borderRadius: "6px",
+        border: `1px solid ${item ? "rgba(200,161,74,0.34)" : "rgba(143,136,111,0.18)"}`,
+        background: item ? "rgba(200,161,74,0.06)" : "rgba(143,136,111,0.04)",
+        lineHeight: "1.35",
+      });
+      row.appendChild(el("div", { fontSize: "11px", color: CSS.ash, textTransform: "uppercase", letterSpacing: "0.5px" }, slot));
+      row.appendChild(el("div", { color: item ? rarityColor(item.rarity) : CSS.ash, fontWeight: "700" }, item ? item.name : "empty"));
       if (item) row.appendChild(this.button("Unequip", () => this.mutate((state) => unequipLootSlot(state, slot))));
       equipped.appendChild(row);
     }
@@ -312,25 +424,47 @@ export class LootSkeletonPanel {
     const items = el("div", { marginTop: "10px" });
     items.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, `Inventory (${this.state.items.length})`));
     if (!this.state.items.length) items.appendChild(el("div", { color: CSS.ash }, "No skeleton items yet."));
-    for (const item of this.state.items) {
+    const itemRows = lootPanelItemRows(this.state, this.selectedForgeItemId);
+    for (const row of itemRows) {
       const card = el("div", {
-        padding: "7px",
+        padding: "8px",
         margin: "6px 0",
         borderRadius: "6px",
-        border: `1px solid ${CSS.rot}`,
-        background: "rgba(255,255,255,0.03)",
+        border: `1px solid ${row.selected ? CSS.plague : row.equipped ? CSS.gold : row.rarityColor}`,
+        background: row.selected
+          ? "rgba(110,230,90,0.1)"
+          : row.equipped
+            ? "rgba(200,161,74,0.08)"
+            : "rgba(255,255,255,0.03)",
+        boxShadow: row.selected ? "0 0 0 1px rgba(110,230,90,0.22) inset" : "none",
       });
-      card.appendChild(el("div", { color: CSS.bone, fontWeight: "700" }, item.name));
-      card.appendChild(el("div", { color: CSS.ash, fontSize: "11px" },
-        `${item.slot} | ${item.rarity} | ilvl ${item.itemLevel}${item.setId ? " | " + item.setId : ""}`));
-      card.appendChild(el("div", { color: CSS.plague, fontSize: "11px", marginTop: "2px" },
-        LOOT_STAT_KEYS.filter((key) => item.stats[key]).map((key) => `+${item.stats[key]} ${key}`).join(" | ") || "No stats"));
-      if (this.state.equipped[item.slot] === item.id) {
-        card.appendChild(el("div", { color: CSS.gold, fontSize: "11px", marginTop: "6px", fontWeight: "700" }, "Equipped"));
-      } else {
-        card.appendChild(this.button("Equip", () => this.mutate((state) => equipLootItem(state, item.id))));
+      const titleRow = el("div", { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" });
+      titleRow.appendChild(el("div", { color: row.rarityColor, fontWeight: "800", lineHeight: "1.2" }, row.name));
+      if (row.equipped) {
+        titleRow.appendChild(el("div", {
+          color: CSS.gold,
+          border: `1px solid rgba(200,161,74,0.55)`,
+          borderRadius: "999px",
+          padding: "2px 6px",
+          fontSize: "10px",
+          fontWeight: "800",
+          flexShrink: "0",
+        }, "Equipped"));
       }
-      card.appendChild(this.button(this.selectedForgeItemId === item.id ? "Forging" : "Forge", () => this.selectForgeItem(item.id)));
+      card.appendChild(titleRow);
+      card.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35", marginTop: "3px" },
+        `${row.slot} | ${row.rarity} | ilvl ${row.itemLevel} | +${row.upgradeLevel}/${row.maxUpgradeLevel}${row.setId ? " | " + row.setId : ""}`));
+      card.appendChild(el("div", { color: CSS.plague, fontSize: "11px", lineHeight: "1.35", marginTop: "3px" }, row.statsText));
+      const actions = el("div", { display: "flex", flexWrap: "wrap", gap: "0 2px", marginTop: "2px" });
+      if (row.equipped) {
+        actions.appendChild(this.button("Unequip", () => this.mutate((state) => unequipLootSlot(state, row.slot))));
+      } else {
+        actions.appendChild(this.button("Equip", () => this.mutate((state) => equipLootItem(state, row.id))));
+      }
+      actions.appendChild(this.button(row.selected ? "Selected for Forge" : "Select for Forge", () => this.selectForgeItem(row.id), {
+        active: row.selected,
+      }));
+      card.appendChild(actions);
       items.appendChild(card);
     }
     this.root.appendChild(items);
