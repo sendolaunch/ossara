@@ -11,7 +11,8 @@ import { HUD } from "../view/hud.js";
 import { Input } from "../input/Input.js";
 import { CSS } from "../config/palette.js";
 import { resolveMissionStart } from "../config/missions.js";
-import { createWorldDropFromRewardSummary, markWorldDropCollected, trimWorldDrops } from "../sim/worldDrops.js";
+import { lootTooltipData } from "../sim/lootModel.js";
+import { createWorldDropFromRewardSummary, markWorldDropCollected, selectNearbyWorldDrop, trimWorldDrops } from "../sim/worldDrops.js";
 
 const PLACEMENT_MESSAGES = {
   marrow: "Not enough Marrow.",
@@ -137,6 +138,7 @@ export class Mission {
     this.onWin = opts.onWin || null;
     this.onWaveReward = opts.onWaveReward || null;
     this.onWorldDropPickup = opts.onWorldDropPickup || null;
+    this.getLootState = opts.getLootState || (() => null);
     this._wonFired = false;
     this.worldDrops = [];
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
@@ -233,6 +235,7 @@ export class Mission {
     }
 
     this.world.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
+    this._updateLootDropTooltip();
     this.renderer.update(this.world, Math.min(dt, 0.05), heroMoveIntent);
     this.hud.update(this.world);
     requestAnimationFrame(this._frame);
@@ -280,8 +283,22 @@ export class Mission {
       if (!res.ok) continue;
       const pickup = this.onWorldDropPickup ? this.onWorldDropPickup(drop) : null;
       const itemName = pickup?.item?.name || drop.name;
-      this.hud.toast(pickup?.duplicate ? `${itemName} already recovered.` : `Recovered ${itemName}.`, CSS.gold);
+      this.hud.toast(pickup?.duplicate ? `${itemName} already picked up.` : `Picked up: ${itemName}`, CSS.gold);
     }
     this.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
+  }
+
+  _updateLootDropTooltip() {
+    if (!this.hud?.setLootDropTooltip || !this.world?.hero?.alive) return;
+    const point = { x: this.world.hero.x, z: this.world.hero.z };
+    const nearby = selectNearbyWorldDrop(this.worldDrops, point);
+    if (!nearby?.drop?.item) {
+      this.hud.setLootDropTooltip(null);
+      return;
+    }
+    this.hud.setLootDropTooltip({
+      ...lootTooltipData(nearby.drop.item, this.getLootState?.()),
+      distance: nearby.distance,
+    });
   }
 }

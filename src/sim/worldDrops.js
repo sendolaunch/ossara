@@ -3,6 +3,7 @@ import { addLootItem, createLootState, findLootItem, normalizeLootItem } from ".
 
 export const WORLD_DROP_PICKUP_RADIUS = 1.45;
 export const WORLD_DROP_MAX_ACTIVE = 12;
+export const WORLD_DROP_TOOLTIP_RADIUS = 2.6;
 
 export const WORLD_DROP_RARITY_COLORS = {
   common: "#d8d8d8",
@@ -59,6 +60,29 @@ export function isPointInPickupRadius(drop, point) {
   const dx = Number(point.x || 0) - Number(drop.position?.x || 0);
   const dz = Number(point.z || 0) - Number(drop.position?.z || 0);
   return Math.hypot(dx, dz) <= Number(drop.pickupRadius || WORLD_DROP_PICKUP_RADIUS);
+}
+
+export function distanceToWorldDrop(drop, point) {
+  if (!drop || !point) return Infinity;
+  const dx = Number(point.x || 0) - Number(drop.position?.x || 0);
+  const dz = Number(point.z || 0) - Number(drop.position?.z || 0);
+  return Math.hypot(dx, dz);
+}
+
+export function selectNearbyWorldDrop(drops, point, opts = {}) {
+  const radius = Math.max(0.1, Number(opts.radius || WORLD_DROP_TOOLTIP_RADIUS));
+  let best = null;
+  let bestDistance = Infinity;
+  for (const drop of drops || []) {
+    if (!drop || drop.collected) continue;
+    const distance = distanceToWorldDrop(drop, point);
+    if (distance > radius) continue;
+    if (!best || distance < bestDistance) {
+      best = drop;
+      bestDistance = distance;
+    }
+  }
+  return best ? { drop: best, distance: bestDistance } : null;
 }
 
 export function markWorldDropCollected(drop, point) {

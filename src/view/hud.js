@@ -56,6 +56,13 @@ function towerIcon(id, c) {
 }
 
 const colorCss = { void: CSS.void, bone: CSS.bone, plague: CSS.plague, rot: CSS.rot, ash: CSS.ash, blood: CSS.blood, gold: CSS.gold };
+const rarityColors = {
+  common: "#d8d8d8",
+  uncommon: CSS.plague,
+  rare: "#4aa8ff",
+  epic: "#a96cff",
+  legendary: CSS.gold,
+};
 const placementReasonText = {
   marrow: "Not enough Marrow",
   path: "Enemy path",
@@ -200,6 +207,7 @@ export class HUD {
     this.commandTargetTower = null;
     this.commandCast = null;
     this.commandCastTower = null;
+    this.lootDropTooltip = null;
     this._build();
   }
 
@@ -228,6 +236,19 @@ export class HUD {
     this.elMarrow.style.color = CSS.gold;
     tl.append(this.elMission, this.elDifficulty, w1.row, w2.row, this.wardBarOuter, w3.row);
     this.root.appendChild(tl);
+
+    this.lootTooltip = el("div", {
+      position: "absolute",
+      top: "116px",
+      left: "12px",
+      width: "270px",
+      ...panel(),
+      padding: "10px 12px",
+      display: "none",
+      zIndex: "4",
+      pointerEvents: "none",
+    });
+    this.root.appendChild(this.lootTooltip);
 
     // ---- phase banner (top center) ----
     const banner = el("div", { position: "absolute", top: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", pointerEvents: "auto" });
@@ -497,6 +518,38 @@ export class HUD {
     if (this.actionMenu) this.actionMenu.style.display = on ? "block" : "none";
   }
 
+  setLootDropTooltip(data) {
+    this.lootDropTooltip = data || null;
+  }
+
+  _renderLootDropTooltip() {
+    if (!this.lootTooltip) return;
+    const data = this.lootDropTooltip;
+    if (!data?.item) {
+      this.lootTooltip.style.display = "none";
+      return;
+    }
+    const rarity = String(data.rarity || data.item.rarity || "common");
+    const color = rarityColors[rarity] || CSS.plague;
+    this.lootTooltip.style.display = "block";
+    this.lootTooltip.style.borderColor = color;
+    const stats = (data.stats || [])
+      .map((stat) => `<div style="color:${CSS.bone};font-size:11px;line-height:1.35">+${stat.value} ${stat.key}</div>`)
+      .join("") || `<div style="color:${CSS.ash};font-size:11px">No stats</div>`;
+    const deltas = (data.deltas || [])
+      .map((stat) => {
+        const positive = stat.delta > 0;
+        return `<span style="display:inline-block;margin:2px 5px 0 0;color:${positive ? CSS.plague : CSS.blood};font-weight:800">${positive ? "+" : ""}${stat.delta} ${stat.key}</span>`;
+      })
+      .join("") || `<span style="color:${CSS.ash}">No stat change</span>`;
+    const equippedText = data.equipped ? `Equipped: ${data.equipped.name}` : data.comparisonText || "No item equipped.";
+    this.lootTooltip.innerHTML =
+      `<div style="color:${color};font:900 13px 'Cinzel',ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.item.name}</div>` +
+      `<div style="margin-top:3px;color:${CSS.gold};font-size:11px;text-transform:uppercase">${rarity} ${data.slot || "item"} · ilvl ${data.itemLevel || 1} · +${data.upgradeLevel || 0}/${data.maxUpgradeLevel ?? 5}</div>` +
+      `<div style="margin-top:7px">${stats}</div>` +
+      `<div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(233,228,210,0.16);color:${CSS.ash};font-size:11px;line-height:1.35">${equippedText}<br>${deltas}</div>`;
+  }
+
   _writeWinSummary(world = null) {
     const drops = this.rewardSummary?.drops || [];
     const reward = this.rewardSummary?.reward || this.rewardSummary || {};
@@ -622,6 +675,7 @@ export class HUD {
       this.elKitHint.textContent = hint;
       this.elKitHint.style.display = hint ? "" : "none";
     }
+    this._renderLootDropTooltip();
 
     // build cards: affordability lock
     for (const id of Object.keys(this.towerBtns || {})) {
@@ -667,6 +721,8 @@ export class HUD {
     this.commandTargetTower = null;
     this.commandCast = null;
     this.commandCastTower = null;
+    this.lootDropTooltip = null;
+    this._renderLootDropTooltip();
     this.setActionMenuOpen(false);
     this.overlay.style.display = "none";
   }

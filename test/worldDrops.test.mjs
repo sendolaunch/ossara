@@ -6,6 +6,7 @@ import {
   collectNearbyWorldDrops,
   createWorldDropFromRewardSummary,
   pickupWorldDrop,
+  selectNearbyWorldDrop,
   trimWorldDrops,
 } from "../src/sim/worldDrops.js";
 import { createLootState, findLootItem, grantStarterLoot } from "../src/sim/lootModel.js";
@@ -84,6 +85,23 @@ function missionRewardSummary() {
   const trimmed = trimWorldDrops(drops);
   ok(trimmed.length === WORLD_DROP_MAX_ACTIVE, "active world drop limit trims old drops");
   ok(trimmed[0].dropId === "drop-limit-3", "drop limit keeps newest active drops");
+}
+
+{
+  const summary = missionRewardSummary();
+  const far = createWorldDropFromRewardSummary(summary, { dropId: "far-drop", position: { x: 2.4, z: 0 } });
+  const near = createWorldDropFromRewardSummary(summary, { dropId: "near-drop", position: { x: 0.8, z: 0 } });
+  const selected = selectNearbyWorldDrop([far, near], { x: 0, z: 0 }, { radius: 3 });
+  ok(selected?.drop.dropId === "near-drop", "nearest drop selection works");
+  far.collected = true;
+  near.collected = true;
+  ok(selectNearbyWorldDrop([far, near], { x: 0, z: 0 }, { radius: 3 }) === null, "nearest drop ignores collected drops");
+}
+
+{
+  const summary = missionRewardSummary();
+  const drop = createWorldDropFromRewardSummary(summary, { dropId: "outside-tooltip", position: { x: 4, z: 0 } });
+  ok(selectNearbyWorldDrop([drop], { x: 0, z: 0 }, { radius: 2 }) === null, "nearest drop respects tooltip radius");
 }
 
 {

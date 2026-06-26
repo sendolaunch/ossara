@@ -171,6 +171,49 @@ export function getLootViewerData(state) {
   };
 }
 
+export function compareLootItemToEquipped(item, state) {
+  const candidate = normalizeLootItem(item);
+  const lootState = createLootState(state);
+  const equipped = candidate.slot ? getEquippedLootItems(lootState)[candidate.slot] || null : null;
+  const deltas = {};
+  for (const key of LOOT_STAT_KEYS) {
+    const value = Number(candidate.stats?.[key] || 0);
+    const current = Number(equipped?.stats?.[key] || 0);
+    const delta = value - current;
+    if (delta !== 0) deltas[key] = delta;
+  }
+  return {
+    item: candidate,
+    equipped,
+    slot: candidate.slot,
+    hasEquipped: !!equipped,
+    deltas,
+  };
+}
+
+export function lootTooltipData(item, state) {
+  const comparison = compareLootItemToEquipped(item, state);
+  const itemStats = LOOT_STAT_KEYS
+    .map((key) => ({ key, value: Number(comparison.item.stats?.[key] || 0) }))
+    .filter((stat) => stat.value !== 0);
+  const deltas = LOOT_STAT_KEYS
+    .map((key) => ({ key, delta: Number(comparison.deltas[key] || 0) }))
+    .filter((stat) => stat.delta !== 0);
+  return {
+    item: comparison.item,
+    rarity: comparison.item.rarity,
+    title: comparison.item.name,
+    slot: comparison.item.slot,
+    itemLevel: comparison.item.itemLevel,
+    upgradeLevel: comparison.item.upgradeLevel,
+    maxUpgradeLevel: comparison.item.maxUpgradeLevel,
+    stats: itemStats,
+    equipped: comparison.equipped,
+    comparisonText: comparison.equipped ? comparison.equipped.name : "No item equipped.",
+    deltas,
+  };
+}
+
 export function grantStarterLoot(state, itemIds = STARTER_LOOT_ITEMS.map((item) => item.id)) {
   const granted = [];
   for (const id of itemIds) {

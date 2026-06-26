@@ -132,6 +132,7 @@ function startMission(missionId = "first-breach", selection = {}) {
     waves: missionCfg.waves,
     bonuses: getBonuses(profile, profile.activeClass),
     equipmentStats: getAppliedLootStats(profile.lootSkeleton).totalStats,
+    getLootState: () => profile.lootSkeleton,
     onWaveReward: (event) => {
       const res = grantReward(profile, profile.lootSkeleton, waveClearRewardDefinition({
         rewardId: `wave:${rewardRunId}:${event.wave}`,

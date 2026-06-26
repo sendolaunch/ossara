@@ -3,11 +3,13 @@ import {
   addLootItem,
   createLootState,
   equipLootItem,
+  compareLootItemToEquipped,
   getActiveLootSetBonuses,
   getAppliedLootStats,
   getEquippedLootStats,
   getLootViewerData,
   grantStarterLoot,
+  lootTooltipData,
   removeLootItem,
   unequipLootSlot,
 } from "../src/sim/lootModel.js";
@@ -134,6 +136,33 @@ const setItem = (id, slot, stats = {}) => ({ ...item(id, slot, stats), setId: "p
   const data = getLootViewerData(state);
   ok(data.activeSetBonuses.length === 2, "viewer data exposes active set bonuses");
   ok(data.totalStats.abilityPower === data.itemStats.abilityPower + data.setStats.abilityPower, "viewer data exposes final applied totals");
+}
+
+{
+  const state = createLootState();
+  addLootItem(state, item("old-blade", "weapon", { heroDamage: 2, abilityPower: 4 }));
+  equipLootItem(state, "old-blade");
+  const drop = item("new-blade", "weapon", { heroDamage: 5, abilityPower: 2, defenseDamage: 1 });
+  const comparison = compareLootItemToEquipped(drop, state);
+  ok(comparison.equipped.id === "old-blade", "compare dropped item to equipped item in same slot");
+  ok(comparison.deltas.heroDamage === 3, "comparison returns positive stat delta");
+  ok(comparison.deltas.abilityPower === -2, "comparison returns negative stat delta");
+  ok(comparison.deltas.defenseDamage === 1, "comparison includes new stat delta");
+}
+
+{
+  const state = createLootState();
+  const tooltip = lootTooltipData(item("empty-slot-helm", "helm", { heroHealth: 3 }), state);
+  ok(tooltip.comparisonText === "No item equipped.", "no-equipped comparison works");
+  ok(tooltip.stats.length === 1 && tooltip.stats[0].key === "heroHealth", "tooltip data includes item stats");
+  ok(tooltip.deltas.some((entry) => entry.key === "heroHealth" && entry.delta === 3), "no-equipped tooltip compares against zero");
+}
+
+{
+  const state = createLootState();
+  const tooltip = lootTooltipData({ id: "safe", name: "Safe Item", slot: "boots", rarity: "common" }, state);
+  ok(tooltip.stats.length === 0, "tooltip data handles missing stats safely");
+  ok(tooltip.item.maxUpgradeLevel >= 0, "tooltip data normalizes missing upgrade fields");
 }
 
 console.log(`lootModel: ${passed}/${passed} checks passed`);
