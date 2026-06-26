@@ -42,7 +42,7 @@ export class LootSkeletonPanel {
     this.rewardMessage = "";
     this.toggleButton = el("button", {
       position: "absolute",
-      right: "14px",
+      right: "156px",
       bottom: "18px",
       zIndex: "18",
       padding: "8px 10px",
