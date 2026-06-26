@@ -3,6 +3,8 @@ import { WAVE_CLEAR_GOLD_REWARD, chestRewardDefinition, grantReward, missionClea
 import { createDeterministicRng } from "../src/sim/itemGenerator.js";
 import {
   WORLD_DROP_MAX_ACTIVE,
+  cleanupWorldDrops,
+  clearWorldDrops,
   collectNearbyWorldDrops,
   createWorldDropFromRewardSummary,
   pickupWorldDrop,
@@ -85,6 +87,29 @@ function missionRewardSummary() {
   const trimmed = trimWorldDrops(drops);
   ok(trimmed.length === WORLD_DROP_MAX_ACTIVE, "active world drop limit trims old drops");
   ok(trimmed[0].dropId === "drop-limit-3", "drop limit keeps newest active drops");
+}
+
+{
+  const summary = missionRewardSummary();
+  const active = createWorldDropFromRewardSummary(summary, { dropId: "active-cleanup", position: { x: 0, z: 0 } });
+  const collected = createWorldDropFromRewardSummary(summary, { dropId: "collected-cleanup", position: { x: 1, z: 0 } });
+  collected.collected = true;
+  const cleaned = cleanupWorldDrops([active, collected]);
+  ok(cleaned.length === 1 && cleaned[0].dropId === "active-cleanup", "cleanup removes collected drops");
+}
+
+{
+  const summary = missionRewardSummary();
+  const expired = createWorldDropFromRewardSummary(summary, { dropId: "expired-drop", createdAt: 10, ttl: 5, position: { x: 0, z: 0 } });
+  const important = createWorldDropFromRewardSummary(summary, { dropId: "important-no-ttl", createdAt: 10, position: { x: 1, z: 0 } });
+  const cleaned = cleanupWorldDrops([expired, important], { now: 20 });
+  ok(cleaned.length === 1 && cleaned[0].dropId === "important-no-ttl", "cleanup expires TTL drops but keeps no-TTL important drops");
+}
+
+{
+  const summary = missionRewardSummary();
+  const drop = createWorldDropFromRewardSummary(summary, { dropId: "reset-drop", position: { x: 0, z: 0 } });
+  ok(clearWorldDrops([drop]).length === 0, "clearWorldDrops removes all drops for mission reset/return");
 }
 
 {

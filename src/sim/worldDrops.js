@@ -55,6 +55,20 @@ export function trimWorldDrops(drops, maxActive = WORLD_DROP_MAX_ACTIVE) {
   return active.slice(active.length - maxActive);
 }
 
+export function cleanupWorldDrops(drops, opts = {}) {
+  const now = opts.now == null ? null : Number(opts.now);
+  const active = (drops || []).filter((drop) => {
+    if (!drop || drop.collected) return false;
+    if (drop.ttl == null || now == null) return true;
+    return now - Number(drop.createdAt || 0) <= Number(drop.ttl || 0);
+  });
+  return trimWorldDrops(active, opts.maxActive ?? WORLD_DROP_MAX_ACTIVE);
+}
+
+export function clearWorldDrops() {
+  return [];
+}
+
 export function isPointInPickupRadius(drop, point) {
   if (!drop || drop.collected || !point) return false;
   const dx = Number(point.x || 0) - Number(drop.position?.x || 0);

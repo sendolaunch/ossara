@@ -13,7 +13,7 @@ import { CSS } from "../config/palette.js";
 import { resolveMissionStart } from "../config/missions.js";
 import { lootTooltipData } from "../sim/lootModel.js";
 import { createMissionChests, nearestClosedChest, openMissionChest } from "../sim/missionChests.js";
-import { createWorldDropFromRewardSummary, markWorldDropCollected, selectNearbyWorldDrop, trimWorldDrops } from "../sim/worldDrops.js";
+import { cleanupWorldDrops, clearWorldDrops, createWorldDropFromRewardSummary, markWorldDropCollected, selectNearbyWorldDrop } from "../sim/worldDrops.js";
 
 const PLACEMENT_MESSAGES = {
   marrow: "Not enough Marrow.",
@@ -113,7 +113,7 @@ export class Mission {
     this.last = 0;
     this.running = false;
     this._startToken = 0;
-    this.worldDrops = [];
+    this.worldDrops = clearWorldDrops();
     this.chests = [];
     this._frame = this._frame.bind(this);
   }
@@ -145,7 +145,7 @@ export class Mission {
     this.getLootState = opts.getLootState || (() => null);
     this._wonFired = false;
     this._rewardSummaryPayload = null;
-    this.worldDrops = [];
+    this.worldDrops = clearWorldDrops();
     this.chests = createMissionChests(this.level);
     this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     this.world.chests = this.chests;
@@ -173,7 +173,7 @@ export class Mission {
     const kit = CLASS_KITS[this.classId] || CLASS_KITS.warden;
     this._wonFired = false;
     this._rewardSummaryPayload = null;
-    this.worldDrops = [];
+    this.worldDrops = clearWorldDrops();
     this.chests = createMissionChests(this.level || LEVEL);
     this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
     this.world.chests = this.chests;
@@ -197,7 +197,7 @@ export class Mission {
     this._startToken++;
     this.running = false;
     this.input?.resetState?.();
-    this.worldDrops = [];
+    this.worldDrops = clearWorldDrops();
     this.chests = [];
     this._show(false);
     if (this.onExit) this.onExit();
@@ -251,7 +251,8 @@ export class Mission {
       if (reward && this.hud.setRewardSummary) this.hud.setRewardSummary(reward);
     }
 
-    this.world.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
+    this.worldDrops = cleanupWorldDrops(this.worldDrops, { now: typeof performance !== "undefined" ? performance.now() : Date.now() });
+    this.world.worldDrops = this.worldDrops;
     this.world.chests = this.chests;
     this._updateLootDropTooltip();
     this._updateChestPrompt();
@@ -294,8 +295,8 @@ export class Mission {
       pickupDelay: opts.pickupDelay ?? 900,
     });
     if (!drop) return null;
-    this.worldDrops = trimWorldDrops([...this.worldDrops, drop]);
-    if (this.world) this.world.worldDrops = this.worldDrops.filter((entry) => !entry.collected);
+    this.worldDrops = cleanupWorldDrops([...this.worldDrops, drop], { now: typeof performance !== "undefined" ? performance.now() : Date.now() });
+    if (this.world) this.world.worldDrops = this.worldDrops;
     this.hud.toast(`Item dropped: ${drop.name}`, CSS.gold);
     if (drop.pickupDelay && typeof window !== "undefined") {
       window.setTimeout(() => this._collectWorldDrops(), drop.pickupDelay + 80);
@@ -322,7 +323,7 @@ export class Mission {
       }
       this.hud.toast(pickup?.duplicate ? `${itemName} already picked up.` : `Picked up: ${itemName}`, CSS.gold);
     }
-    this.worldDrops = this.worldDrops.filter((drop) => !drop.collected);
+    this.worldDrops = cleanupWorldDrops(this.worldDrops, { now: typeof performance !== "undefined" ? performance.now() : Date.now() });
   }
 
   _updateLootDropTooltip() {
