@@ -1,6 +1,6 @@
 import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
-import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "../src/view/spawnIndicators.js";
+import { activeSpawnLaneIds, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "../src/view/spawnIndicators.js";
 
 let pass = 0;
 let fail = 0;
@@ -28,6 +28,23 @@ for (const lane of LEVEL.lanes) {
   ok(sideDistance >= 0.9, `${lane.id} marker is offset from the lane path`);
   ok(Number.isFinite(spec.facing), `${lane.id} carries lane-facing rotation`);
 }
+
+const laneSpecs = laneReadabilitySpecs(LEVEL);
+ok(laneSpecs.length === LEVEL.lanes.length, "lane readability specs exist for every lane");
+for (const lane of LEVEL.lanes) {
+  const spec = laneSpecs.find((s) => s.id === lane.id);
+  ok(!!spec, `${lane.id} has lane readability data`);
+  ok(spec.name === lane.name, `${lane.id} readability data carries lane name`);
+  ok(spec.width > 1 && spec.width <= lane.corridorWidth, `${lane.id} visual strip stays inside the lane corridor`);
+  ok(spec.segments.length === lane.waypoints.length - 1, `${lane.id} visual strip derives from every lane segment`);
+  ok(spec.segments.every((seg) => Number.isFinite(seg.x) && Number.isFinite(seg.z) && Number.isFinite(seg.yaw)), `${lane.id} visual segments have finite world transforms`);
+  ok(spec.segments.every((seg) => seg.length > 0 && seg.width === spec.width), `${lane.id} visual segments have positive size`);
+}
+
+const wardSpec = wardCoreReadabilitySpec(LEVEL);
+ok(wardSpec.col === LEVEL.core.col && wardSpec.row === LEVEL.core.row, "Ward readability spec stays anchored to the configured core cell");
+ok(Number.isFinite(wardSpec.x) && Number.isFinite(wardSpec.z), "Ward readability spec has world coordinates");
+ok(wardSpec.wardRingRadius > 2 && wardSpec.approachRingRadius > wardSpec.wardRingRadius, "Ward readability rings have clear nested radii");
 
 ok(spawnIndicatorsVisible({ phase: "prep" }, true), "spawn indicators are visible during build phase");
 ok(!spawnIndicatorsVisible({ phase: "active" }, true), "spawn indicators hide during combat");

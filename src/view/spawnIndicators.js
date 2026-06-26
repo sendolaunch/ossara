@@ -46,6 +46,54 @@ export function spawnIndicatorSpecs(level) {
   });
 }
 
+export function laneReadabilitySpecs(level) {
+  return (level.lanes || []).map((lane) => {
+    const width = Math.max(1.05, Math.min(2.25, (lane.corridorWidth || level.corridorWidth || 2.4) * 0.68));
+    const segments = [];
+    for (let i = 1; i < (lane.waypoints || []).length; i++) {
+      const a = lane.waypoints[i - 1];
+      const b = lane.waypoints[i];
+      const aw = gridToWorld(a.col, a.row, level);
+      const bw = gridToWorld(b.col, b.row, level);
+      const dx = bw.x - aw.x;
+      const dz = bw.z - aw.z;
+      const length = Math.hypot(dx, dz);
+      if (length <= 0.001) continue;
+      segments.push({
+        id: `${lane.id}-${i}`,
+        laneId: lane.id,
+        x: (aw.x + bw.x) * 0.5,
+        z: (aw.z + bw.z) * 0.5,
+        length,
+        width,
+        yaw: Math.atan2(dx, dz),
+        dir: Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? "east" : "west") : (dz > 0 ? "south" : "north"),
+      });
+    }
+    return {
+      id: lane.id,
+      name: lane.name || lane.id,
+      threatRating: lane.threatRating || 1,
+      width,
+      segments,
+    };
+  });
+}
+
+export function wardCoreReadabilitySpec(level) {
+  const core = level.core || { col: 0, row: 0 };
+  const w = gridToWorld(core.col, core.row, level);
+  return {
+    x: w.x,
+    z: w.z,
+    col: core.col,
+    row: core.row,
+    wardRingRadius: 3.15,
+    approachRingRadius: 4.65,
+    dangerRadius: 5.4,
+  };
+}
+
 export function activeSpawnLaneIds(world) {
   const lanes = world?.level?.lanes || [];
   const valid = new Set(lanes.map((lane) => lane.id));

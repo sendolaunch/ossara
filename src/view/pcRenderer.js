@@ -10,7 +10,7 @@ import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
-import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
+import { activeSpawnLaneIds, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
 
@@ -342,23 +342,78 @@ export class PCRenderer {
     ground.setPosition(0, -0.1, 0);
     this.app.root.addChild(ground);
 
+    // Readability-only lane language: broad worn strips, faint ward seams, and
+    // low direction chips. These are visual aids only; pathing/placement still
+    // comes from the sim sets below.
+    const laneBedMat = translucentMat("rot", 0.2, 0.24);
+    const laneEdgeMat = translucentMat("plague", 0.42, 0.18);
+    const laneChipMat = translucentMat("gold", 0.34, 0.18);
+    const addLaneStrip = (seg) => {
+      const group = new pc.Entity(`lane-strip-${seg.id}`);
+      group.setPosition(seg.x, 0, seg.z);
+      group.setLocalEulerAngles(0, (seg.yaw * 180) / Math.PI, 0);
+      const bed = prim("box", laneBedMat);
+      bed.render.castShadows = false;
+      bed.render.receiveShadows = false;
+      bed.setLocalScale(seg.width, 0.026, seg.length + 0.14);
+      bed.setLocalPosition(0, 0.018, 0);
+      group.addChild(bed);
+      for (const side of [-1, 1]) {
+        const edge = prim("box", laneEdgeMat);
+        edge.render.castShadows = false;
+        edge.render.receiveShadows = false;
+        edge.setLocalScale(0.055, 0.034, seg.length + 0.08);
+        edge.setLocalPosition(side * seg.width * 0.52, 0.036, 0);
+        group.addChild(edge);
+      }
+      this.app.root.addChild(group);
+    };
+    for (const lane of laneReadabilitySpecs(level)) {
+      for (const seg of lane.segments) addLaneStrip(seg);
+    }
+
+    const dirYaw = { north: 180, south: 0, east: 90, west: -90 };
+    for (const tele of level.laneTelegraphs || []) {
+      if ((tele.index || 0) % 2 !== 0) continue;
+      const w = gridToWorld(tele.col, tele.row, level);
+      const chip = new pc.Entity(`lane-direction-chip-${tele.laneId || "lane"}`);
+      chip.setPosition(w.x, 0.064, w.z);
+      chip.setLocalEulerAngles(0, dirYaw[tele.dir] ?? 0, 0);
+      const shaft = prim("box", laneChipMat);
+      shaft.render.castShadows = false;
+      shaft.render.receiveShadows = false;
+      shaft.setLocalScale(0.14, 0.04, 0.46);
+      shaft.setLocalPosition(0, 0, -0.1);
+      chip.addChild(shaft);
+      const head = prim("box", laneChipMat);
+      head.render.castShadows = false;
+      head.render.receiveShadows = false;
+      head.setLocalScale(0.27, 0.048, 0.27);
+      head.setLocalEulerAngles(0, 45, 0);
+      head.setLocalPosition(0, 0.004, 0.2);
+      chip.addChild(head);
+      this.app.root.addChild(chip);
+    }
+
     // the lane the dead march — worn stone path with a faint green seam
     const laneMat = mat("rot", 0.28);
     for (const key of world.pathSet) {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
       const tile = prim("box", laneMat);
-      tile.setLocalScale(0.98, 0.06, 0.84);
-      tile.setPosition(w.x, 0.03, w.z);
+      tile.setLocalScale(0.86, 0.044, 0.76);
+      tile.setPosition(w.x, 0.048, w.z);
       this.app.root.addChild(tile);
     }
 
-    const buildHintMat = mat("ash", 0.035);
+    const buildHintMat = translucentMat("gold", 0.12, 0.16);
     for (const cell of expandRects(level.buildableZones || [])) {
       const key = `${cell.col},${cell.row}`;
       if (world.pathSet.has(key) || world.blockedSet.has(key) || world.reservedSet.has(key)) continue;
       const w = gridToWorld(cell.col, cell.row, level);
       const tile = prim("box", buildHintMat);
+      tile.render.castShadows = false;
+      tile.render.receiveShadows = false;
       tile.setLocalScale(0.82, 0.035, 0.82);
       tile.setPosition(w.x, 0.012, w.z);
       this.app.root.addChild(tile);
@@ -370,6 +425,9 @@ export class PCRenderer {
     const stairMat = mat("bone");
     const markerMat = mat("rot", 0.08);
     const portalMat = mat("plague", 1.55);
+    const thresholdMat = translucentMat("blood", 0.52, 0.3);
+    const gateRingMat = translucentMat("plague", 1.0, 0.42);
+    const gateArrowMat = translucentMat("gold", 0.42, 0.24);
     const addGatePortal = (lane, x, z, side = "north") => {
       const horizontal = side === "north" || side === "south";
       const sx = horizontal ? 3.2 : 0.8;
@@ -379,6 +437,45 @@ export class PCRenderer {
       addBox(this.app.root, gateMat, x + left[0], z + left[1], 0.55, 1.8, 0.55);
       addBox(this.app.root, gateMat, x + right[0], z + right[1], 0.55, 1.8, 0.55);
       addBox(this.app.root, gateMat, x, z, sx, 0.35, sz, 1.85);
+      const threshold = prim("box", thresholdMat);
+      threshold.render.castShadows = false;
+      threshold.render.receiveShadows = false;
+      threshold.setLocalScale(horizontal ? 4.15 : 1.15, 0.045, horizontal ? 1.15 : 4.15);
+      threshold.setPosition(x, 0.07, z);
+      this.app.root.addChild(threshold);
+      const gateRing = prim("torus", gateRingMat);
+      gateRing.render.castShadows = false;
+      gateRing.render.receiveShadows = false;
+      gateRing.setLocalEulerAngles(90, 0, 0);
+      gateRing.setLocalScale(horizontal ? 1.82 : 1.46, horizontal ? 1.82 : 1.46, horizontal ? 1.82 : 1.46);
+      gateRing.setPosition(x, 0.16, z);
+      this.app.root.addChild(gateRing);
+      const spawn = lane.spawn || lane.waypoints?.[0] || { col: 0, row: 0 };
+      const next = lane.waypoints?.[1] || spawn;
+      const sw = gridToWorld(spawn.col, spawn.row, level);
+      const nw = gridToWorld(next.col, next.row, level);
+      const fdx = nw.x - sw.x;
+      const fdz = nw.z - sw.z;
+      const fl = Math.max(0.001, Math.hypot(fdx, fdz));
+      const fx = fdx / fl;
+      const fz = fdz / fl;
+      const gateArrow = new pc.Entity(`${lane.id}-gate-arrow`);
+      gateArrow.setPosition(x + fx * 2.15, 0.09, z + fz * 2.15);
+      gateArrow.setLocalEulerAngles(0, (Math.atan2(fx, fz) * 180) / Math.PI, 0);
+      const gateShaft = prim("box", gateArrowMat);
+      gateShaft.render.castShadows = false;
+      gateShaft.render.receiveShadows = false;
+      gateShaft.setLocalScale(0.26, 0.05, 0.82);
+      gateShaft.setLocalPosition(0, 0, -0.16);
+      gateArrow.addChild(gateShaft);
+      const gateHead = prim("box", gateArrowMat);
+      gateHead.render.castShadows = false;
+      gateHead.render.receiveShadows = false;
+      gateHead.setLocalScale(0.48, 0.06, 0.48);
+      gateHead.setLocalEulerAngles(0, 45, 0);
+      gateHead.setLocalPosition(0, 0.006, 0.34);
+      gateArrow.addChild(gateHead);
+      this.app.root.addChild(gateArrow);
       const portal = prim("sphere", portalMat);
       portal.setLocalScale(horizontal ? 0.75 : 0.55, 2.4, horizontal ? 0.55 : 0.75);
       portal.setPosition(x, 1.1, z);
@@ -416,6 +513,38 @@ export class PCRenderer {
 
     // THE WARD — the failing seal you defend: rune dais + ring + crystal
     const cw = gridToWorld(level.core.col, level.core.row, level);
+    const wardVisual = wardCoreReadabilitySpec(level);
+    const wardApproach = prim("torus", translucentMat("gold", 0.38, 0.22));
+    wardApproach.name = "ward-approach-ring";
+    wardApproach.render.castShadows = false;
+    wardApproach.render.receiveShadows = false;
+    wardApproach.setLocalEulerAngles(90, 0, 0);
+    wardApproach.setLocalScale(wardVisual.approachRingRadius, wardVisual.approachRingRadius, wardVisual.approachRingRadius);
+    wardApproach.setPosition(wardVisual.x, 0.09, wardVisual.z);
+    this.app.root.addChild(wardApproach);
+    const wardHalo = prim("torus", translucentMat("plague", 0.72, 0.34));
+    wardHalo.name = "ward-protection-ring";
+    wardHalo.render.castShadows = false;
+    wardHalo.render.receiveShadows = false;
+    wardHalo.setLocalEulerAngles(90, 0, 0);
+    wardHalo.setLocalScale(wardVisual.wardRingRadius, wardVisual.wardRingRadius, wardVisual.wardRingRadius);
+    wardHalo.setPosition(wardVisual.x, 0.13, wardVisual.z);
+    this.app.root.addChild(wardHalo);
+    const beaconMat = mat("ash");
+    const beaconGlowMat = mat("plague", 1.15);
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const bx = wardVisual.x + dx * wardVisual.wardRingRadius * 0.72;
+      const bz = wardVisual.z + dz * wardVisual.wardRingRadius * 0.72;
+      const post = prim("cylinder", beaconMat);
+      post.setLocalScale(0.18, 0.36, 0.18);
+      post.setPosition(bx, 0.26, bz);
+      this.app.root.addChild(post);
+      const flame = prim("cone", beaconGlowMat);
+      flame.render.castShadows = false;
+      flame.setLocalScale(0.18, 0.42, 0.18);
+      flame.setPosition(bx, 0.72, bz);
+      this.app.root.addChild(flame);
+    }
     const dais = prim("cylinder", mat("ash"));
     dais.setLocalScale(2.4, 0.3, 2.4);
     dais.setPosition(cw.x, 0.15, cw.z);
@@ -1996,6 +2125,13 @@ export class PCRenderer {
           base.setLocalScale(1.28, 0.22, 0.62);
           base.setLocalPosition(0, 0.11, 0);
           ent.addChild(base);
+          const footRing = prim("torus", translucentMat("plague", 0.62, 0.32));
+          footRing.render.castShadows = false;
+          footRing.render.receiveShadows = false;
+          footRing.setLocalEulerAngles(90, 0, 0);
+          footRing.setLocalScale(0.92, 0.92, 0.92);
+          footRing.setLocalPosition(0, 0.08, 0);
+          ent.addChild(footRing);
           const head = new pc.Entity("head");
           const wall = prim("box", mat("ash"));
           wall.setLocalScale(1.25, 0.82, 0.28);
@@ -2029,6 +2165,13 @@ export class PCRenderer {
           base.setLocalScale(1.18, 0.18, 0.58);
           base.setLocalPosition(0, 0.09, 0);
           ent.addChild(base);
+          const footRing = prim("torus", translucentMat("blood", 0.55, 0.3));
+          footRing.render.castShadows = false;
+          footRing.render.receiveShadows = false;
+          footRing.setLocalEulerAngles(90, 0, 0);
+          footRing.setLocalScale(0.86, 0.86, 0.86);
+          footRing.setLocalPosition(0, 0.075, 0);
+          ent.addChild(footRing);
           const head = new pc.Entity("head");
           const rail = prim("box", mat("ash"));
           rail.setLocalScale(1.18, 0.36, 0.22);
