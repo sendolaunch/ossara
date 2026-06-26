@@ -88,6 +88,14 @@ function nearestLaneDistance(lane, x, z) {
 
 {
   const world = new World(LEVEL);
+  const range = ENEMIES.bonebow.attackRange;
+  const bonebow = spawnAt(world, "bonebow", world.core.x - range - 0.75, world.core.z);
+  const target = selectEnemyRangedTarget(bonebow, world.towers, world.core, world.lane);
+  ok(target === null, "Bonebow does not target the Ward Crystal from outside ranged attack distance");
+}
+
+{
+  const world = new World(LEVEL);
   world.marrow = 999;
   const placed = world.tryPlaceTower("barricade", 60, 32);
   const barricade = placed.tower;
