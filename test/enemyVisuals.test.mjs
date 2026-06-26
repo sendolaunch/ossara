@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ENEMIES } from "../src/config/enemies.js";
+import { ENEMIES, FUTURE_ENEMY_ARCHETYPES } from "../src/config/enemies.js";
 import { ENEMY_ANIMATION_SETS, ENEMY_VISUAL_THEMES } from "../src/config/enemyVisualThemes.js";
 import {
   ACTIVE_ENEMY_VISUAL_THEME,
@@ -25,6 +25,21 @@ function glbClipNames(path) {
 
 ok(ACTIVE_ENEMY_VISUAL_THEME === "ruined_kingdom_plague_v1", "active enemy visual theme is explicit");
 ok(!!ENEMY_VISUAL_THEMES[ACTIVE_ENEMY_VISUAL_THEME], "active enemy visual theme exists");
+ok(ENEMIES.rotling?.name === "Rotling" && ENEMIES.rotling.role === "enemy-basic", "Rotling basic enemy config exists");
+ok(ENEMIES.gravebreaker?.name === "Gravebreaker" && ENEMIES.gravebreaker.role === "enemy-brute", "Gravebreaker brute enemy config exists");
+ok(ENEMIES.gravebreaker.hp >= ENEMIES.rotling.hp * 5, "Gravebreaker has tank HP relative to Rotling");
+ok(ENEMIES.gravebreaker.speed < ENEMIES.rotling.speed, "Gravebreaker is slower than Rotling");
+ok(ENEMIES.gravebreaker.attackDamage > ENEMIES.rotling.attackDamage, "Gravebreaker has stronger melee pressure than Rotling");
+ok(ENEMIES.husk.aliasOf === "rotling" && ENEMIES.brute.aliasOf === "gravebreaker", "legacy enemy ids remain compatibility aliases");
+ok(FUTURE_ENEMY_ARCHETYPES.bonebow.enabled === false, "Bonebow placeholder stays disabled until ranged behavior exists");
+ok(FUTURE_ENEMY_ARCHETYPES.plaguewick.enabled === false, "Plaguewick placeholder stays disabled until bomber behavior exists");
+ok(FUTURE_ENEMY_ARCHETYPES.ossuaryAcolyte.enabled === false, "Ossuary Acolyte placeholder stays disabled until support behavior exists");
+
+const rotlingVisual = resolveEnemyVisual("rotling");
+ok(rotlingVisual.model === "Skeleton_Minion.glb", "Rotling maps to audited Skeleton_Minion asset");
+const gravebreakerVisual = resolveEnemyVisual("gravebreaker");
+ok(gravebreakerVisual.model === "Skeleton_Golem.glb", "Gravebreaker maps to audited Skeleton_Golem asset");
+ok(gravebreakerVisual.targetHeight > rotlingVisual.targetHeight, "Gravebreaker visual is larger than Rotling");
 
 for (const id of Object.keys(ENEMIES)) {
   ok(!("visual" in ENEMIES[id]), `${id} keeps visual metadata out of mechanics config`);
@@ -103,7 +118,7 @@ ok(legOnly.legOnlyAnimation, "full-body probe classifies leg-only motion");
 ok(legOnly.staticPoseRisk, "leg-only motion is a static/T-pose readability risk");
 
 const missing = resolveEnemyVisual("missing-type");
-ok(missing.fallbackShape === "box" && missing.fallbackColor === "ash", "missing enemy type falls back to husk primitive");
+ok(missing.fallbackShape === "box" && missing.fallbackColor === "ash", "missing enemy type falls back to Rotling primitive");
 
 console.log(`enemyVisuals: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

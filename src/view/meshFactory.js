@@ -144,12 +144,13 @@ export function createEnemyMesh(typeId) {
       g = geo("e_sprinter", () => new THREE.ConeGeometry(1, 2, 5));
       break;
     case "brute":
+    case "gravebreaker":
       g = geo("e_brute", () => new THREE.IcosahedronGeometry(1, 0));
       break;
     case "herald":
       g = geo("e_herald", () => new THREE.DodecahedronGeometry(1, 0));
       break;
-    default: // husk
+    default: // rotling / legacy husk
       g = geo("e_husk", () => new THREE.BoxGeometry(1.2, 1.6, 1.2));
   }
   const m = mat(def.color, { emissive: def.boss ? 0.6 : 0.0, roughness: 0.9 });

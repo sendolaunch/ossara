@@ -134,9 +134,9 @@ section("first breach pacing");
   ok(WAVES.length === 5, "first breach has five intentional waves");
   ok(WAVES.every((w) => w.name && w.hint && w.warning), "each wave has teaching/pressure HUD copy");
   ok(WAVES[0].prepTime >= 30, "wave 1 gives a long first build phase");
-  ok(WAVES[0].groups.every((g) => g.type === "husk"), "wave 1 teaches with husks only");
+  ok(WAVES[0].groups.every((g) => g.type === "rotling"), "wave 1 teaches with Rotlings only");
   ok(WAVES[1].groups.some((g) => g.type === "sprinter"), "wave 2 introduces sprinters");
-  ok(WAVES.slice(1, -1).some((w) => w.groups.some((g) => g.type === "brute" && g.count === 1)), "middle waves include a single brute mini-boss moment");
+  ok(WAVES.slice(1, -1).some((w) => w.groups.some((g) => g.type === "gravebreaker" && g.count === 1)), "middle waves include a single Gravebreaker mini-boss moment");
   const final = WAVES[WAVES.length - 1];
   ok(final.name === "Final Stand", "final wave is explicitly framed as a final stand");
   ok(final.groups.some((g) => g.type === "herald" && g.count === 1 && g.delay >= 15), "final wave ends with a delayed Herald boss");
@@ -208,7 +208,7 @@ section("warden barricade v1");
   ok(barricade.blocksEnemies && barricade.targetableByEnemies, "placed Warden Barricade blocks and can be attacked");
   ok(barricade.contactDamage === 0, "Warden Barricade does not inherit Spike-gate thorns damage");
 
-  const enemy = spawnEnemyAt(w, "husk", w.defaultLaneId, NORTH_CHOKE_DIST);
+  const enemy = spawnEnemyAt(w, "rotling", w.defaultLaneId, NORTH_CHOKE_DIST);
   const slot = computeBlockadeAttackSlot(enemy, barricade, w.lane, 0);
   enemy.x = slot.x;
   enemy.z = slot.z;
@@ -218,6 +218,17 @@ section("warden barricade v1");
   ok(enemy.blockingTargetId === barricade.id && enemy.attackingBlocker, "enemy clearly attacks the Warden Barricade");
   ok(barricade.hp < hpBefore, "Warden Barricade takes enemy damage while holding the lane");
   ok(approx(enemy.dist, distBefore), "Warden Barricade holds enemies in place");
+
+  const gravebreaker = spawnEnemyAt(w, "gravebreaker", w.defaultLaneId, NORTH_CHOKE_DIST);
+  const graveSlot = computeBlockadeAttackSlot(gravebreaker, barricade, w.lane, 1);
+  gravebreaker.x = graveSlot.x;
+  gravebreaker.z = graveSlot.z;
+  const graveHpBefore = barricade.hp;
+  const graveDistBefore = gravebreaker.dist;
+  w.update(0.1, {});
+  ok(gravebreaker.blockingTargetId === barricade.id && gravebreaker.attackingBlocker, "Gravebreaker uses the same melee blockade behavior");
+  ok(barricade.hp < graveHpBefore, "Gravebreaker damages a blocking defense");
+  ok(approx(gravebreaker.dist, graveDistBefore), "Gravebreaker pauses while attacking a blockade");
 
   const damagedHp = barricade.hp;
   const repair = w.repairTower(barricade.id);
@@ -1167,8 +1178,8 @@ section("enemy leaks to core when undefended");
   w.hero.alive = false;
   w.hero.respawnTimer = Infinity;
   const coreBefore = w.core.hp;
-  w.startWave(); // wave 1 = slow husks
-  // run long enough for at least one husk to traverse (~16s) plus margin
+  w.startWave(); // wave 1 = slow Rotlings
+  // run long enough for at least one Rotling to traverse (~16s) plus margin
   run(w, 3000, 0.05, {});
   ok(w.stats.leaked > 0, "at least one enemy reached the core");
   ok(w.core.hp < coreBefore, "core took leak damage");

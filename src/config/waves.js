@@ -1,7 +1,7 @@
 // Five escalating waves, then the slice is won. Each wave is a list of spawn
 // groups; a group emits `count` of `type`, `interval` seconds apart, after an
 // initial `delay`. Groups within a wave run in parallel, so you can interleave
-// (e.g. a brute wall with sprinters weaving past it).
+// (e.g. a Gravebreaker wall with sprinters weaving past it).
 //
 // prepTime — seconds of build time before the wave auto-starts (player may
 //            start early from the HUD). Reward = Marrow granted when wave clears.
@@ -12,19 +12,19 @@ export const TUTORIAL_WAVES = [
   {
     name: "First Footsteps",
     hint: "Build beside the road, then start the wave when you are ready.",
-    warning: "Slow husks only. Watch how the lane feeds your towers.",
+    warning: "Slow Rotlings only. Watch how the lane feeds your towers.",
     prepTime: 30,
     reward: 40,
-    groups: [{ type: "husk", laneId: "north-gate", count: 5, interval: 1.4, delay: 0 }],
+    groups: [{ type: "rotling", laneId: "north-gate", count: 5, interval: 1.4, delay: 0 }],
   },
   {
     name: "Quick Dead",
     hint: "Sprinters are fragile, but they punish uncovered corners.",
-    warning: "Fast enemies enter after the husks.",
+    warning: "Fast enemies enter after the Rotlings.",
     prepTime: 20,
     reward: 0,
     groups: [
-      { type: "husk", laneId: "north-gate", count: 6, interval: 1.1, delay: 0 },
+      { type: "rotling", laneId: "north-gate", count: 6, interval: 1.1, delay: 0 },
       { type: "sprinter", laneId: "north-gate", count: 3, interval: 1.6, delay: 4 },
     ],
   },
@@ -34,10 +34,10 @@ export const WAVES = [
   {
     name: "First Footsteps",
     hint: "Build beside the road. Towers cannot be placed on the enemy lane.",
-    warning: "Slow husks only. Learn where your defenses can reach.",
+    warning: "Slow Rotlings only. Learn where your defenses can reach.",
     prepTime: 34,
     reward: 45,
-    groups: [{ type: "husk", laneId: "north-gate", count: 6, interval: 1.45, delay: 0 }],
+    groups: [{ type: "rotling", laneId: "north-gate", count: 6, interval: 1.45, delay: 0 }],
   },
   {
     name: "Quick Dead",
@@ -46,19 +46,19 @@ export const WAVES = [
     prepTime: 24,
     reward: 50,
     groups: [
-      { type: "husk", laneId: "north-gate", count: 8, interval: 1.1, delay: 0 },
+      { type: "rotling", laneId: "north-gate", count: 8, interval: 1.1, delay: 0 },
       { type: "sprinter", laneId: "north-gate", count: 3, interval: 1.7, delay: 5 },
     ],
   },
   {
     name: "The Gate-Bruiser",
-    hint: "A brute is coming. Strengthen one choke and fight beside it.",
-    warning: "Mini-boss: a plague-brute enters the lane.",
+    hint: "A Gravebreaker is coming. Strengthen one choke and fight beside it.",
+    warning: "Mini-boss: a Gravebreaker enters the lane.",
     prepTime: 24,
     reward: 60,
     groups: [
-      { type: "husk", laneId: "north-gate", count: 8, interval: 0.9, delay: 0 },
-      { type: "brute", laneId: "north-gate", count: 1, interval: 1, delay: 6, elite: true, eliteId: "gate-bruiser", eliteName: "Gate-Bruiser", eliteHpMultiplier: 3, eliteScale: 1.22 },
+      { type: "rotling", laneId: "north-gate", count: 8, interval: 0.9, delay: 0 },
+      { type: "gravebreaker", laneId: "north-gate", count: 1, interval: 1, delay: 6, elite: true, eliteId: "gate-bruiser", eliteName: "Gate-Bruiser", eliteHpMultiplier: 3, eliteScale: 1.22 },
     ],
   },
   {
@@ -68,9 +68,9 @@ export const WAVES = [
     prepTime: 22,
     reward: 70,
     groups: [
-      { type: "husk", laneId: "north-gate", count: 12, interval: 0.7, delay: 0 },
+      { type: "rotling", laneId: "north-gate", count: 12, interval: 0.7, delay: 0 },
       { type: "sprinter", laneId: "north-gate", count: 8, interval: 1.0, delay: 4 },
-      { type: "brute", laneId: "north-gate", count: 2, interval: 5, delay: 10 },
+      { type: "gravebreaker", laneId: "north-gate", count: 2, interval: 5, delay: 10 },
     ],
   },
   {
@@ -80,9 +80,9 @@ export const WAVES = [
     prepTime: 28,
     reward: 0,
     groups: [
-      { type: "husk", laneId: "north-gate", count: 10, interval: 0.75, delay: 0 },
+      { type: "rotling", laneId: "north-gate", count: 10, interval: 0.75, delay: 0 },
       { type: "sprinter", laneId: "north-gate", count: 8, interval: 0.9, delay: 3 },
-      { type: "brute", laneId: "north-gate", count: 3, interval: 4, delay: 8 },
+      { type: "gravebreaker", laneId: "north-gate", count: 3, interval: 4, delay: 8 },
       { type: "herald", laneId: "north-gate", count: 1, interval: 1, delay: 18 }, // the boss closes the slice
     ],
   },

@@ -10,7 +10,9 @@ const CLIP_FALLBACKS = {
 };
 
 export const FALLBACK_ENEMY_LOOK = {
+  rotling: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
   husk: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
+  gravebreaker: { shape: "sphere", color: "rot", scale: 1.05, emissive: 0 },
   sprinter: { shape: "cone", color: "plague", scale: 0.55, emissive: 0.3 },
   brute: { shape: "sphere", color: "rot", scale: 0.95, emissive: 0 },
   herald: { shape: "sphere", color: "blood", scale: 1.5, emissive: 0.5 },
@@ -18,8 +20,8 @@ export const FALLBACK_ENEMY_LOOK = {
 
 export function resolveEnemyVisual(type) {
   const theme = ENEMY_VISUAL_THEMES[ACTIVE_ENEMY_VISUAL_THEME];
-  const def = theme?.enemies?.[type] || theme?.enemies?.husk;
-  const fallback = FALLBACK_ENEMY_LOOK[type] || FALLBACK_ENEMY_LOOK.husk;
+  const def = theme?.enemies?.[type] || theme?.enemies?.rotling || theme?.enemies?.husk;
+  const fallback = FALLBACK_ENEMY_LOOK[type] || FALLBACK_ENEMY_LOOK.rotling;
   return {
     fallbackShape: fallback.shape,
     fallbackColor: fallback.color,

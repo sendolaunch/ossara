@@ -2,6 +2,8 @@
 // are resolved by the view layer so the game can swap art direction without
 // rewriting combat mechanics.
 //
+// id                  mechanics id used by waves/sim
+// name                OSSARA-facing theme name
 // role                theme-neutral visual/gameplay role
 // hp                  health
 // speed               world units / second along the lane
@@ -12,21 +14,76 @@
 // attackDamage/rate/range  simple defense-attack knobs for blockades
 // color               palette key
 
+const ROTLING = {
+  id: "rotling",
+  name: "Rotling",
+  role: "enemy-basic",
+  hp: 30,
+  speed: 1.6,
+  leak: 1,
+  bounty: 6,
+  radius: 0.28,
+  collisionRadius: 0.34,
+  attackDamage: 18,
+  attackRate: 1.0,
+  attackRange: 0.65,
+  color: "ash",
+};
+
+const GRAVEBREAKER = {
+  id: "gravebreaker",
+  name: "Gravebreaker",
+  role: "enemy-brute",
+  hp: 150,
+  speed: 0.95,
+  leak: 3,
+  bounty: 24,
+  radius: 0.46,
+  collisionRadius: 0.56,
+  attackDamage: 36,
+  attackRate: 0.72,
+  attackRange: 0.85,
+  color: "rot",
+};
+
+export const FUTURE_ENEMY_ARCHETYPES = {
+  bonebow: {
+    id: "bonebow",
+    name: "Bonebow",
+    role: "enemy-ranged",
+    enabled: false,
+    plannedBehavior: "ranged archer",
+  },
+  plaguewick: {
+    id: "plaguewick",
+    name: "Plaguewick",
+    role: "enemy-bomber",
+    enabled: false,
+    plannedBehavior: "suicide runner",
+  },
+  ossuaryAcolyte: {
+    id: "ossuary-acolyte",
+    name: "Ossuary Acolyte",
+    role: "enemy-caster",
+    enabled: false,
+    plannedBehavior: "support mage",
+  },
+};
+
 export const ENEMIES = {
+  rotling: ROTLING,
+  gravebreaker: GRAVEBREAKER,
+  // Legacy ids stay available for older tests/dev tools while waves migrate to
+  // the OSSARA-facing archetype names.
   husk: {
+    ...ROTLING,
     id: "husk",
-    name: "Husk",
-    role: "enemy-basic",
-    hp: 30,
-    speed: 1.6,
-    leak: 1,
-    bounty: 6,
-    radius: 0.28,
-    collisionRadius: 0.34,
-    attackDamage: 18,
-    attackRate: 1.0,
-    attackRange: 0.65,
-    color: "ash",
+    aliasOf: "rotling",
+  },
+  brute: {
+    ...GRAVEBREAKER,
+    id: "brute",
+    aliasOf: "gravebreaker",
   },
   sprinter: {
     id: "sprinter",
@@ -42,21 +99,6 @@ export const ENEMIES = {
     attackRate: 1.25,
     attackRange: 0.55,
     color: "plague",
-  },
-  brute: {
-    id: "brute",
-    name: "Plague-brute",
-    role: "enemy-brute",
-    hp: 120,
-    speed: 1.1,
-    leak: 3,
-    bounty: 18,
-    radius: 0.42,
-    collisionRadius: 0.5,
-    attackDamage: 34,
-    attackRate: 0.75,
-    attackRange: 0.8,
-    color: "rot",
   },
   herald: {
     id: "herald",

@@ -20,7 +20,7 @@ const waves = [
     prepTime: 5,
     reward: 10,
     groups: [
-      { type: "husk", laneId: "north-gate", count: 2, interval: 1, delay: 2 },
+      { type: "rotling", laneId: "north-gate", count: 2, interval: 1, delay: 2 },
       { type: "sprinter", count: 2, interval: 0.5, delay: 0 },
     ],
   },
@@ -28,7 +28,7 @@ const waves = [
     name: "Two",
     prepTime: 7,
     reward: 20,
-    groups: [{ type: "brute", laneId: "southeast-garden", count: 1, interval: 1, delay: 0, elite: true, eliteId: "test-elite", eliteName: "Test Elite", eliteHpMultiplier: 2.5, eliteScale: 1.2 }],
+    groups: [{ type: "gravebreaker", laneId: "southeast-garden", count: 1, interval: 1, delay: 0, elite: true, eliteId: "test-elite", eliteName: "Test Elite", eliteHpMultiplier: 2.5, eliteScale: 1.2 }],
   },
 ];
 
@@ -90,7 +90,7 @@ const waves = [
   const elite = world.enemies[0];
   ok(elite?.elite && elite.eliteId === "test-elite", "World spawns requested elite enemy metadata");
   ok(elite.name === "Test Elite" && elite.eliteScale === 1.2, "World spawns requested elite visual identity");
-  ok(elite.maxHp === Math.round(ENEMIES.brute.hp * 2.5) && elite.hp === elite.maxHp, "elite spawns with higher HP than normal equivalent");
+  ok(elite.maxHp === Math.round(ENEMIES.gravebreaker.hp * 2.5) && elite.hp === elite.maxHp, "elite spawns with higher HP than normal equivalent");
   world._damageEnemy(elite, elite.hp + 1);
   const kill = world.events.find((event) => event.kind === "kill");
   ok(kill?.elite && kill.eliteId === "test-elite", "elite kill event carries reward metadata");

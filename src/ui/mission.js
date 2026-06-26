@@ -308,7 +308,7 @@ export class Mission {
   spawnDebugEliteEncounter() {
     if (!this.world?.hero?.alive) return null;
     const eliteId = `debug-gate-bruiser-${Date.now()}`;
-    this.world._spawnEnemy("brute", this.world.defaultLaneId, {
+    this.world._spawnEnemy("gravebreaker", this.world.defaultLaneId, {
       elite: true,
       eliteId,
       eliteName: "Gate-Bruiser",
