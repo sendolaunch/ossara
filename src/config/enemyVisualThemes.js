@@ -14,6 +14,20 @@ export const ENEMY_ANIMATION_SETS = {
       death: "Death_A",
     },
   },
+  "skeleton-ranged": {
+    libs: [
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_General.glb",
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_MovementBasic.glb",
+      "models/skeletons/anim/Rig_Medium/Rig_Medium_CombatRanged.glb",
+    ],
+    clips: {
+      idle: "Idle_A",
+      walk: "Walking_A",
+      run: "Running_A",
+      attack: "Ranged_2H_Shoot",
+      death: "Death_A",
+    },
+  },
   "skeleton-large": {
     libs: [
       "models/skeletons/anim/Rig_Large/Rig_Large_General.glb",
@@ -95,6 +109,60 @@ const GRAVEBREAKER_VISUAL = {
   fallbackEmissive: 0,
 };
 
+const BONEBOW_VISUAL = {
+  pack: "skeletons",
+  model: "Skeleton_Rogue.glb",
+  scale: 1,
+  targetHeight: 1.42,
+  heightOffset: 0,
+  rotationOffset: 0,
+  animationSet: "skeleton-ranged",
+  animationClips: {
+    walk: "Walking_A",
+    run: "Running_A",
+    attack: "Ranged_2H_Shoot",
+  },
+  animationSpeed: {
+    walk: 0.95,
+    run: 1,
+    attack: 0.92,
+  },
+  accessories: [
+    {
+      name: "crossbow",
+      pack: "skeletons",
+      model: "Skeleton_Crossbow.gltf",
+      position: { x: 0.28, y: 0.78, z: 0.26 },
+      rotation: { x: 0, y: 0, z: -8 },
+      scale: 0.34,
+    },
+    {
+      name: "quiver",
+      pack: "skeletons",
+      model: "Skeleton_Quiver.gltf",
+      position: { x: -0.23, y: 0.88, z: -0.24 },
+      rotation: { x: -12, y: 180, z: 8 },
+      scale: 0.45,
+    },
+  ],
+  projectileModel: "Skeleton_Arrow.gltf",
+  useProceduralLocomotionFallback: true,
+  proceduralLocomotion: {
+    proceduralStrength: 0.25,
+    fallbackStrength: 1,
+    bobAmplitude: 0.014,
+    swayAmplitude: 1.05,
+    leanAmount: 2.2,
+    visualSmooth: 0.18,
+    rotationSmooth: 0.16,
+    rate: 3.8,
+  },
+  fallbackShape: "cone",
+  fallbackColor: "bone",
+  fallbackScale: 0.58,
+  fallbackEmissive: 0.15,
+};
+
 export const ENEMY_VISUAL_THEMES = {
   ruined_kingdom_plague_v1: {
     id: "ruined_kingdom_plague_v1",
@@ -102,6 +170,7 @@ export const ENEMY_VISUAL_THEMES = {
     enemies: {
       rotling: ROTLING_VISUAL,
       husk: ROTLING_VISUAL,
+      bonebow: BONEBOW_VISUAL,
       sprinter: {
         pack: "skeletons",
         model: "Skeleton_Rogue.glb",

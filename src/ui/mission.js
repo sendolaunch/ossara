@@ -340,6 +340,33 @@ export class Mission {
     return elite;
   }
 
+  spawnDebugBonebowEncounter() {
+    if (!this.world?.hero?.alive) return null;
+    this.world._spawnEnemy("bonebow", this.world.defaultLaneId);
+    const enemy = this.world.enemies[this.world.enemies.length - 1] || null;
+    if (!enemy) return null;
+    const lane = this.world.lanePaths[enemy.laneId] || this.world.lane;
+    let bestDistance = 0;
+    let bestScore = Infinity;
+    const hero = this.world.hero;
+    const step = 0.5;
+    for (let d = 0; d <= lane.total; d += step) {
+      const p = pointAtDistance(lane, d);
+      const score = Math.hypot(p.x - hero.x, p.z - hero.z);
+      if (score < bestScore) {
+        bestScore = score;
+        bestDistance = d;
+      }
+    }
+    enemy.dist = Math.max(0, bestDistance - 4.0);
+    const p = pointAtDistance(lane, enemy.dist);
+    enemy.x = p.x;
+    enemy.z = p.z;
+    enemy.hpBarTimer = 6;
+    this.hud.toast("Bonebow takes aim.", CSS.gold);
+    return enemy;
+  }
+
   _collectWorldDrops() {
     if (!this.worldDrops.length || !this.world?.hero?.alive) return;
     const point = { x: this.world.hero.x, z: this.world.hero.z, time: typeof performance !== "undefined" ? performance.now() : Date.now() };

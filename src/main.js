@@ -322,6 +322,7 @@ window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui, {
   getRewards: () => getRewardViewerData(profile),
   onDebugReward: debugLootRewardHandler,
   onDebugEliteEncounter: devLoot ? () => mission?.spawnDebugEliteEncounter?.() : null,
+  onDebugBonebowEncounter: devLoot ? () => mission?.spawnDebugBonebowEncounter?.() : null,
   devMode: devLoot,
   initialOpen: devLoot,
   onChange: (state) => {

@@ -11,7 +11,7 @@ import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
 import { activeSpawnLaneIds, spawnIndicatorSpecs, spawnIndicatorsVisible } from "./spawnIndicators.js";
-import { classifyFullBodyMotion, enemyAnimationSet, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
+import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
 
 const col = (hex) => new pc.Color(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
@@ -1041,6 +1041,40 @@ export class PCRenderer {
     });
   }
 
+  _attachEnemyAccessories(ent, type, visual) {
+    if (!ent?._ossaraVisualWrap || ent._ossaraAccessoriesRequested) return;
+    const accessories = Array.isArray(visual?.accessories) ? visual.accessories : [];
+    if (!accessories.length) return;
+    ent._ossaraAccessoriesRequested = true;
+    ent._ossaraAccessories = [];
+    for (const spec of accessories) {
+      const url = enemyAssetUrl(spec, visual.pack || visual.modelPack || "");
+      if (!url) continue;
+      this._loadEnemyContainer(`${type}:${spec.name || "accessory"}`, url).then((asset) => {
+        if (!asset || !this.enemyEntities.has(ent._ossaraEnemyId)) return;
+        let accessory = null;
+        try {
+          accessory = asset.resource.instantiateRenderEntity();
+        } catch (_) {
+          if (!this.enemyModelWarned.has(`${type}:${url}`)) {
+            this.enemyModelWarned.add(`${type}:${url}`);
+            console.warn(`[pcRenderer] enemy accessory instantiate failed for ${type}: ${url}`);
+          }
+          return;
+        }
+        accessory.name = spec.name || "enemy-accessory";
+        const pos = spec.position || {};
+        const rot = spec.rotation || {};
+        const scale = spec.scale || 1;
+        accessory.setLocalPosition(pos.x || 0, pos.y || 0, pos.z || 0);
+        accessory.setLocalEulerAngles(rot.x || 0, rot.y || 0, rot.z || 0);
+        accessory.setLocalScale(scale, scale, scale);
+        ent._ossaraVisualWrap.addChild(accessory);
+        ent._ossaraAccessories.push(accessory);
+      });
+    }
+  }
+
   _useEnemyPrimitiveFallback(ent, reason = "fallback") {
     if (!ent) return;
     try {
@@ -1077,7 +1111,7 @@ export class PCRenderer {
     ent._ossaraProceduralTuning = { bobAmplitude, swayAmplitude, leanAmount, visualSmooth, rotationSmooth: cfg.rotationSmooth ?? 0.16 };
     const clipLooksLikeMove = !forcedClip || /walk|run|move|movement|locomotion/i.test(forcedClip);
     const stateLooksLikeMove = !forcedState || forcedState === "walk" || forcedState === "run";
-    const active = !!visual.useProceduralLocomotionFallback && !!moving && !enemy.attackingBlocker && clipLooksLikeMove && stateLooksLikeMove;
+    const active = !!visual.useProceduralLocomotionFallback && !!moving && !enemy.attackingBlocker && !enemy.rangedAttacking && clipLooksLikeMove && stateLooksLikeMove;
     const blend = smoothFactor(visualSmooth, dt);
     const pose = ent._ossaraProcPose || { bob: 0, sway: 0, lean: 0 };
     if (!active) {
@@ -1749,16 +1783,17 @@ export class PCRenderer {
         this.app.root.addChild(ent);
         this.enemyEntities.set(e.id, ent);
         this._attachEnemyModel(ent, e.type, visual);
+        this._attachEnemyAccessories(ent, e.type, visual);
       }
       const prev = ent._ossaraPrevPos || { x: e.x, z: e.z, dist: e.dist || 0 };
       const movedDist = Math.hypot(e.x - prev.x, e.z - prev.z);
       const progressed = Math.abs((e.dist || 0) - (prev.dist || 0));
       const forcedState = e.previewAnimState || "";
       const forcedClip = e.previewAnimClip || "";
-      const rawMoving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.003 || progressed > 0.003) && !e.attackingBlocker;
+      const rawMoving = forcedState ? (forcedState === "walk" || forcedState === "run") : (movedDist > 0.003 || progressed > 0.003) && !e.attackingBlocker && !e.rangedAttacking;
       if (rawMoving) ent._ossaraMoveHold = 0.14;
       else ent._ossaraMoveHold = Math.max(0, (ent._ossaraMoveHold || 0) - dt);
-      const moving = forcedState ? rawMoving : (rawMoving || (ent._ossaraMoveHold || 0) > 0) && !e.attackingBlocker;
+      const moving = forcedState ? rawMoving : (rawMoving || (ent._ossaraMoveHold || 0) > 0) && !e.attackingBlocker && !e.rangedAttacking;
       if (movedDist > 0.001) {
         const yaw = (Math.atan2(e.x - prev.x, e.z - prev.z) * 180) / Math.PI;
         const cfg = ent._ossaraVisual?.proceduralLocomotion || {};
@@ -1770,7 +1805,7 @@ export class PCRenderer {
       else if (forcedState) ent._ossaraAnim?.setPreviewState?.(forcedState);
       else {
         ent._ossaraAnim?.setMoving(moving, e.speed >= 2.25);
-        ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
+        ent._ossaraAnim?.setAttacking(!!e.attackingBlocker || !!e.rangedAttacking);
       }
       ent._ossaraAnim?.update(dt);
       if (ent._ossaraVisualWrap) {
@@ -1784,11 +1819,12 @@ export class PCRenderer {
         ent._ossaraDebug.currentState = animState?.currentState || "";
         ent._ossaraDebug.currentTime = animState?.currentTime ?? 0;
         ent._ossaraDebug.playbackSpeed = animState?.playbackSpeed ?? 1;
-        ent._ossaraDebug.desiredState = forcedClip ? `clip:${forcedClip}` : forcedState || (e.attackingBlocker ? "attack" : moving ? (e.speed >= 2.25 ? "run" : "walk") : "idle");
+        ent._ossaraDebug.desiredState = forcedClip ? `clip:${forcedClip}` : forcedState || (e.attackingBlocker || e.rangedAttacking ? "attack" : moving ? (e.speed >= 2.25 ? "run" : "walk") : "idle");
         ent._ossaraDebug.isMoving = moving;
         ent._ossaraDebug.movementDelta = movedDist;
         ent._ossaraDebug.laneProgressDelta = progressed;
         ent._ossaraDebug.attackingBlocker = !!e.attackingBlocker;
+        ent._ossaraDebug.rangedAttacking = !!e.rangedAttacking;
         ent._ossaraDebug.animEntityName = animState?.animEntityName || ent._ossaraModel?.name || "";
         ent._ossaraDebug.visibleModelName = animState?.visibleModelName || ent._ossaraModel?.name || ent._ossaraFallbackBody?.name || "";
         ent._ossaraDebug.boneProbeName = animState?.boneProbeName || "";
@@ -1860,12 +1896,28 @@ export class PCRenderer {
       seen.add(p.id);
       let ent = this.projEntities.get(p.id);
       if (!ent) {
-        ent = prim("sphere", mat(p.color || "bone", 0.8));
-        ent.setLocalScale(0.22, 0.22, 0.22);
+        if (p.shape === "bolt") {
+          ent = new pc.Entity("enemy-bolt");
+          const shaft = prim("box", mat(p.color || "bone", 1.1));
+          shaft.setLocalScale(0.045, 0.045, 0.52);
+          shaft.setLocalPosition(0, 0, 0);
+          ent.addChild(shaft);
+          const head = prim("box", mat("plague", 0.8));
+          head.setLocalScale(0.075, 0.075, 0.12);
+          head.setLocalPosition(0, 0, 0.32);
+          ent.addChild(head);
+        } else {
+          ent = prim("sphere", mat(p.color || "bone", 0.8));
+          ent.setLocalScale(0.22, 0.22, 0.22);
+        }
         this.app.root.addChild(ent);
         this.projEntities.set(p.id, ent);
       }
-      ent.setPosition(p.x, 0.6, p.z);
+      ent.setPosition(p.x, p.sourceKind === "enemy" ? 0.78 : 0.6, p.z);
+      if (p.shape === "bolt") {
+        const yaw = (Math.atan2(p.vx || 0, p.vz || 1) * 180) / Math.PI;
+        ent.setEulerAngles(0, yaw, 0);
+      }
     }
     for (const [id, ent] of this.projEntities) {
       if (!seen.has(id)) {

@@ -6,7 +6,7 @@ import { World } from "../sim/World.js";
 import { PCRenderer } from "../view/pcRenderer.js";
 
 const MODES = ["idle", "walk", "run", "attack", "death"];
-const TYPES = ["rotling", "sprinter", "gravebreaker", "herald"];
+const TYPES = ["rotling", "bonebow", "sprinter", "gravebreaker", "herald"];
 
 export class EnemyGallery {
   constructor(appEl, uiEl) {

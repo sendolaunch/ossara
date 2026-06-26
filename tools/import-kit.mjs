@@ -79,5 +79,18 @@ const skelDst = join(DST, "skeletons");
 let skelN = 0;
 skelN += copyExts(join(skelDir, "characters", "gltf"), skelDst, [".glb", ".png"]);
 skelN += copyExtsRecursive(join(skelDir, "Animations", "gltf"), join(skelDst, "anim"), [".glb"]);
+skelN += copyExts(join(skelDir, "assets", "gltf"), skelDst, [
+  "skeleton_crossbow.gltf",
+  "skeleton_crossbow.bin",
+  "skeleton_quiver.gltf",
+  "skeleton_quiver.bin",
+  "skeleton_arrow.gltf",
+  "skeleton_arrow.bin",
+]);
+skelN += copyExts(
+  join(SRC, "KayKit Character Animations 1.1", "Animations", "gltf", "Rig_Medium"),
+  join(skelDst, "anim", "Rig_Medium"),
+  ["rig_medium_combatranged.glb"]
+);
 console.log(`  skeletons: ${skelN} files`);
 console.log("Import complete.");

@@ -19,12 +19,18 @@ export function createEnemy() {
     leak: 1,
     bounty: 0,
     radius: 0.3,
+    attackStyle: "melee",
     attackDamage: 1,
     attackRate: 1,
     attackRange: 0.6,
     attackCd: 0,
+    projectileSpeed: 0,
+    projectileColor: "bone",
     blockingTargetId: 0,
     attackingBlocker: false,
+    rangedAttacking: false,
+    rangedTargetId: 0,
+    rangedTargetKind: "",
     attackSlotIndex: -1,
     attackSlotX: 0,
     attackSlotZ: 0,
@@ -64,12 +70,18 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.leak = def.leak;
   e.bounty = def.bounty;
   e.radius = def.radius;
+  e.attackStyle = def.attackStyle || "melee";
   e.attackDamage = def.attackDamage ?? Math.max(1, def.leak * 12);
   e.attackRate = def.attackRate ?? 1;
   e.attackRange = def.attackRange ?? 0.6;
   e.attackCd = 0;
+  e.projectileSpeed = def.projectileSpeed ?? 0;
+  e.projectileColor = def.projectileColor || def.color || "bone";
   e.blockingTargetId = 0;
   e.attackingBlocker = false;
+  e.rangedAttacking = false;
+  e.rangedTargetId = 0;
+  e.rangedTargetKind = "";
   e.attackSlotIndex = -1;
   e.attackSlotX = 0;
   e.attackSlotZ = 0;

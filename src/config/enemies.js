@@ -46,14 +46,26 @@ const GRAVEBREAKER = {
   color: "rot",
 };
 
+const BONEBOW = {
+  id: "bonebow",
+  name: "Bonebow",
+  role: "enemy-ranged",
+  hp: 52,
+  speed: 1.38,
+  leak: 1,
+  bounty: 12,
+  radius: 0.27,
+  collisionRadius: 0.34,
+  attackStyle: "ranged",
+  attackDamage: 12,
+  attackRate: 0.65,
+  attackRange: 4.4,
+  projectileSpeed: 8.5,
+  projectileColor: "bone",
+  color: "bone",
+};
+
 export const FUTURE_ENEMY_ARCHETYPES = {
-  bonebow: {
-    id: "bonebow",
-    name: "Bonebow",
-    role: "enemy-ranged",
-    enabled: false,
-    plannedBehavior: "ranged archer",
-  },
   plaguewick: {
     id: "plaguewick",
     name: "Plaguewick",
@@ -72,6 +84,7 @@ export const FUTURE_ENEMY_ARCHETYPES = {
 
 export const ENEMIES = {
   rotling: ROTLING,
+  bonebow: BONEBOW,
   gravebreaker: GRAVEBREAKER,
   // Legacy ids stay available for older tests/dev tools while waves migrate to
   // the OSSARA-facing archetype names.

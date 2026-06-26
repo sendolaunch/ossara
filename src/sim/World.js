@@ -20,6 +20,7 @@ import {
   moveToward,
   releaseAttackSlot,
 } from "./enemyMovement.js";
+import { isRangedEnemy, selectEnemyRangedTarget } from "./enemyCombat.js";
 import { Pool } from "./pool.js";
 import { createEnemy, resetEnemy } from "./Enemy.js";
 import { createProjectile, resetProjectile } from "./Projectile.js";
@@ -381,6 +382,23 @@ export class World {
       e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
       e.hpBarTimer = Math.max(0, (e.hpBarTimer || 0) - dt);
       e.attackCd -= dt;
+      e.attackingBlocker = false;
+      e.rangedAttacking = false;
+      e.rangedTargetId = 0;
+      e.rangedTargetKind = "";
+      const rangedTarget = this._selectEnemyRangedTarget(e);
+      if (rangedTarget) {
+        releaseAttackSlot(e);
+        e.blockingTargetId = rangedTarget.kind === "tower" ? rangedTarget.id : 0;
+        e.rangedAttacking = true;
+        e.rangedTargetId = rangedTarget.id || 0;
+        e.rangedTargetKind = rangedTarget.kind;
+        if (e.attackCd <= 0) {
+          this._fireEnemyProjectile(e, rangedTarget);
+          e.attackCd = 1 / Math.max(0.01, e.attackRate || 1);
+        }
+        continue;
+      }
       const blocker = this._findBlockingDefense(e);
       if (blocker) {
         e.blockingTargetId = blocker.id;
@@ -398,6 +416,7 @@ export class World {
         continue;
       }
       releaseAttackSlot(e);
+      e.blockingTargetId = 0;
       const lane = this.lanePaths[e.laneId] || this.lane;
       const p = advanceEnemyAlongLane(e, lane, dt, { corridorWidth: lane.lane?.corridorWidth ?? this.level.corridorWidth });
       if (p.done && !e.counted) {
@@ -414,6 +433,33 @@ export class World {
 
   _findBlockingDefense(e) {
     return findBlockingDefense(e, this.towers, this.lanePaths[e.laneId] || this.lane);
+  }
+
+  _selectEnemyRangedTarget(e) {
+    if (!isRangedEnemy(e)) return null;
+    return selectEnemyRangedTarget(e, this.towers, this.core, this.lanePaths[e.laneId] || this.lane);
+  }
+
+  _fireEnemyProjectile(e, target) {
+    if (!target) return null;
+    const projectileDef = {
+      projSpeed: e.projectileSpeed || 8,
+      damage: e.attackDamage || 1,
+      splash: 0,
+      color: e.projectileColor || e.color || "bone",
+      shape: "bolt",
+    };
+    const projectile = this.projPool.acquire(this._nextId++, { x: e.x, z: e.z }, target.id || 0, projectileDef, {
+      targetKind: target.kind,
+      targetX: target.x,
+      targetZ: target.z,
+      targetRadius: target.radius || 0.45,
+      sourceKind: "enemy",
+      sourceId: e.id,
+      shape: "bolt",
+    });
+    this.events.push({ kind: "enemyShoot", x1: e.x, z1: e.z, x2: target.x, z2: target.z, targetKind: target.kind, targetId: target.id || 0, enemyId: e.id, type: e.type });
+    return projectile;
   }
 
   _enemyInBlockerContact(e, t) {
@@ -502,6 +548,18 @@ export class World {
   _enemyById(id) {
     for (const e of this.enemies) if (e.id === id && e.alive) return e;
     return null;
+  }
+
+  _projectileTarget(p) {
+    if (p.targetKind === "tower") {
+      const tower = this.towerById(p.targetId);
+      return tower?.alive ? { kind: "tower", obj: tower, x: tower.x, z: tower.z, radius: tower.blockRadius || 0.45 } : null;
+    }
+    if (p.targetKind === "core") {
+      return this.core.hp > 0 ? { kind: "core", obj: this.core, x: this.core.x, z: this.core.z, radius: p.targetRadius || 0.75 } : null;
+    }
+    const enemy = this._enemyById(p.targetId);
+    return enemy ? { kind: "enemy", obj: enemy, x: enemy.x, z: enemy.z, radius: enemy.radius || 0.3 } : null;
   }
 
   _updateHero(dt, input) {
@@ -604,7 +662,7 @@ export class World {
   _updateProjectiles(dt) {
     for (const p of this.projectiles) {
       if (!p.alive) continue;
-      const target = this._enemyById(p.targetId);
+      const target = this._projectileTarget(p);
       if (!target) {
         p.alive = false; // target gone — fizzle
         continue;
@@ -615,11 +673,21 @@ export class World {
       const step = p.speed * dt;
       const hitDist = 0.25 + target.radius;
       if (d <= hitDist || d <= step) {
-        this._applyHit(target, p.x, p.z, p.damage, p.splash);
+        if (target.kind === "enemy") {
+          this._applyHit(target.obj, p.x, p.z, p.damage, p.splash);
+        } else if (target.kind === "tower") {
+          this._damageTower(target.obj, p.damage, { id: p.sourceId || 0 });
+          this.events.push({ kind: "enemyProjectileImpact", x: target.x, z: target.z, targetKind: "tower", targetId: target.obj.id, sourceId: p.sourceId || 0, amount: p.damage });
+        } else if (target.kind === "core") {
+          this.core.hp = Math.max(0, this.core.hp - p.damage);
+          this.events.push({ kind: "enemyProjectileImpact", x: target.x, z: target.z, targetKind: "core", sourceId: p.sourceId || 0, amount: p.damage });
+        }
         p.alive = false;
       } else {
-        p.x += (dx / d) * step;
-        p.z += (dz / d) * step;
+        p.vx = dx / d;
+        p.vz = dz / d;
+        p.x += p.vx * step;
+        p.z += p.vz * step;
       }
     }
   }

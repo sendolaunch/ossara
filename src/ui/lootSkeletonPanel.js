@@ -119,7 +119,7 @@ export function lootPanelForgeState(state, selectedItemId = null, availableGold 
 }
 
 export class LootSkeletonPanel {
-  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, onDebugEliteEncounter, devMode = false, initialOpen = false } = {}) {
+  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, onDebugEliteEncounter, onDebugBonebowEncounter, devMode = false, initialOpen = false } = {}) {
     this.getState = getState || (() => this.state);
     this.onChange = onChange || (() => {});
     this.state = createLootState(this.getState?.());
@@ -129,6 +129,7 @@ export class LootSkeletonPanel {
     this.visible = !!initialOpen;
     this.onDebugReward = this.devMode ? onDebugReward || null : null;
     this.onDebugEliteEncounter = this.devMode ? onDebugEliteEncounter || null : null;
+    this.onDebugBonebowEncounter = this.devMode ? onDebugBonebowEncounter || null : null;
     this.selectedForgeItemId = null;
     this.forgeMessage = "";
     this.rewardMessage = "";
@@ -246,6 +247,13 @@ export class LootSkeletonPanel {
     this.render();
   }
 
+  spawnDebugBonebowEncounter() {
+    if (!this.onDebugBonebowEncounter) return;
+    const enemy = this.onDebugBonebowEncounter();
+    this.rewardMessage = enemy ? `Bonebow spawned: ${enemy.name || "Bonebow"}.` : "Bonebow spawn failed.";
+    this.render();
+  }
+
   selectForgeItem(itemId) {
     this.selectedForgeItemId = itemId;
     this.forgeMessage = "";
@@ -308,6 +316,7 @@ export class LootSkeletonPanel {
       wrap.appendChild(this.button("Spawn legendary test drop", () => this.claimDebugReward("legendary")));
     }
     if (this.onDebugEliteEncounter) wrap.appendChild(this.button("Spawn elite encounter", () => this.spawnDebugEliteEncounter()));
+    if (this.onDebugBonebowEncounter) wrap.appendChild(this.button("Spawn Bonebow", () => this.spawnDebugBonebowEncounter()));
     if (this.rewardMessage) wrap.appendChild(el("div", { color: CSS.gold, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" }, this.rewardMessage));
     const recent = Array.isArray(rewards.recent) ? rewards.recent.slice(0, 4) : [];
     if (!recent.length) {

@@ -12,6 +12,7 @@ const CLIP_FALLBACKS = {
 export const FALLBACK_ENEMY_LOOK = {
   rotling: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
   husk: { shape: "box", color: "ash", scale: 0.6, emissive: 0 },
+  bonebow: { shape: "cone", color: "bone", scale: 0.58, emissive: 0.15 },
   gravebreaker: { shape: "sphere", color: "rot", scale: 1.05, emissive: 0 },
   sprinter: { shape: "cone", color: "plague", scale: 0.55, emissive: 0.3 },
   brute: { shape: "sphere", color: "rot", scale: 0.95, emissive: 0 },
@@ -35,6 +36,12 @@ export function enemyModelUrl(visual) {
   const pack = visual?.pack || visual?.modelPack;
   if (!visual?.model || !pack) return null;
   return `models/${pack}/${visual.model}`;
+}
+
+export function enemyAssetUrl(asset, inheritedPack = "") {
+  const pack = asset?.pack || asset?.modelPack || inheritedPack;
+  if (!asset?.model || !pack) return null;
+  return `models/${pack}/${asset.model}`;
 }
 
 export function enemyAnimationSet(visual) {
