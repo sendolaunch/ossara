@@ -6,6 +6,7 @@ import {
   defensePanelData,
   defenseTypeLabel,
   heroKitHintData,
+  missionDefeatPanelData,
   missionVictoryPanelData,
   selectedDefensePanelData,
   waveClearToastText,
@@ -155,6 +156,11 @@ ok(victory.title === "FIRST BREACH CLEARED", "victory title clearly names First 
 ok(victory.subtitle.includes("The Ward holds.") && victory.subtitle.includes("Gold +35.") && victory.subtitle.includes("Current Gold: 91."), "victory subtitle includes Ward and Gold summary");
 ok(victory.subtitle.includes("Item dropped: Wardforged Blade") && victory.subtitle.includes("Picked up: Wardforged Blade"), "victory subtitle includes item drop and pickup summary");
 ok(victory.returnLabel === "Return to Tavern", "victory return action points back to the Tavern");
+
+const defeat = missionDefeatPanelData({ id: "first-breach", name: "The First Seal" }, { stats: { leaked: 9 } });
+ok(defeat.title === "THE WARD HAS FALLEN", "defeat title clearly names Ward failure");
+ok(defeat.subtitle.includes("First Breach was overrun.") && defeat.subtitle.includes("9 enemies broke through."), "defeat subtitle explains the failed run");
+ok(defeat.returnLabel === "Return to Tavern", "defeat return action points back to the Tavern");
 
 console.log(`hudData: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

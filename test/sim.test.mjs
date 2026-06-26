@@ -1468,6 +1468,19 @@ section("no defense -> LOSE");
   ok(w.core.hp === 0, "core hp floored at 0");
 }
 
+{
+  const finalWave = [{ name: "Last Breath", prepTime: 0, reward: 100, groups: [] }];
+  const w = new World(LEVEL, finalWave);
+  const marrowBefore = w.marrow;
+  w.phase = "active";
+  w.schedule = [];
+  w.spawnCursor = 0;
+  w.core.hp = 0;
+  w.update(0.1, {});
+  ok(w.status === "lost" && w.phase === "lost", "dead core cannot be converted into a same-frame victory");
+  ok(w.marrow === marrowBefore, "defeat does not grant final wave reward");
+}
+
 // ---------------------------------------------------------------------------
 section("per-class kits + abilities");
 {

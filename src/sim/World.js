@@ -804,6 +804,7 @@ export class World {
 
   _checkWaveProgress() {
     if (!isWaveCleared(this.phase, this.spawnCursor, this.schedule, this.enemyPool.liveCount)) return;
+    if (this.core.hp <= 0) return;
     const next = completeWave(this.waves, this.waveIndex);
     this.marrow += next.reward;
     this.events.push({ kind: "waveCleared", wave: next.clearedWaveNumber, reward: next.reward });

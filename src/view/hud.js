@@ -255,6 +255,22 @@ export function missionVictoryPanelData(mission, rewardPayload = {}, world = nul
   };
 }
 
+export function missionDefeatPanelData(mission, world = null) {
+  const missionId = mission?.id || "";
+  const missionName = mission?.name || mission?.title || "The breach";
+  const subtitle = missionId === "first-breach"
+    ? "First Breach was overrun."
+    : `${missionName} was overrun.`;
+  const details = [];
+  if (world?.stats?.leaked) details.push(`${world.stats.leaked} enemies broke through.`);
+  details.push("Return to the Tavern and rebuild.");
+  return {
+    title: "THE WARD HAS FALLEN",
+    subtitle: `${subtitle} ${details.join(" ")}`,
+    returnLabel: "Return to Tavern",
+  };
+}
+
 export class HUD {
   constructor(root, cb) {
     this.cb = cb;
@@ -787,10 +803,11 @@ export class HUD {
         this.elEndTitle.style.color = CSS.plague;
         this._writeWinSummary(world);
       } else if (world.status === "lost") {
+        const data = missionDefeatPanelData(this.mission, world);
         this.overlay.style.display = "flex";
-        this.elEndTitle.textContent = "THE WARD FALLS";
+        this.elEndTitle.textContent = data.title;
         this.elEndTitle.style.color = CSS.blood;
-        this.elEndSub.textContent = `${world.stats.leaked} broke through. The dead don't rest.`;
+        this.elEndSub.textContent = data.subtitle;
       }
     }
   }
