@@ -287,12 +287,8 @@ window.OSSARA = {
   startMission,
 };
 
-if (devLoot) {
-  window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui, {
-    getState: () => profile.lootSkeleton,
-    getHero: () => getActiveHero(profile),
-    getRewards: () => getRewardViewerData(profile),
-    onDebugReward: (sourceType = "mission") => {
+const debugLootRewardHandler = devLoot
+  ? (sourceType = "mission") => {
       const id = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
       const rewardDef = sourceType === "chest"
         ? chestRewardDefinition({ rewardId: `chest:dev:${id}`, chestId: `dev-chest-${id}` })
@@ -317,14 +313,22 @@ if (devLoot) {
       if (res.ok) persist();
       if (res.summary?.shouldSpawnWorldDrop && mission) mission.spawnWorldDrop(res.summary);
       return res.summary;
-    },
-    onChange: (state) => {
-      profile.lootSkeleton = createLootState(state);
-      ensureRewardState(profile);
-      persist();
-    },
-  });
-}
+    }
+  : null;
+
+window.OSSARA.lootSkeletonPanel = new LootSkeletonPanel(ui, {
+  getState: () => profile.lootSkeleton,
+  getHero: () => getActiveHero(profile),
+  getRewards: () => getRewardViewerData(profile),
+  onDebugReward: debugLootRewardHandler,
+  devMode: devLoot,
+  initialOpen: devLoot,
+  onChange: (state) => {
+    profile.lootSkeleton = createLootState(state);
+    ensureRewardState(profile);
+    persist();
+  },
+});
 
 if (devHeroAttackClass) {
   screensRoot.style.display = "none";

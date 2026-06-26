@@ -17,6 +17,7 @@ import {
   getAppliedLootStats,
   grantStarterLoot,
 } from "../src/sim/lootModel.js";
+import { lootPanelAccessData } from "../src/ui/lootSkeletonPanel.js";
 import { World } from "../src/sim/World.js";
 
 let passed = 0;
@@ -105,6 +106,19 @@ const item = (id, slot, stats = {}) => ({
   const data = getForgeViewerData(state, "starter-warden-oath-blade");
   ok(data.selected.item.id === "starter-warden-oath-blade", "dev loot/forge viewer data exposes selected item");
   ok(data.selected.upgradeableStats.includes("heroDamage"), "dev loot/forge viewer data exposes upgrade choices");
+}
+
+{
+  const playerClosed = lootPanelAccessData({ devMode: false, visible: false });
+  ok(playerClosed.title === "Inventory / Forge", "player-facing inventory Forge panel is available outside devLoot");
+  ok(!playerClosed.debugControlsVisible, "debug reward controls are hidden outside devLoot");
+  ok(playerClosed.toggleLabel === "Inventory / Forge", "closed player panel exposes open label");
+
+  const playerOpen = lootPanelAccessData({ devMode: false, visible: true });
+  ok(playerOpen.toggleLabel === "Close Inventory / Forge", "open player panel exposes close label");
+
+  const devOpen = lootPanelAccessData({ devMode: true, visible: true });
+  ok(devOpen.title === "Loot Dev Panel" && devOpen.debugControlsVisible, "devLoot keeps debug controls visible");
 }
 
 console.log(`forgeModel: ${passed}/${passed} checks passed`);

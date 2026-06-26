@@ -16,17 +16,46 @@ const el = (tag, styles = {}, text = "") => {
   return node;
 };
 
+export function lootPanelAccessData({ devMode = false, visible = false } = {}) {
+  return {
+    title: devMode ? "Loot Dev Panel" : "Inventory / Forge",
+    subtitle: devMode
+      ? "Dev-only equipment and reward controls. Player inventory/Forge flow is shown below."
+      : "Manage equipment and upgrade owned items. Debug rewards stay hidden.",
+    debugControlsVisible: !!devMode,
+    toggleLabel: visible ? "Close Inventory / Forge" : "Inventory / Forge",
+  };
+}
+
 export class LootSkeletonPanel {
-  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward } = {}) {
+  constructor(root, { getState, onChange, getHero, getRewards, onDebugReward, devMode = false, initialOpen = false } = {}) {
     this.getState = getState || (() => this.state);
     this.onChange = onChange || (() => {});
     this.state = createLootState(this.getState?.());
     this.getHero = getHero || (() => null);
     this.getRewards = getRewards || (() => ({ claimedCount: 0, recent: [] }));
-    this.onDebugReward = onDebugReward || null;
+    this.devMode = !!devMode;
+    this.visible = !!initialOpen;
+    this.onDebugReward = this.devMode ? onDebugReward || null : null;
     this.selectedForgeItemId = null;
     this.forgeMessage = "";
     this.rewardMessage = "";
+    this.toggleButton = el("button", {
+      position: "absolute",
+      right: "14px",
+      bottom: "18px",
+      zIndex: "18",
+      padding: "8px 10px",
+      borderRadius: "8px",
+      border: `1px solid ${CSS.gold}`,
+      background: "rgba(7,8,6,0.88)",
+      color: CSS.gold,
+      cursor: "pointer",
+      font: "800 11px 'Cinzel', serif",
+      letterSpacing: "0.4px",
+    });
+    this.toggleButton.onclick = () => this.toggle();
+    root.appendChild(this.toggleButton);
     this.root = el("div", {
       position: "absolute",
       right: "14px",
@@ -45,6 +74,26 @@ export class LootSkeletonPanel {
     });
     root.appendChild(this.root);
     this.render();
+  }
+
+  setOpen(on) {
+    this.visible = !!on;
+    this.root.style.display = this.visible ? "block" : "none";
+    const data = lootPanelAccessData({ devMode: this.devMode, visible: this.visible });
+    this.toggleButton.textContent = data.toggleLabel;
+  }
+
+  open() {
+    this.setOpen(true);
+    this.refresh();
+  }
+
+  close() {
+    this.setOpen(false);
+  }
+
+  toggle() {
+    this.visible ? this.close() : this.open();
   }
 
   mutate(fn) {
@@ -179,10 +228,10 @@ export class LootSkeletonPanel {
     });
     wrap.appendChild(el("div", { color: CSS.gold, fontWeight: "700", marginBottom: "4px" }, "Forge v1"));
     wrap.appendChild(el("div", { color: CSS.ash, fontSize: "11px", lineHeight: "1.35" },
-      `Dev skeleton: +1 to an existing stat, max +5. Cost ${FORGE_UPGRADE_GOLD_COST} Gold. Marrow unaffected.`));
+      `+1 to an existing stat, max +5. Cost ${FORGE_UPGRADE_GOLD_COST} Gold. Marrow unaffected.`));
     wrap.appendChild(el("div", { color: CSS.bone, fontSize: "11px", lineHeight: "1.35", marginTop: "5px" },
       `Active hero Gold: ${this.heroGold()}`));
-    wrap.appendChild(this.button("Dev +50 Gold", () => this.grantTestGold(50)));
+    if (this.devMode) wrap.appendChild(this.button("Dev +50 Gold", () => this.grantTestGold(50)));
 
     if (!forgeData.selected) {
       wrap.appendChild(el("div", { color: CSS.ash, marginTop: "8px" }, "Grant or own an item to use the Forge."));
@@ -210,16 +259,18 @@ export class LootSkeletonPanel {
 
   render() {
     this.root.innerHTML = "";
-    this.root.appendChild(el("div", {
+    const access = lootPanelAccessData({ devMode: this.devMode, visible: this.visible });
+    const header = el("div", { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "6px" });
+    header.appendChild(el("div", {
       color: CSS.gold,
       font: "700 15px 'Cinzel', serif",
       letterSpacing: "1px",
-      marginBottom: "6px",
-    }, "Loot Skeleton v1"));
-    this.root.appendChild(el("div", { color: CSS.ash, lineHeight: "1.35", marginBottom: "6px" },
-      "Dev-only equipment test panel. This is not the Forge or final loot UI."));
+    }, access.title));
+    header.appendChild(this.button("Close", () => this.close()));
+    this.root.appendChild(header);
+    this.root.appendChild(el("div", { color: CSS.ash, lineHeight: "1.35", marginBottom: "6px" }, access.subtitle));
 
-    this.root.appendChild(this.button("Grant starter reward", () => {
+    if (this.devMode) this.root.appendChild(this.button("Grant starter reward", () => {
       this.mutate((state) => grantStarterLoot(state));
     }));
 
@@ -283,5 +334,6 @@ export class LootSkeletonPanel {
       items.appendChild(card);
     }
     this.root.appendChild(items);
+    this.setOpen(this.visible);
   }
 }
