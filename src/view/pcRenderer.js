@@ -10,7 +10,9 @@ import { expandRects, gridToWorld, worldToGrid } from "../sim/pathing.js";
 import { loadGlb } from "./pcAssets.js";
 import { MODELS } from "../config/models.js";
 import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharacter } from "./character.js";
+import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
+import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
 
@@ -600,6 +602,8 @@ export class PCRenderer {
       this.app.root.addChild(block);
     }
 
+    this._loadMissionShowcaseArt(level);
+
     // Build target marker. Kept disabled in Stage 1 so the hero never reads as
     // the build target; visible feedback is attached to the tower ghost.
     this.hover = prim("box", null);
@@ -666,6 +670,45 @@ export class PCRenderer {
 
     // Hero creation is intentionally owned by setHeroClass(). Mission startup
     // awaits that path so the gameplay loop cannot race model/animation setup.
+  }
+
+  _loadMissionShowcaseArt(level) {
+    if (this.missionArtRoot) {
+      this.missionArtRoot.destroy();
+      this.missionArtRoot = null;
+    }
+    const root = new pc.Entity("first-breach-showcase-art");
+    this.app.root.addChild(root);
+    this.missionArtRoot = root;
+    const token = Symbol("mission-art");
+    this._missionArtToken = token;
+
+    preloadKit(this.app, MISSION_ART_ASSET_NAMES)
+      .then(() => {
+        if (this._missionArtToken !== token || this.missionArtRoot !== root) return;
+        let placed = 0;
+        for (const spec of missionShowcaseArtSpecs(level)) {
+          const ent = place(this.app, root, spec.name, {
+            x: spec.x,
+            y: spec.y,
+            z: spec.z,
+            ry: spec.ry,
+            scale: spec.scale,
+          });
+          if (!ent) continue;
+          ent.name = `showcase-${spec.id}`;
+          ent._ossaraMissionArt = spec;
+          for (const render of ent.findComponents("render")) {
+            for (const mesh of render.meshInstances || []) {
+              mesh.castShadow = spec.category !== "floor";
+              mesh.receiveShadow = true;
+            }
+          }
+          placed++;
+        }
+        console.log(`[missionArt] placed ${placed}/${missionShowcaseArtSpecs(level).length} props`);
+      })
+      .catch((err) => console.warn("[missionArt] showcase art skipped:", err));
   }
 
   _buildSpawnIndicators(level) {
