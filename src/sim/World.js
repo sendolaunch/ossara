@@ -320,7 +320,7 @@ export class World {
     return true;
   }
 
-  _spawnEnemy(typeId, laneId = this.defaultLaneId) {
+  _spawnEnemy(typeId, laneId = this.defaultLaneId, opts = {}) {
     const def = ENEMIES[typeId];
     const path = this.lanePaths[laneId] || this.lane;
     const id = this._nextId++;
@@ -329,7 +329,12 @@ export class World {
     const offset = computeSpawnSpreadOffset(id, width);
     const fade = lane.spawnSpreadFade ?? this.level.spawnSpreadFade ?? 14;
     const start = computeLanePosition(path, 0, offset, { fadeNearCore: fade, corridorWidth: lane.corridorWidth ?? this.level.corridorWidth });
-    this.enemyPool.acquire(def, id, start, path.id || laneId || this.defaultLaneId, { laneOffset: offset, laneOffsetFade: fade });
+    this.enemyPool.acquire(def, id, start, path.id || laneId || this.defaultLaneId, {
+      laneOffset: offset,
+      laneOffsetFade: fade,
+      elite: !!opts.elite,
+      eliteId: opts.eliteId || "",
+    });
   }
 
   // ---- main tick ------------------------------------------------------------
@@ -348,7 +353,7 @@ export class World {
       this.waveElapsed = next.waveElapsed;
       this.spawnCursor = next.spawnCursor;
       for (const spawn of next.spawns) {
-        this._spawnEnemy(spawn.type, spawn.laneId);
+        this._spawnEnemy(spawn.type, spawn.laneId, spawn);
       }
     }
 
@@ -434,7 +439,7 @@ export class World {
     e.alive = false;
     this.marrow += Math.round(e.bounty * (1 + (this.bonuses.marrowPct || 0) / 100));
     this.stats.kills++;
-    this.events.push({ kind: "kill", x: e.x, z: e.z, bounty: e.bounty, boss: e.boss });
+    this.events.push({ kind: "kill", x: e.x, z: e.z, bounty: e.bounty, boss: e.boss, elite: !!e.elite, eliteId: e.eliteId || "", enemyId: e.id, type: e.type });
   }
 
   _damageEnemy(e, dmg) {

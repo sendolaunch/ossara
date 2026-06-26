@@ -27,7 +27,7 @@ const waves = [
     name: "Two",
     prepTime: 7,
     reward: 20,
-    groups: [{ type: "brute", laneId: "southeast-garden", count: 1, interval: 1, delay: 0 }],
+    groups: [{ type: "brute", laneId: "southeast-garden", count: 1, interval: 1, delay: 0, elite: true, eliteId: "test-elite" }],
   },
 ];
 
@@ -37,6 +37,11 @@ const waves = [
   ok(schedule.map((s) => s.time).join(",") === "0,0.5,2,3", "wave schedule sorts spawns by time");
   ok(schedule[0].laneId === "legacy-lane" && schedule[1].laneId === "legacy-lane", "wave schedule fills missing lane ids with default lane");
   ok(schedule[2].laneId === "north-gate", "wave schedule preserves explicit lane ids");
+}
+
+{
+  const schedule = buildWaveSchedule(waves[1], "legacy-lane");
+  ok(schedule.length === 1 && schedule[0].elite && schedule[0].eliteId === "test-elite", "wave schedule preserves controlled elite metadata");
 }
 
 {
@@ -74,6 +79,17 @@ const waves = [
   ok(world.schedule.length === 4 && world.phase === "active", "World stores expanded wave schedule");
   world.update(0.1, {});
   ok(world.enemies.length === 1 && world.enemies[0].laneId === world.defaultLaneId, "World spawns missing-lane groups on its default lane");
+}
+
+{
+  const world = new World(LEVEL, [waves[1]]);
+  ok(world.startWave(), "World starts elite test wave");
+  world.update(0.1, {});
+  const elite = world.enemies[0];
+  ok(elite?.elite && elite.eliteId === "test-elite", "World spawns requested elite enemy metadata");
+  world._damageEnemy(elite, elite.hp + 1);
+  const kill = world.events.find((event) => event.kind === "kill");
+  ok(kill?.elite && kill.eliteId === "test-elite", "elite kill event carries reward metadata");
 }
 
 console.log(`waveSpawner: ${pass}/${pass + fail} checks passed`);

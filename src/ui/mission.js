@@ -140,6 +140,7 @@ export class Mission {
     this.onWin = opts.onWin || null;
     this.onWaveReward = opts.onWaveReward || null;
     this.onChestReward = opts.onChestReward || null;
+    this.onEliteReward = opts.onEliteReward || null;
     this.onWorldDropPickup = opts.onWorldDropPickup || null;
     this.getLootState = opts.getLootState || (() => null);
     this._wonFired = false;
@@ -254,11 +255,22 @@ export class Mission {
   }
 
   _handleWorldEvents() {
-    if (!this.onWaveReward || !this.world?.events?.length) return;
+    if (!this.world?.events?.length) return;
     for (const event of this.world.events) {
-      if (event.kind !== "waveCleared") continue;
-      const summary = this.onWaveReward(event);
-      if (summary?.goldGranted) this.hud.toast(`+${summary.goldGranted} Gold`, CSS.gold);
+      if (event.kind === "waveCleared" && this.onWaveReward) {
+        const summary = this.onWaveReward(event);
+        if (summary?.goldGranted) this.hud.toast(`+${summary.goldGranted} Gold`, CSS.gold);
+      }
+      if (event.kind === "kill" && event.elite && this.onEliteReward) {
+        const summary = this.onEliteReward(event);
+        if (summary?.goldGranted) this.hud.toast(`Elite defeated. +${summary.goldGranted} Gold`, CSS.gold);
+        if (summary?.shouldSpawnWorldDrop) {
+          this.spawnWorldDrop(summary, {
+            position: { x: event.x || this.world.hero.x, y: 0, z: event.z || this.world.hero.z },
+            pickupDelay: 900,
+          });
+        }
+      }
     }
   }
 

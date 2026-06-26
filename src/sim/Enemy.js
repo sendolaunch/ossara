@@ -26,6 +26,9 @@ export function createEnemy() {
     attackSlotZ: 0,
     color: "ash",
     boss: false,
+    elite: false,
+    eliteId: "",
+    eliteRewardClaimed: false,
     laneId: "",
     laneOffset: 0,
     laneOffsetFade: 12,
@@ -64,6 +67,9 @@ export function resetEnemy(e, def, id, startPos, laneId = "", opts = {}) {
   e.attackSlotZ = 0;
   e.color = def.color;
   e.boss = !!def.boss;
+  e.elite = !!opts.elite;
+  e.eliteId = opts.eliteId ? String(opts.eliteId) : "";
+  e.eliteRewardClaimed = false;
   e.laneId = laneId;
   e.laneOffset = opts.laneOffset || 0;
   e.laneOffsetFade = opts.laneOffsetFade || 12;

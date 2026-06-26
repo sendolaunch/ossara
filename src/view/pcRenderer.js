@@ -1711,6 +1711,19 @@ export class PCRenderer {
         hitRing.setLocalEulerAngles(90, 0, 0);
         hitRing.enabled = false;
         ent.addChild(hitRing);
+        const eliteRing = prim("torus", translucentMat("gold", 1.05, 0.5));
+        eliteRing.name = "elite-ring";
+        eliteRing.render.castShadows = false;
+        eliteRing.render.receiveShadows = false;
+        eliteRing.setLocalEulerAngles(90, 0, 0);
+        eliteRing.enabled = false;
+        ent.addChild(eliteRing);
+        const eliteCrown = prim("box", mat("gold", 0.8));
+        eliteCrown.name = "elite-marker";
+        eliteCrown.setLocalScale(0.18, 0.18, 0.08);
+        eliteCrown.setLocalEulerAngles(0, 0, 45);
+        eliteCrown.enabled = false;
+        ent.addChild(eliteCrown);
         ent._ossaraVisualWrap = visualWrap;
         ent._ossaraVisual = visual;
         ent._ossaraFallbackBody = body;
@@ -1721,6 +1734,8 @@ export class PCRenderer {
         ent._ossaraHpBg = hpBg;
         ent._ossaraHpFill = hpFill;
         ent._ossaraHitRing = hitRing;
+        ent._ossaraEliteRing = eliteRing;
+        ent._ossaraEliteCrown = eliteCrown;
         ent._ossaraDebug = {
         type: e.type,
           modelName: visual.model || "",
@@ -1758,6 +1773,10 @@ export class PCRenderer {
         ent._ossaraAnim?.setAttacking(!!e.attackingBlocker);
       }
       ent._ossaraAnim?.update(dt);
+      if (ent._ossaraVisualWrap) {
+        const eliteScale = e.elite ? 1.16 : 1;
+        ent._ossaraVisualWrap.setLocalScale(eliteScale, eliteScale, eliteScale);
+      }
       const animState = ent._ossaraAnim?.state?.();
       const proceduralActive = this._syncEnemyProceduralLocomotion(ent, e, moving, forcedState, forcedClip, dt, animState);
       if (ent._ossaraDebug) {
@@ -1810,6 +1829,20 @@ export class PCRenderer {
         ent._ossaraHitRing.enabled = flash > 0;
         const s = 0.85 + (0.35 - flash) * 1.3;
         ent._ossaraHitRing.setLocalScale(s, s, s);
+      }
+      if (ent._ossaraEliteRing) {
+        ent._ossaraEliteRing.enabled = !!e.elite;
+        if (e.elite) {
+          const s = 0.95 + Math.sin(performance.now() * 0.005 + e.id) * 0.06;
+          ent._ossaraEliteRing.setLocalScale(s, s, s);
+        }
+      }
+      if (ent._ossaraEliteCrown) {
+        ent._ossaraEliteCrown.enabled = !!e.elite;
+        if (e.elite) {
+          ent._ossaraEliteCrown.setLocalPosition(0, (ent._ossaraVisual?.hpY || 1.65) + 0.32 + Math.sin(performance.now() * 0.004 + e.id) * 0.04, 0);
+          ent._ossaraEliteCrown.setLocalEulerAngles(0, performance.now() * 0.05, 45);
+        }
       }
     }
     for (const [id, ent] of this.enemyEntities) {
