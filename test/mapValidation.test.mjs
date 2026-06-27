@@ -96,8 +96,12 @@ ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 5 &
 ok(wardPieces.every((piece) => piece.allowOverlapGameplay), "Ward shrine pieces explicitly allow core-reserve visual overlap");
 
 const centralStairs = placements.filter((placement) => placement.laneId === "north-gate" && placement.readabilityRole === "visual-stair");
-ok(centralStairs.length >= 9, "central route has modular visual stair bands");
+ok(centralStairs.length >= 15, "central route has modular visual stair bands");
+ok(centralStairs.some((placement) => placement.elevationBand === "low"), "central stair includes a low entry band");
+ok(centralStairs.some((placement) => placement.elevationBand === "mid"), "central stair includes a mid transition band");
+ok(centralStairs.some((placement) => placement.elevationBand === "high"), "central stair includes a high exit band");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
+ok(placements.some((placement) => placement.readabilityRole === "ward-approach-terrace" && placement.elevationBand === "shrine"), "Ward approach terrace connects into shrine elevation band");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 10, "macro floor slabs break up the flat grid-board read");
 ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke readability is supported by in-world ward markers");
 ok(placements.filter((placement) => placement.readabilityRole === "crypt-breach-frame").length >= 6, "side crypt breaches have visible frame pieces");
@@ -110,6 +114,7 @@ ok(built.assetNames.every((assetName) => typeof assetName === "string" && assetN
 ok(mapThemeMaterialToken(theme, "stone") === "ruinedStoneMid", "legacy stone fallback material aliases to themed ruined stone");
 ok(mapThemeMaterialToken(theme, "plague") === "chokeReadabilityGreen", "legacy plague fallback material aliases to softened choke green");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-lower-run"), theme) === "ruinedStoneStep", "central stair run receives readable step material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-approach-upper-landing"), theme) === "wardApproachGold", "Ward approach upper landing receives direct shrine approach material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-gem-pile"), theme) === "wardGreenEmissive", "Ward shrine gem pile receives Ward-green material");
 
 console.log(`mapValidation: ${pass}/${pass + fail} checks passed`);

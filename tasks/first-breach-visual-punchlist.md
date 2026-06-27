@@ -14,8 +14,9 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 
 - Central Stair should read as a built stair-and-landing approach, not a huge dropped ramp/slab.
 - Use modular stair bands, landings, and side retaining edges before adding more decoration.
+- Elevation grammar pass applied: bottom, mid, and top stair landings now carry explicit low/mid/high elevation intent; the central stair has denser tread bands and rising retaining cheeks; the Ward approach now has a small high-to-shrine terrace chain.
 - Future polish: tune stair asset rotation/scale from screenshots if any step pieces look buried or too repetitive.
-- Future polish: use the First Breach elevation intent to verify bottom landing, stepped connector, top landing, and retaining edges before adding more stair decoration.
+- Future polish: use human review footage to verify whether the new tread rhythm reads from the normal camera before adding more stair decoration.
 
 ## Ward Crystal Shrine
 

@@ -66,6 +66,10 @@ const after = stableGameplaySnapshotKey(levelGameplaySnapshot(LEVEL));
 ok(before === after, "elevation intent does not mutate gameplay level data");
 ok(built.elevationPlan?.id === intent.id, "Map Builder build carries elevation intent metadata");
 ok(built.gameplaySnapshotUnchanged, "Map Builder still reports unchanged gameplay snapshot with elevation intent");
+ok(built.placements.some((placement) => placement.id === "central-stair-bottom-landing" && placement.elevationZone === "front-courtyard-low"), "central stair bottom landing carries lower-zone elevation intent");
+ok(built.placements.some((placement) => placement.id === "central-main-landing" && placement.elevationZone === "main-landing-high"), "central stair top landing carries high-zone elevation intent");
+ok(built.placements.some((placement) => placement.id === "ward-approach-upper-landing" && placement.elevationZone === "ward-shrine"), "Ward approach upper landing carries shrine-zone elevation intent");
+ok(built.placements.every((placement) => placement.type !== "stair" || placement.allowOverlapGameplay), "visual stair pieces remain explicit gameplay-overlap art");
 
 const badSameBandStair = validateElevationPlan({
   id: "bad-same-band",

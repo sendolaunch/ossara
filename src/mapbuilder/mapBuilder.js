@@ -16,6 +16,8 @@ function normalizeScale(scale = 1) {
 
 function childDescriptor(parent, child, index) {
   const suffix = child.id || `${index}`;
+  const parentVisualY = Number.isFinite(parent.visualY) ? parent.visualY : null;
+  const childVisualY = Number.isFinite(child.visualY) ? child.visualY : null;
   return {
     ...parent,
     ...child,
@@ -27,13 +29,18 @@ function childDescriptor(parent, child, index) {
     laneId: child.laneId ?? parent.laneId,
     readabilityRole: child.readabilityRole || parent.readabilityRole,
     allowOverlapGameplay: child.allowOverlapGameplay ?? parent.allowOverlapGameplay,
+    materialToken: child.materialToken ?? parent.materialToken,
+    elevationZone: child.elevationZone ?? parent.elevationZone,
+    elevationBand: child.elevationBand ?? parent.elevationBand,
     offset: {
       x: (parent.offset?.x || parent.offset?.dx || 0) + (child.offset?.x || child.offset?.dx || 0),
       y: (parent.offset?.y || 0) + (child.offset?.y || 0),
       z: (parent.offset?.z || parent.offset?.dz || 0) + (child.offset?.z || child.offset?.dz || 0),
     },
     rotation: (parent.rotation || 0) + (child.rotation || 0),
-    visualY: (parent.visualY || 0) + (child.visualY || 0),
+    visualY: parentVisualY !== null || childVisualY !== null
+      ? (parentVisualY || 0) + (childVisualY || 0)
+      : undefined,
   };
 }
 
@@ -95,6 +102,7 @@ export function normalizeMapPiece(piece, { level, registry, themeId = ACTIVE_MAP
     tags: [...new Set([...(resolved.tags || []), ...(piece.tags || [])])],
     readabilityRole: piece.readabilityRole || null,
     allowOverlapGameplay: !!piece.allowOverlapGameplay,
+    materialToken: piece.materialToken || null,
     elevationZone: piece.elevationZone || null,
     elevationBand,
   };

@@ -24,7 +24,7 @@ ok(built.planId === FIRST_BREACH_MAP_PLAN.id, "build result carries the plan id"
 ok(built.gameplaySnapshotUnchanged, "map-builder build reports unchanged gameplay snapshot");
 ok(before === after, "map-builder does not mutate level geometry or gameplay data");
 ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "map-builder output is deterministic");
-ok(placements.length >= 140 && placements.length <= 155, "First Breach builder adds a stronger but bounded macro-shape visual subset");
+ok(placements.length >= 160 && placements.length <= 175, "First Breach builder adds a stronger but bounded macro-shape visual subset");
 ok(new Set(placements.map((placement) => placement.id)).size === placements.length, "every map-builder placement has a stable unique id");
 
 for (const placement of placements) {
@@ -52,7 +52,7 @@ for (const lane of LEVEL.lanes) {
 }
 
 ok(placements.filter((placement) => placement.tags.includes("verticality") && placement.type === "stair").length >= 2, "map-builder includes multiple visual-only stair pieces");
-ok(placements.filter((placement) => placement.readabilityRole === "visual-stair").length >= 9, "central stair uses modular step bands instead of one slab");
+ok(placements.filter((placement) => placement.readabilityRole === "visual-stair").length >= 15, "central stair uses modular step bands instead of one slab");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central stair has a visual-only landing");
 ok(placements.some((placement) => placement.readabilityRole === "stair-retaining-edge"), "central stair has retaining edge pieces");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 10, "macro floor breakup reduces flat grid-board feeling");
@@ -86,8 +86,21 @@ ok(LEVEL.lanes.length === 5, "map-builder does not change lane count");
 ok(WAVES.length === 5, "map-builder does not change First Breach wave count");
 
 ok(byId.has("central-stair-lower-run"), "central lower stair run has a stable id");
+ok(byId.has("central-stair-lower-mid-center"), "central lower-mid stair band has a stable id");
+ok(byId.has("central-stair-upper-mid-center"), "central upper-mid stair band has a stable id");
 ok(byId.has("central-stair-bottom-landing"), "central lower landing has a stable id");
 ok(byId.has("central-main-landing"), "central landing has a stable id");
+ok(byId.get("central-stair-bottom-landing")?.tags.includes("bottom-landing"), "central stair bottom landing is tagged as the entry landing");
+ok(byId.get("central-stair-mid-landing")?.tags.includes("mid-landing"), "central stair mid landing is tagged as the transition landing");
+ok(byId.get("central-main-landing")?.tags.includes("top-landing"), "central stair top landing is tagged as the exit landing");
+ok(byId.get("central-stair-lower-run")?.elevationBand === "low", "central stair lower run carries low elevation band intent");
+ok(byId.get("central-stair-middle-center")?.elevationBand === "mid", "central stair middle run carries mid elevation band intent");
+ok(byId.get("central-stair-upper-center")?.elevationBand === "high", "central stair upper run carries high landing intent");
+ok(byId.get("central-stair-lower-run")?.materialToken === "ruinedStoneStep", "central stair material token is preserved for renderer material resolution");
+ok(byId.has("ward-approach-lower-landing"), "Ward approach lower landing has a stable id");
+ok(byId.has("ward-approach-upper-landing"), "Ward approach upper landing has a stable id");
+ok(byId.get("ward-approach-lower-landing")?.elevationBand === "high", "Ward approach starts on the high landing band");
+ok(byId.get("ward-approach-upper-landing")?.elevationBand === "shrine", "Ward approach upper landing connects into the shrine band");
 ok(byId.has("ward-shrine-raised-foundation"), "Ward shrine foundation has a stable id");
 ok(byId.has("ward-shrine-core-pedestal"), "Ward shrine core pedestal has a stable id");
 ok(byId.has("ward-shrine-front-landing"), "Ward shrine front landing has a stable id");
