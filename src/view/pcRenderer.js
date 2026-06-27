@@ -14,6 +14,7 @@ import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharact
 import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
+import { buildFirstBreachMapBuilder } from "../mapbuilder/firstBreachMapPlan.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
 
@@ -645,6 +646,7 @@ export class PCRenderer {
     }
 
     this._loadMissionShowcaseArt(level);
+    this._loadMapBuilderArt(level);
 
     // Build target marker. Kept disabled in Stage 1 so the hero never reads as
     // the build target; visible feedback is attached to the tower ghost.
@@ -751,6 +753,84 @@ export class PCRenderer {
         console.log(`[missionArt] placed ${placed}/${missionShowcaseArtSpecs(level).length} props`);
       })
       .catch((err) => console.warn("[missionArt] showcase art skipped:", err));
+  }
+
+  _mapBuilderFallbackMaterial(materialKey = "stone") {
+    this.mapBuilderFallbackMaterials = this.mapBuilderFallbackMaterials || {};
+    if (this.mapBuilderFallbackMaterials[materialKey]) return this.mapBuilderFallbackMaterials[materialKey];
+    const material = materialKey === "plague"
+      ? translucentMat("plague", 0.75, 0.34)
+      : materialKey === "gold"
+        ? mat("gold", 0.55)
+        : materialKey === "shadow"
+          ? translucentMat("void", 0.1, 0.42)
+          : mat("ash", 0.08);
+    this.mapBuilderFallbackMaterials[materialKey] = material;
+    return material;
+  }
+
+  _createMapBuilderFallback(root, placement) {
+    const fallback = placement.fallback || {};
+    const material = this._mapBuilderFallbackMaterial(fallback.material || "stone");
+    const ent = prim(fallback.primitive || "box", material);
+    const sx = (fallback.scale?.x ?? 1) * (placement.scaleX || placement.scale || 1);
+    const sy = (fallback.scale?.y ?? 1) * (placement.scaleY || placement.scale || 1);
+    const sz = (fallback.scale?.z ?? 1) * (placement.scaleZ || placement.scale || 1);
+    ent.name = `mapbuilder-fallback-${placement.id}`;
+    ent.setLocalScale(sx, sy, sz);
+    ent.setLocalEulerAngles(0, placement.ry || 0, 0);
+    ent.setPosition(placement.x, placement.y + sy / 2, placement.z);
+    if (ent.render) {
+      ent.render.castShadows = fallback.material !== "plague";
+      ent.render.receiveShadows = true;
+    }
+    root.addChild(ent);
+    return ent;
+  }
+
+  _loadMapBuilderArt(level) {
+    if (this.mapBuilderRoot) {
+      this.mapBuilderRoot.destroy();
+      this.mapBuilderRoot = null;
+    }
+    const built = buildFirstBreachMapBuilder(level);
+    const root = new pc.Entity("first-breach-mapbuilder-art");
+    this.app.root.addChild(root);
+    this.mapBuilderRoot = root;
+    const token = Symbol("map-builder-art");
+    this._mapBuilderToken = token;
+
+    preloadKit(this.app, built.assetNames)
+      .then(() => {
+        if (this._mapBuilderToken !== token || this.mapBuilderRoot !== root) return;
+        let placed = 0;
+        let fallbackCount = 0;
+        for (const placement of built.placements) {
+          const ent = placement.assetName
+            ? place(this.app, root, placement.assetName, {
+              x: placement.x,
+              y: placement.y,
+              z: placement.z,
+              ry: placement.ry,
+              scale: placement.scale,
+            })
+            : null;
+          const finalEnt = ent || this._createMapBuilderFallback(root, placement);
+          if (!finalEnt) continue;
+          finalEnt.name = `mapbuilder-${placement.id}`;
+          finalEnt._ossaraMapBuilder = placement;
+          for (const render of finalEnt.findComponents("render")) {
+            for (const mesh of render.meshInstances || []) {
+              mesh.castShadow = placement.type !== "laneFloor" && placement.type !== "readabilityMarker";
+              mesh.receiveShadow = true;
+            }
+          }
+          if (!ent) fallbackCount++;
+          placed++;
+        }
+        console.log(`[mapBuilder] placed ${placed}/${built.placements.length} visual pieces (${fallbackCount} fallback)`);
+      })
+      .catch((err) => console.warn("[mapBuilder] visual layer skipped:", err));
   }
 
   _loadWardCrystalGem(cw) {
