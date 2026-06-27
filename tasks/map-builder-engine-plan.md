@@ -206,3 +206,26 @@ Remaining placeholders:
 - choke and Ward readability rings still use primitive cylinder fallback markers
 - visual stairs/platforms remain art-only and do not change pathing or elevation gameplay
 - the old showcase layer is still present; future passes should migrate more lane-side and Ward dressing gradually
+
+## First Breach Lighting Readability Foundation
+
+The first lighting/material pass keeps geometry fixed and makes the new builder art more cohesive from the normal mission camera.
+
+Theme-owned additions:
+
+- `mapThemes.js` now owns reusable material tokens for ruined stone, Ward-green emissive accents, warm torch/candle accents, ash/bone highlights, shadow rubble, softened build hints, and choke readability rings.
+- The same theme owns mission lighting values for ambient color, sun color/intensity, fog color/range, spawn accent light strength, and Ward Crystal light strength.
+- Map Builder placements resolve material tokens by asset key or piece type so stairs, landings, walls, edges, lane floors, candles, banners, gems, and fallback rings can be tuned without changing gameplay data.
+
+Renderer-owned application:
+
+- `pcRenderer.js` consumes theme tokens for ground, lane strips, build hints, choke rings, spawn portal accents, Ward rings, Ward Crystal gem material, map-builder fallbacks, and selected map-builder GLB pieces.
+- The old showcase art remains loaded, but primary material cohesion now comes from theme tokens rather than scattered one-off material choices.
+
+Current readability intent:
+
+- central stairs and landings read as unified ruined stone
+- build and path hints are softer so the map no longer reads as a hard debug grid
+- Ward Crystal and shrine gems stay toxic green as the focal point
+- torch/candle assets provide small warm contrast without adding a large number of dynamic lights
+- gameplay layout, lanes, build zones, waves, Warden tuning, enemy tuning, and loot/reward rules remain unchanged

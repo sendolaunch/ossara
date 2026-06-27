@@ -15,6 +15,7 @@ import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
 import { buildFirstBreachMapBuilder } from "../mapbuilder/firstBreachMapPlan.js";
+import { getMapTheme, mapMaterialTokenForPlacement, mapThemeMaterialToken } from "../config/mapThemes.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
 
@@ -52,6 +53,27 @@ function translucentMat(colorKey, emissiveAmt = 0.9, opacity = 0.55) {
   m.opacity = opacity;
   m.blendType = pc.BLEND_NORMAL;
   m.depthWrite = false;
+  m.update();
+  return m;
+}
+
+function materialFromToken(token = {}, fallbackColor = "ash") {
+  const c = col(colorValue(token.color || fallbackColor));
+  const emissive = col(colorValue(token.emissiveColor || token.color || fallbackColor));
+  const m = new pc.StandardMaterial();
+  m.diffuse = c;
+  m.gloss = token.gloss ?? 0.24;
+  m.useMetalness = false;
+  if ((token.emissive || 0) > 0) {
+    m.emissive = emissive;
+    m.emissiveIntensity = token.emissive;
+  }
+  if (Number.isFinite(token.opacity) && token.opacity < 1) {
+    m.opacity = token.opacity;
+    m.blendType = pc.BLEND_NORMAL;
+    m.depthWrite = token.depthWrite ?? false;
+    m.cull = token.cull ?? pc.CULLFACE_NONE;
+  }
   m.update();
   return m;
 }
@@ -244,7 +266,10 @@ export class PCRenderer {
     this.app = new pc.Application(canvas, { graphicsDeviceOptions: { antialias: true } });
     this.app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
-    this.app.scene.ambientLight = col(0x2a3326);
+    this.mapTheme = getMapTheme();
+    this.themeMaterialCache = {};
+    const lighting = this.mapTheme.lighting || {};
+    this.app.scene.ambientLight = col(colorValue(lighting.ambient || 0x2a3326));
 
     // camera (high tactical chase/orbit)
     this.camYaw = MISSION_CAMERA.yaw;
@@ -266,8 +291,16 @@ export class PCRenderer {
     this.app.root.addChild(this.cameraEntity);
 
     const sun = new pc.Entity("sun");
-    sun.addComponent("light", { type: "directional", color: col(0xdfeac6), intensity: 1.0, castShadows: true, shadowResolution: 1024, shadowBias: 0.2 });
-    sun.setEulerAngles(50, 35, 0);
+    sun.addComponent("light", {
+      type: "directional",
+      color: col(colorValue(lighting.sunColor || 0xdfeac6)),
+      intensity: lighting.sunIntensity ?? 1.0,
+      castShadows: true,
+      shadowResolution: 1024,
+      shadowBias: 0.2,
+    });
+    const sunEuler = lighting.sunEuler || { x: 50, y: 35, z: 0 };
+    sun.setEulerAngles(sunEuler.x, sunEuler.y, sunEuler.z);
     this.app.root.addChild(sun);
 
     this.enemyEntities = new Map();
@@ -334,6 +367,20 @@ export class PCRenderer {
     ].join("\n");
   }
 
+  _themeMaterial(tokenName, fallbackColor = "ash") {
+    const resolvedName = mapThemeMaterialToken(this.mapTheme, tokenName);
+    const cacheKey = resolvedName || `fallback:${fallbackColor}`;
+    if (this.themeMaterialCache[cacheKey]) return this.themeMaterialCache[cacheKey];
+    const token = resolvedName ? this.mapTheme.materialTokens[resolvedName] : { color: fallbackColor };
+    const material = materialFromToken(token, fallbackColor);
+    this.themeMaterialCache[cacheKey] = material;
+    return material;
+  }
+
+  _themeLight(key, fallback = {}) {
+    return this.mapTheme?.lighting?.[key] || fallback;
+  }
+
   // ---- static scene --------------------------------------------------------
   buildStatic(world) {
     const level = world.level;
@@ -346,16 +393,18 @@ export class PCRenderer {
       maxZ: maxWorld.z + 0.5 * level.tile,
     };
 
+    const lighting = this.mapTheme.lighting || {};
+
     // plague-green atmospheric fog over the ruin
     try {
       this.app.scene.fog = pc.FOG_LINEAR;
-      this.app.scene.fogColor = col(0x09120a);
-      this.app.scene.fogStart = 14;
-      this.app.scene.fogEnd = 62;
+      this.app.scene.fogColor = col(colorValue(lighting.fogColor || 0x09120a));
+      this.app.scene.fogStart = lighting.fogStart ?? 14;
+      this.app.scene.fogEnd = lighting.fogEnd ?? 62;
     } catch (_) {}
 
     // ruined stone floor
-    const ground = prim("box", mat("void"));
+    const ground = prim("box", this._themeMaterial("ruinedStoneDark", "void"));
     ground.setLocalScale(level.cols * level.tile + 6, 0.2, level.rows * level.tile + 6);
     ground.setPosition(0, -0.1, 0);
     this.app.root.addChild(ground);
@@ -363,9 +412,9 @@ export class PCRenderer {
     // Readability-only lane language: broad worn strips, faint ward seams, and
     // low direction chips. These are visual aids only; pathing/placement still
     // comes from the sim sets below.
-    const laneBedMat = translucentMat("rot", 0.18, 0.2);
-    const laneEdgeMat = translucentMat("plague", 0.38, 0.16);
-    const laneChipMat = translucentMat("gold", 0.34, 0.18);
+    const laneBedMat = this._themeMaterial("laneStoneBed", "rot");
+    const laneEdgeMat = this._themeMaterial("lanePlagueSeam", "plague");
+    const laneChipMat = this._themeMaterial("laneDirectionGold", "gold");
     const addLaneStrip = (seg) => {
       const group = new pc.Entity(`lane-strip-${seg.id}`);
       group.setPosition(seg.x, 0, seg.z);
@@ -414,7 +463,7 @@ export class PCRenderer {
     }
 
     // the lane the dead march — worn stone path with a faint green seam
-    const laneMat = mat("rot", 0.18);
+    const laneMat = this._themeMaterial("pathTileStone", "rot");
     for (const key of world.pathSet) {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
@@ -424,7 +473,7 @@ export class PCRenderer {
       this.app.root.addChild(tile);
     }
 
-    const buildHintMat = translucentMat("gold", 0.12, 0.16);
+    const buildHintMat = this._themeMaterial("buildableGoldSoft", "gold");
     for (const cell of expandRects(level.buildableZones || [])) {
       const key = `${cell.col},${cell.row}`;
       if (world.pathSet.has(key) || world.blockedSet.has(key) || world.reservedSet.has(key)) continue;
@@ -437,8 +486,8 @@ export class PCRenderer {
       this.app.root.addChild(tile);
     }
 
-    const mainChokeMat = translucentMat("gold", 0.45, 0.24);
-    const fallbackChokeMat = translucentMat("plague", 0.45, 0.18);
+    const mainChokeMat = this._themeMaterial("mainChokeGold", "gold");
+    const fallbackChokeMat = this._themeMaterial("chokeReadabilityGreen", "plague");
     for (const spec of chokeReadabilitySpecs(level)) {
       const ring = prim("torus", spec.kind === "main" ? mainChokeMat : fallbackChokeMat);
       ring.name = `choke-readability-${spec.id}`;
@@ -452,13 +501,13 @@ export class PCRenderer {
 
     // THE BREACH — a glowing tear in the world where the dead pour through
     this.breachEntities = [];
-    const gateMat = mat("ash");
-    const stairMat = mat("bone");
-    const markerMat = mat("rot", 0.08);
-    const portalMat = mat("plague", 1.55);
-    const thresholdMat = translucentMat("blood", 0.52, 0.3);
-    const gateRingMat = translucentMat("plague", 1.0, 0.42);
-    const gateArrowMat = translucentMat("gold", 0.42, 0.24);
+    const gateMat = this._themeMaterial("ruinedStoneMid", "ash");
+    const stairMat = this._themeMaterial("boneAsh", "bone");
+    const markerMat = this._themeMaterial("shadowRubble", "rot");
+    const portalMat = this._themeMaterial("wardGreenEmissive", "plague");
+    const thresholdMat = this._themeMaterial("spawnThresholdBlood", "blood");
+    const gateRingMat = this._themeMaterial("spawnGateWardRing", "plague");
+    const gateArrowMat = this._themeMaterial("laneDirectionGold", "gold");
     const addGatePortal = (lane, x, z, side = "north") => {
       const horizontal = side === "north" || side === "south";
       const sx = horizontal ? 3.2 : 0.8;
@@ -512,8 +561,14 @@ export class PCRenderer {
       portal.setPosition(x, 1.1, z);
       this.app.root.addChild(portal);
       this.breachEntities.push(portal);
+      const spawnLight = this._themeLight("spawnLight", { color: "plague", intensity: 1.35, range: 9 });
       const light = new pc.Entity(`${lane.id}-breach-light`);
-      light.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 1.35, range: 9 });
+      light.addComponent("light", {
+        type: "point",
+        color: col(colorValue(spawnLight.color || "plague")),
+        intensity: spawnLight.intensity ?? 1.35,
+        range: spawnLight.range ?? 9,
+      });
       light.setPosition(x, 1.8, z);
       this.app.root.addChild(light);
     };
@@ -556,7 +611,7 @@ export class PCRenderer {
     // THE WARD — the failing seal you defend: rune dais + ring + crystal
     const cw = gridToWorld(level.core.col, level.core.row, level);
     const wardVisual = wardCoreReadabilitySpec(level);
-    const wardApproach = prim("torus", translucentMat("gold", 0.38, 0.22));
+    const wardApproach = prim("torus", this._themeMaterial("wardApproachGold", "gold"));
     wardApproach.name = "ward-approach-ring";
     wardApproach.render.castShadows = false;
     wardApproach.render.receiveShadows = false;
@@ -564,7 +619,7 @@ export class PCRenderer {
     wardApproach.setLocalScale(wardVisual.approachRingRadius, wardVisual.approachRingRadius, wardVisual.approachRingRadius);
     wardApproach.setPosition(wardVisual.x, 0.09, wardVisual.z);
     this.app.root.addChild(wardApproach);
-    const wardHalo = prim("torus", translucentMat("plague", 0.72, 0.34));
+    const wardHalo = prim("torus", this._themeMaterial("wardHaloGreen", "plague"));
     wardHalo.name = "ward-protection-ring";
     wardHalo.render.castShadows = false;
     wardHalo.render.receiveShadows = false;
@@ -572,8 +627,8 @@ export class PCRenderer {
     wardHalo.setLocalScale(wardVisual.wardRingRadius, wardVisual.wardRingRadius, wardVisual.wardRingRadius);
     wardHalo.setPosition(wardVisual.x, 0.13, wardVisual.z);
     this.app.root.addChild(wardHalo);
-    const beaconMat = mat("ash");
-    const beaconGlowMat = mat("plague", 1.15);
+    const beaconMat = this._themeMaterial("ruinedStoneMid", "ash");
+    const beaconGlowMat = this._themeMaterial("wardGreenEmissive", "plague");
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const bx = wardVisual.x + dx * wardVisual.wardRingRadius * 0.72;
       const bz = wardVisual.z + dz * wardVisual.wardRingRadius * 0.72;
@@ -587,30 +642,36 @@ export class PCRenderer {
       flame.setPosition(bx, 0.72, bz);
       this.app.root.addChild(flame);
     }
-    const dais = prim("cylinder", mat("ash"));
+    const dais = prim("cylinder", this._themeMaterial("ruinedStoneMid", "ash"));
     dais.setLocalScale(2.4, 0.3, 2.4);
     dais.setPosition(cw.x, 0.15, cw.z);
     this.app.root.addChild(dais);
-    const ring = prim("torus", mat("plague", 1.4));
+    const ring = prim("torus", this._themeMaterial("wardGreenEmissive", "plague"));
     ring.setLocalScale(2.0, 2.0, 2.0);
     ring.setPosition(cw.x, 0.35, cw.z);
     this.app.root.addChild(ring);
-    this.coreEntity = prim("sphere", mat("plague", 1.2));
+    this.coreEntity = prim("sphere", this._themeMaterial("wardGreenEmissive", "plague"));
     this.coreEntity.name = WARD_CRYSTAL_FALLBACK_NAME;
     this.coreEntity.setLocalScale(1.0, 1.5, 1.0);
     this.coreEntity.setPosition(cw.x, 1.2, cw.z);
     this.app.root.addChild(this.coreEntity);
     this.coreFallbackEntity = this.coreEntity;
     this._loadWardCrystalGem(cw);
+    const coreLightSpec = this._themeLight("coreLight", { color: "plague", intensity: 2.15, range: 15 });
     const coreLight = new pc.Entity();
-    coreLight.addComponent("light", { type: "point", color: col(PALETTE.plague), intensity: 2.15, range: 15 });
+    coreLight.addComponent("light", {
+      type: "point",
+      color: col(colorValue(coreLightSpec.color || "plague")),
+      intensity: coreLightSpec.intensity ?? 2.15,
+      range: coreLightSpec.range ?? 15,
+    });
     coreLight.setPosition(cw.x, 2.2, cw.z);
     this.app.root.addChild(coreLight);
 
     // ruined cathedral walls
     const halfW = (level.cols * level.tile) / 2 + 0.5;
     const halfH = (level.rows * level.tile) / 2 + 0.5;
-    const wallMat = mat("ash");
+    const wallMat = this._themeMaterial("ruinedStoneMid", "ash");
     const wall = (x, z, sx, sz) => {
       const e = prim("box", wallMat);
       e.setLocalScale(sx, 0.55, sz);
@@ -634,7 +695,7 @@ export class PCRenderer {
     }
 
     // impassable ruins — a stone block at each blocked cell, varied height
-    const ruinMat = mat("ash");
+    const ruinMat = this._themeMaterial("shadowRubble", "ash");
     for (const key of world.blockedSet) {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
@@ -758,15 +819,21 @@ export class PCRenderer {
   _mapBuilderFallbackMaterial(materialKey = "stone") {
     this.mapBuilderFallbackMaterials = this.mapBuilderFallbackMaterials || {};
     if (this.mapBuilderFallbackMaterials[materialKey]) return this.mapBuilderFallbackMaterials[materialKey];
-    const material = materialKey === "plague"
-      ? translucentMat("plague", 0.75, 0.34)
-      : materialKey === "gold"
-        ? mat("gold", 0.55)
-        : materialKey === "shadow"
-          ? translucentMat("void", 0.1, 0.42)
-          : mat("ash", 0.08);
+    const tokenName = mapThemeMaterialToken(this.mapTheme, materialKey);
+    const fallbackColor = materialKey === "plague" ? "plague" : materialKey === "gold" ? "gold" : materialKey === "shadow" ? "void" : "ash";
+    const material = tokenName ? this._themeMaterial(tokenName, fallbackColor) : mat(fallbackColor, 0.08);
     this.mapBuilderFallbackMaterials[materialKey] = material;
     return material;
+  }
+
+  _applyMapBuilderPlacementMaterial(entity, placement) {
+    const tokenName = mapMaterialTokenForPlacement(placement, this.mapTheme);
+    if (!tokenName) return;
+    const material = this._themeMaterial(tokenName, "ash");
+    applyRenderMaterial(entity, material, {
+      castShadow: placement.type !== "laneFloor" && placement.type !== "readabilityMarker",
+      receiveShadow: true,
+    });
   }
 
   _createMapBuilderFallback(root, placement) {
@@ -819,6 +886,7 @@ export class PCRenderer {
           if (!finalEnt) continue;
           finalEnt.name = `mapbuilder-${placement.id}`;
           finalEnt._ossaraMapBuilder = placement;
+          if (ent) this._applyMapBuilderPlacementMaterial(finalEnt, placement);
           for (const render of finalEnt.findComponents("render")) {
             for (const mesh of render.meshInstances || []) {
               mesh.castShadow = placement.type !== "laneFloor" && placement.type !== "readabilityMarker";
@@ -843,9 +911,7 @@ export class PCRenderer {
         const root = new pc.Entity(WARD_CRYSTAL_GEM_NAME);
         root.setPosition(cw.x, 0.25, cw.z);
         root.setLocalEulerAngles(0, 35, 0);
-        const gemMat = mat("plague", 1.75);
-        gemMat.gloss = 0.78;
-        gemMat.update();
+        const gemMat = this._themeMaterial("wardGreenEmissive", "plague");
         applyRenderMaterial(gem, gemMat, { castShadow: true, receiveShadow: true });
         fitRenderEntityToHeight(gem, 2.55, 1.0, -0.03);
         root.addChild(gem);

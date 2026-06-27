@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { LEVEL } from "../src/config/level.js";
 import { MAP_PIECES, MAP_PIECE_PACKS } from "../src/config/mapPieces.js";
+import { getMapTheme, mapMaterialTokenForPlacement, mapThemeMaterialToken } from "../src/config/mapThemes.js";
 import { expandRects, pathCellSet } from "../src/sim/pathing.js";
 import { buildFirstBreachMapBuilder, firstBreachMapPlan } from "../src/mapbuilder/firstBreachMapPlan.js";
 import { protectedGameplayCellSet, validateMapPlanAgainstLevel, validateMapPlacements } from "../src/mapbuilder/mapValidation.js";
@@ -18,11 +19,27 @@ const pathCells = pathCellSet(LEVEL);
 const reservedCells = new Set(expandRects(LEVEL.reservedZones || []).map((cell) => `${cell.col},${cell.row}`));
 const blockedCells = new Set(expandRects(LEVEL.blockedZones || []).map((cell) => `${cell.col},${cell.row}`));
 const allowedPacks = new Set(MAP_PIECE_PACKS);
+const theme = getMapTheme(built.themeId);
 
 ok(validation.ok, `First Breach map-builder plan validates: ${validation.errors.join("; ")}`);
 ok(validation.warnings.length === 0, "First Breach map-builder plan has no validation warnings");
 ok(validateMapPlacements(placements, LEVEL, { requiredLaneIds: LEVEL.lanes.map((lane) => lane.id) }).ok, "direct placement validation passes required lanes");
 ok(protectedCells.has(`${LEVEL.core.col},${LEVEL.core.row}`), "protected gameplay set includes core cell");
+ok(theme.id === "ruined_ward_courtyard_v1", "First Breach map builder uses the ruined Ward courtyard theme");
+for (const tokenName of [
+  "ruinedStoneDark",
+  "ruinedStoneMid",
+  "ruinedStoneStep",
+  "wardGreenEmissive",
+  "torchWarm",
+  "boneAsh",
+  "shadowRubble",
+  "chokeReadabilityGreen",
+  "buildableGoldSoft",
+]) {
+  ok(!!theme.materialTokens[tokenName], `${tokenName} material token resolves`);
+}
+ok(theme.lighting?.fogColor && Number.isFinite(theme.lighting.fogStart) && Number.isFinite(theme.lighting.fogEnd), "theme exposes mission fog controls");
 for (const lane of LEVEL.lanes) {
   ok(protectedCells.has(`${lane.spawn.col},${lane.spawn.row}`), `${lane.id} spawn is protected`);
 }
@@ -46,6 +63,10 @@ for (const placement of placements) {
   } else {
     ok(!!placement.fallback, `${placement.id} has fallback data`);
     ok(placement.assetKey === "primitive-readability-ring", `${placement.id} is the only allowed fallback-only visual type`);
+  }
+  const themeToken = mapMaterialTokenForPlacement(placement, theme);
+  if (theme.typeMaterialTokens[placement.type] || theme.assetMaterialTokens[placement.assetKey]) {
+    ok(!!themeToken && !!theme.materialTokens[themeToken], `${placement.id} resolves a theme material token`);
   }
 
   const key = `${placement.anchorCol},${placement.anchorRow}`;
@@ -84,6 +105,10 @@ ok(built.audit.missingAssets.length === 0, "audit has no missing asset keys");
 ok(built.audit.disallowedPacks.length === 0, "audit has no disallowed packs");
 ok(built.audit.fallbackPlacements.length === 11, "audit captures the expected fallback readability rings");
 ok(built.assetNames.every((assetName) => typeof assetName === "string" && assetName.length > 0), "asset name list is normalized for renderer preloading");
+ok(mapThemeMaterialToken(theme, "stone") === "ruinedStoneMid", "legacy stone fallback material aliases to themed ruined stone");
+ok(mapThemeMaterialToken(theme, "plague") === "chokeReadabilityGreen", "legacy plague fallback material aliases to softened choke green");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-lower-run"), theme) === "ruinedStoneStep", "central stair run receives readable step material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-gem-pile"), theme) === "wardGreenEmissive", "Ward shrine gem pile receives Ward-green material");
 
 console.log(`mapValidation: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);
