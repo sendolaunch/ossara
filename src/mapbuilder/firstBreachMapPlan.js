@@ -3,30 +3,20 @@ import { ACTIVE_MAP_THEME_ID } from "../config/mapThemes.js";
 import { buildMapPlacements } from "./mapBuilder.js";
 
 const SPAWN_DRESSING = Object.freeze({
-  "north-gate": { rotation: 180, gate: "arched-gate", torchOffset: 2.05, wallOffset: -0.72, thresholdOffset: 0.35 },
-  "northwest-stairs": { rotation: 180, gate: "arched-gate-scaffold", torchOffset: 1.75, wallOffset: -0.72, thresholdOffset: 0.35 },
-  "northeast-market": { rotation: 180, gate: "arched-gate-scaffold", torchOffset: 1.75, wallOffset: -0.72, thresholdOffset: 0.35 },
-  "southwest-crypt": { rotation: 90, gate: "crypt-corner-gate", torchOffset: 1.7, wallOffset: -0.62, thresholdOffset: 0.3 },
-  "southeast-garden": { rotation: -90, gate: "crypt-corner-gate", torchOffset: 1.7, wallOffset: 0.62, thresholdOffset: 0.3 },
+  "north-gate": { rotation: 180, gate: "arched-gate", torchOffset: 2.15, wallOffset: -0.72, thresholdOffset: 0.44, gateScale: 1.08 },
+  "northwest-stairs": { rotation: 180, gate: "arched-gate-scaffold", torchOffset: 1.8, wallOffset: -0.68, thresholdOffset: 0.42, gateScale: 0.92 },
+  "northeast-market": { rotation: 180, gate: "arched-gate-scaffold", torchOffset: 1.8, wallOffset: -0.68, thresholdOffset: 0.42, gateScale: 0.92 },
+  "southwest-crypt": { rotation: 90, gate: "crypt-corner-gate", torchOffset: 1.65, wallOffset: -0.58, thresholdOffset: 0.34, gateScale: 0.88 },
+  "southeast-garden": { rotation: -90, gate: "crypt-corner-gate", torchOffset: 1.65, wallOffset: 0.58, thresholdOffset: 0.34, gateScale: 0.88 },
 });
 
-const LANE_FLOOR_KEYS = ["broken-floor-tile", "lane-floor-rocks", "stone-floor-large", "weed-floor-a", "weed-floor-b"];
-const MACRO_FLOOR_KEYS = ["stone-floor-large", "lane-floor-rocks", "broken-floor-tile", "weed-floor-a"];
+const MACRO_FLOOR_KEYS = ["stone-floor-large", "lane-floor-rocks", "broken-floor-tile"];
 
 function floorMaterialTokenForBand(band) {
   if (band === "shrine") return "shrinePlatformStone";
   if (band === "high") return "landingHighStone";
   if (band === "mid") return "courtyardMidStone";
   if (band === "sunken") return "floorRubbleDark";
-  return "courtyardLowStone";
-}
-
-function laneHintMaterialToken(tele, level) {
-  const coreRow = level.core?.row ?? 47;
-  if (tele.row >= coreRow - 7) return "shrinePlatformStone";
-  if (tele.row >= coreRow - 13) return "landingHighStone";
-  if (tele.row >= 18) return "courtyardMidStone";
-  if (tele.row <= 7) return "floorRubbleDark";
   return "courtyardLowStone";
 }
 
@@ -53,35 +43,28 @@ function forwardOffsetForDirection(direction, distance) {
   };
 }
 
-function combineOffsets(...offsets) {
-  return offsets.reduce((acc, offset) => ({
-    x: acc.x + (offset?.x || 0),
-    z: acc.z + (offset?.z || 0),
-  }), { x: 0, z: 0 });
-}
-
-export function firstBreachElevationPlan(level = LEVEL) {
+function firstBreachElevationPlan(level = LEVEL) {
   const core = level.core || { col: 36, row: 47 };
   return {
-    id: "first-breach-deeper-well-crypt-elevation-v1",
+    id: "first-breach-dd1-crypt-whitebox-elevation-v1",
     mapId: "first-breach",
     visualOnly: true,
     zones: [
       {
         id: "upper-crypt-low",
         band: "sunken",
-        bounds: { col: 12, row: 0, w: 49, h: 16 },
-        role: "shadowed lower enemy crypt floor",
+        bounds: { col: 10, row: 0, w: 53, h: 16 },
+        role: "shadowed lower enemy crypt floor and breach wall",
         floorMaterial: "dark broken crypt stone",
-        edgeTreatment: "black spawn walls and ruined thresholds",
+        edgeTreatment: "black spawn walls and simple gate frames",
         allowGameplayOverlap: true,
         tags: ["enemy-floor", "spawn", "crypt"],
       },
       {
         id: "mid-combat-floor",
         band: "mid",
-        bounds: { col: 18, row: 18, w: 37, h: 18 },
-        role: "main DD1-style combat floor and first choke line",
+        bounds: { col: 18, row: 18, w: 37, h: 19 },
+        role: "open DD1-style combat floor and primary choke band",
         floorMaterial: "broad worn crypt slabs",
         edgeTreatment: "low wall shoulders and broken slab borders",
         allowGameplayOverlap: true,
@@ -90,20 +73,20 @@ export function firstBreachElevationPlan(level = LEVEL) {
       {
         id: "ward-approach-high",
         band: "high",
-        bounds: { col: 27, row: 36, w: 19, h: 8 },
-        role: "fallback choke and stair landing before the Ward shrine",
+        bounds: { col: 29, row: 36, w: 15, h: 9 },
+        role: "broad broken stair approach and fallback hold line",
         floorMaterial: "raised crypt landing stone",
-        edgeTreatment: "retaining cheek walls",
+        edgeTreatment: "two simple retaining cheek walls",
         allowGameplayOverlap: true,
         tags: ["ward-approach", "fallback-choke", "landing"],
       },
       {
         id: "ward-shrine",
         band: "shrine",
-        bounds: { col: core.col - 6, row: core.row - 4, w: 13, h: 9 },
-        role: "bottom-middle raised Ward Crystal focal platform",
-        floorMaterial: "Ward-green ritual stone and broken shrine base",
-        edgeTreatment: "simple ring, pedestal, and cracked platform support",
+        bounds: { col: core.col - 5, row: core.row - 4, w: 11, h: 9 },
+        role: "bottom-middle raised Ward Crystal platform",
+        floorMaterial: "simple Ward-green shrine stone",
+        edgeTreatment: "single low platform and floating Ward ring",
         allowGameplayOverlap: true,
         tags: ["ward", "objective", "bottom-middle"],
       },
@@ -113,7 +96,7 @@ export function firstBreachElevationPlan(level = LEVEL) {
         bounds: { col: 0, row: 18, w: 18, h: 14 },
         role: "left shadow side breach",
         floorMaterial: "side crypt threshold stone",
-        edgeTreatment: "broken wall, rubble, and pillars",
+        edgeTreatment: "dark gate frame and wall shoulder",
         allowGameplayOverlap: true,
         tags: ["side-breach", "left"],
       },
@@ -123,7 +106,7 @@ export function firstBreachElevationPlan(level = LEVEL) {
         bounds: { col: level.cols - 18, row: 18, w: 18, h: 14 },
         role: "right shadow side breach",
         floorMaterial: "side crypt threshold stone",
-        edgeTreatment: "broken wall, rubble, and pillars",
+        edgeTreatment: "dark gate frame and wall shoulder",
         allowGameplayOverlap: true,
         tags: ["side-breach", "right"],
       },
@@ -131,9 +114,9 @@ export function firstBreachElevationPlan(level = LEVEL) {
         id: "rear-shadow-wall",
         band: "backgroundHigh",
         bounds: { col: 0, row: 0, w: level.cols, h: 7 },
-        role: "upper crypt wall hiding the enemy origin",
+        role: "upper crypt wall hiding enemy origin",
         floorMaterial: "dark wall base and black void stone",
-        edgeTreatment: "broken gates and shadow silhouettes",
+        edgeTreatment: "three strong shadow gate silhouettes",
         allowGameplayOverlap: true,
         tags: ["background", "spawn-wall"],
       },
@@ -147,14 +130,14 @@ export function firstBreachElevationPlan(level = LEVEL) {
         laneId: "north-gate",
         entryCell: { col: 36, row: 14 },
         exitCell: { col: 36, row: 26 },
-        width: 3,
-        stepCount: 4,
+        width: 4,
+        stepCount: 3,
         landingCells: {
           bottom: { col: 36, row: 14 },
           mid: { col: 36, row: 20 },
           top: { col: 36, row: 26 },
         },
-        edgeTreatment: "crypt floor steps into the main fight floor",
+        edgeTreatment: "simple lower crypt rise into the mid combat floor",
         visualOnly: true,
         tags: ["central-crypt", "enemy-climb"],
       },
@@ -166,16 +149,16 @@ export function firstBreachElevationPlan(level = LEVEL) {
         laneId: "north-gate",
         entryCell: { col: 36, row: 36 },
         exitCell: { col: core.col, row: core.row - 2 },
-        width: 3,
-        stepCount: 5,
+        width: 5,
+        stepCount: 4,
         landingCells: {
           bottom: { col: 36, row: 36 },
           mid: { col: 36, row: 41 },
           top: { col: core.col, row: core.row - 2 },
         },
-        edgeTreatment: "broken stone steps and cheek walls climbing to the Ward",
+        edgeTreatment: "fewer broad broken stone treads and two cheek walls",
         visualOnly: true,
-        tags: ["ward", "central-stair", "enemy-climb"],
+        tags: ["ward", "central-stair", "enemy-climb", "whitebox"],
       },
       {
         id: "left-broken-crypt-terrace",
@@ -190,7 +173,7 @@ export function firstBreachElevationPlan(level = LEVEL) {
           bottom: { col: 16, row: 14 },
           top: { col: 32, row: 26 },
         },
-        edgeTreatment: "left broken slab route into the fight floor",
+        edgeTreatment: "simple left crypt slab route into the fight floor",
         visualOnly: true,
         tags: ["left", "front-breach"],
       },
@@ -207,7 +190,7 @@ export function firstBreachElevationPlan(level = LEVEL) {
           bottom: { col: 56, row: 14 },
           top: { col: 40, row: 26 },
         },
-        edgeTreatment: "right broken slab route into the fight floor",
+        edgeTreatment: "simple right crypt slab route into the fight floor",
         visualOnly: true,
         tags: ["right", "front-breach"],
       },
@@ -254,8 +237,6 @@ function spawnGateCluster(lane) {
   const direction = laneDirection(lane);
   const side = (value) => sideOffsetForDirection(direction, value);
   const forward = (value) => forwardOffsetForDirection(direction, value);
-  const shadowOffset = forward(spec.wallOffset);
-  const thresholdOffset = forward(spec.thresholdOffset);
 
   return {
     id: `${lane.id}-spawn-gate`,
@@ -265,15 +246,15 @@ function spawnGateCluster(lane) {
     readabilityRole: "spawn-gate",
     allowOverlapGameplay: true,
     materialToken: "shadowEdgeRuin",
-    tags: ["spawn", "shadow-crypt", "mapbuilder"],
+    tags: ["spawn", "shadow-crypt", "whitebox", "mapbuilder"],
     children: [
       {
         id: "shadow-wall",
         type: "wall",
         assetKey: lane.silhouette === "crypt" ? "wall-inset-candles" : "broken-wall",
-        offset: shadowOffset,
+        offset: forward(spec.wallOffset),
         rotation: spec.rotation,
-        scale: lane.id === "north-gate" ? 0.8 : 0.64,
+        scale: lane.id === "north-gate" ? 0.82 : 0.66,
         materialToken: "shadowEdgeRuin",
       },
       {
@@ -282,204 +263,80 @@ function spawnGateCluster(lane) {
         assetKey: spec.gate,
         offset: forward(0),
         rotation: spec.rotation,
-        scale: lane.id === "north-gate" ? 1.06 : 0.9,
+        scale: spec.gateScale,
       },
       {
-        id: "left-torch",
-        assetKey: "lit-torch",
-        offset: side(-spec.torchOffset),
+        id: "left-frame",
+        type: "edge",
+        assetKey: "low-wall",
+        offset: side(-2.15),
         rotation: spec.rotation,
-        scale: 0.58,
+        scale: 0.44,
+        materialToken: "shadowEdgeRuin",
       },
       {
-        id: "right-torch",
-        assetKey: "lit-torch",
-        offset: side(spec.torchOffset),
+        id: "right-frame",
+        type: "edge",
+        assetKey: "low-wall",
+        offset: side(2.15),
         rotation: spec.rotation,
-        scale: 0.58,
+        scale: 0.44,
+        materialToken: "shadowEdgeRuin",
       },
       {
         id: "threshold",
         type: "laneFloor",
         assetKey: "grate-threshold",
-        offset: thresholdOffset,
+        offset: forward(spec.thresholdOffset),
         rotation: spec.rotation,
-        scale: lane.id === "north-gate" ? 0.78 : 0.64,
+        scale: lane.id === "north-gate" ? 0.74 : 0.62,
         materialToken: "spawnThresholdBlood",
       },
       {
-        id: "breach-rubble",
+        id: "left-torch",
         type: "prop",
-        assetKey: "rubble-small",
-        offset: combineOffsets(forward(1.0), side(lane.spawn.col < 36 ? -1.2 : 1.2)),
-        rotation: lane.spawn.col < 36 ? 22 : -22,
+        assetKey: "lit-torch",
+        offset: side(-spec.torchOffset),
+        rotation: spec.rotation,
         scale: 0.48,
-        materialToken: "shadowRubble",
+      },
+      {
+        id: "right-torch",
+        type: "prop",
+        assetKey: "lit-torch",
+        offset: side(spec.torchOffset),
+        rotation: spec.rotation,
+        scale: 0.48,
       },
     ],
   };
 }
 
-function laneFloorHints(level) {
-  return (level.laneTelegraphs || [])
-    .filter((tele) => (tele.index || 0) % 5 === 0)
-    .map((tele, index) => ({
-      id: `${tele.laneId}-lane-slab-${index}`,
-      type: "laneFloor",
-      assetKey: LANE_FLOOR_KEYS[index % LANE_FLOOR_KEYS.length],
-      laneId: tele.laneId,
-      cell: { col: tele.col, row: tele.row },
-      readabilityRole: "lane-art",
-      allowOverlapGameplay: true,
-      visualY: 0.05,
-      scale: 0.62 + ((tele.col + tele.row) % 3) * 0.05,
-      rotation: ((tele.col * 19 + tele.row * 13) % 80) - 40,
-      materialToken: laneHintMaterialToken(tele, level),
-      tags: ["lane", "broken-slab", "mapbuilder"],
-    }));
-}
-
-function laneChokeMarkers(level) {
-  const pieces = [];
-  for (const lane of level.lanes || []) {
-    if (lane.choke) {
-      pieces.push({
-        id: `${lane.id}-main-choke-ring`,
-        type: "readabilityMarker",
-        assetKey: "primitive-readability-ring",
-        laneId: lane.id,
-        cell: lane.choke,
-        readabilityRole: "main-choke",
-        allowOverlapGameplay: true,
-        materialToken: "wardChokeGlyph",
-        scale: { x: 1.18, y: 1, z: 1.18 },
-        tags: ["choke", "main", "mapbuilder"],
-      });
-    }
-    if (lane.fallbackChoke) {
-      pieces.push({
-        id: `${lane.id}-fallback-choke-ring`,
-        type: "readabilityMarker",
-        assetKey: "primitive-readability-ring",
-        laneId: lane.id,
-        cell: lane.fallbackChoke,
-        readabilityRole: "fallback-choke",
-        allowOverlapGameplay: true,
-        materialToken: "wardRuneSoft",
-        scale: { x: 0.92, y: 1, z: 0.92 },
-        tags: ["choke", "fallback", "mapbuilder"],
-      });
-    }
-    (lane.buildShoulders || []).slice(0, 2).forEach((shoulder, index) => {
-      pieces.push({
-        id: `${lane.id}-shoulder-edge-${index}`,
-        type: "edge",
-        assetKey: "lane-edge-barrier",
-        laneId: lane.id,
-        cell: shoulder,
-        readabilityRole: "build-shoulder",
-        rotation: lane.spawn.col < level.core.col ? 16 : -16,
-        materialToken: "shadowEdgeRuin",
-        scale: 0.42,
-        tags: ["build-space", "lane-edge", "mapbuilder"],
-      });
-    });
-  }
-  return pieces;
-}
-
-function chokeWardStones(level) {
-  return (level.lanes || []).filter((lane) => lane.choke).flatMap((lane, index) => {
-    const sideSign = lane.choke.col < level.core.col ? -1 : lane.choke.col > level.core.col ? 1 : (index % 2 ? -1 : 1);
-    const mainStone = {
-      id: `${lane.id}-choke-ward-stone`,
-      type: "shrine",
-      assetKey: index % 2 === 0 ? "stone-bricks-small" : "candle-thin-lit",
-      laneId: lane.id,
-      cell: lane.choke,
-      offset: { x: sideSign * 0.82, z: 0.36 },
-      readabilityRole: "in-world-choke-marker",
-      allowOverlapGameplay: true,
-      materialToken: index % 2 === 0 ? "shadowEdgeRuin" : "torchWarm",
-      scale: index % 2 === 0 ? 0.3 : 0.34,
-      rotation: sideSign * 18,
-      tags: ["choke", "ward-rune", "mapbuilder"],
-    };
-    const fallbackStone = lane.fallbackChoke ? {
-      id: `${lane.id}-fallback-ward-stone`,
-      type: "shrine",
-      assetKey: index % 2 === 0 ? "ward-gem-small" : "stone-bricks-small",
-      laneId: lane.id,
-      cell: lane.fallbackChoke,
-      offset: { x: -sideSign * 0.7, z: -0.34 },
-      readabilityRole: "in-world-choke-marker",
-      allowOverlapGameplay: true,
-      materialToken: index % 2 === 0 ? "wardRuneSoft" : "shadowEdgeRuin",
-      scale: index % 2 === 0 ? 0.22 : 0.28,
-      rotation: -sideSign * 18,
-      tags: ["choke", "fallback", "ward-rune", "mapbuilder"],
-    } : null;
-    return fallbackStone ? [mainStone, fallbackStone] : [mainStone];
-  });
-}
-
-function laneWardMarkers(level) {
-  const laneCounts = new Map();
-  return (level.laneTelegraphs || [])
-    .filter((tele) => (tele.index || 0) % 6 === 2)
-    .map((tele) => {
-      const count = laneCounts.get(tele.laneId) || 0;
-      laneCounts.set(tele.laneId, count + 1);
-      const lateral = tele.dir === "east" || tele.dir === "west"
-        ? { x: 0, z: count % 2 ? -0.42 : 0.42 }
-        : { x: count % 2 ? -0.42 : 0.42, z: 0 };
-      return {
-        id: `${tele.laneId}-ward-floor-marker-${count}`,
-        type: "shrine",
-        assetKey: count % 3 === 0 ? "ward-gem-small" : "stone-bricks-small",
-        laneId: tele.laneId,
-        cell: { col: tele.col, row: tele.row },
-        offset: lateral,
-        readabilityRole: "in-world-lane-marker",
-        allowOverlapGameplay: true,
-        visualY: 0.07,
-        materialToken: count % 3 === 0 ? "wardCrackGlow" : laneHintMaterialToken(tele, level),
-        scale: count % 3 === 0 ? 0.18 : 0.23,
-        rotation: ((tele.col * 17 + tele.row * 23) % 90) - 45,
-        tags: ["lane", "ward-rune", "mapbuilder"],
-      };
-    });
-}
-
-function macroFloorBreakup(level = LEVEL) {
+function whiteboxFloorFields(level = LEVEL) {
   const core = level.core || { col: 36, row: 47 };
   const patches = [
-    { id: "upper-shadow-west-field", col: 24, row: 8, scale: 1.16, rot: -21, zone: "upper-crypt-low", band: "sunken", y: -0.03, assetKey: "lane-floor-rocks" },
-    { id: "upper-shadow-center-field", col: 36, row: 9, scale: 1.28, rot: 7, zone: "upper-crypt-low", band: "sunken", y: -0.03, assetKey: "stone-floor-large" },
-    { id: "upper-shadow-east-field", col: 48, row: 8, scale: 1.16, rot: 21, zone: "upper-crypt-low", band: "sunken", y: -0.03, assetKey: "lane-floor-rocks" },
-    { id: "central-low-threshold", col: 36, row: 15, scale: 0.92, rot: 0, zone: "upper-crypt-low", band: "low", y: 0.01, assetKey: "grate-threshold" },
-    { id: "left-broken-crypt-field", col: 24, row: 21, scale: 1.02, rot: -33, zone: "mid-combat-floor", band: "mid", y: 0.075 },
-    { id: "right-broken-crypt-field", col: 48, row: 21, scale: 1.02, rot: 33, zone: "mid-combat-floor", band: "mid", y: 0.075 },
-    { id: "mid-combat-west-slab", col: 29, row: 27, scale: 1.18, rot: 26, zone: "mid-combat-floor", band: "mid", y: 0.08, assetKey: "lane-floor-rocks" },
-    { id: "mid-combat-center-slab", col: 36, row: 28, scale: 1.24, rot: 45, zone: "mid-combat-floor", band: "mid", y: 0.082, assetKey: "stone-floor-large" },
-    { id: "mid-combat-east-slab", col: 43, row: 27, scale: 1.18, rot: -26, zone: "mid-combat-floor", band: "mid", y: 0.08, assetKey: "lane-floor-rocks" },
-    { id: "left-side-crypt-threshold", col: 10, row: 24, scale: 0.88, rot: 90, zone: "left-crypt-low", band: "low", y: 0.02, assetKey: "grate-threshold" },
-    { id: "right-side-crypt-threshold", col: 62, row: 24, scale: 0.88, rot: -90, zone: "right-crypt-low", band: "low", y: 0.02, assetKey: "grate-threshold" },
-    { id: "left-side-crypt-slab", col: 20, row: 30, scale: 0.96, rot: -12, zone: "left-crypt-low", band: "mid", y: 0.07 },
-    { id: "right-side-crypt-slab", col: 52, row: 30, scale: 0.96, rot: 12, zone: "right-crypt-low", band: "mid", y: 0.07 },
-    { id: "ward-approach-left-landing", col: 32, row: 38, scale: 0.98, rot: -18, zone: "ward-approach-high", band: "high", y: 0.155 },
-    { id: "ward-approach-center-landing", col: 36, row: 39, scale: 1.14, rot: 45, zone: "ward-approach-high", band: "high", y: 0.16, assetKey: "stone-floor-large" },
-    { id: "ward-approach-right-landing", col: 40, row: 38, scale: 0.98, rot: 18, zone: "ward-approach-high", band: "high", y: 0.155 },
-    { id: "ward-stair-left-chip", col: 34, row: 42, scale: 0.86, rot: -10, zone: "ward-approach-high", band: "high", y: 0.18 },
-    { id: "ward-stair-right-chip", col: 38, row: 42, scale: 0.86, rot: 10, zone: "ward-approach-high", band: "high", y: 0.18 },
-    { id: "ward-shrine-left-apron", col: core.col - 4, row: core.row - 2, scale: 0.96, rot: -18, zone: "ward-shrine", band: "shrine", y: 0.22 },
-    { id: "ward-shrine-center-apron", col: core.col, row: core.row - 1, scale: 1.08, rot: 45, zone: "ward-shrine", band: "shrine", y: 0.225, assetKey: "lane-floor-rocks" },
-    { id: "ward-shrine-right-apron", col: core.col + 4, row: core.row - 2, scale: 0.96, rot: 18, zone: "ward-shrine", band: "shrine", y: 0.22 },
-    { id: "player-side-worn-slab", col: core.col, row: core.row + 5, scale: 1.0, rot: 0, zone: "ward-shrine", band: "shrine", y: 0.2 },
+    { id: "upper-left-shadow-floor", col: 22, row: 9, scale: 1.28, rot: -18, band: "sunken", zone: "upper-crypt-low", y: -0.04, assetKey: "lane-floor-rocks" },
+    { id: "upper-center-shadow-floor", col: 36, row: 10, scale: 1.42, rot: 0, band: "sunken", zone: "upper-crypt-low", y: -0.04, assetKey: "stone-floor-large" },
+    { id: "upper-right-shadow-floor", col: 50, row: 9, scale: 1.28, rot: 18, band: "sunken", zone: "upper-crypt-low", y: -0.04, assetKey: "lane-floor-rocks" },
+    { id: "left-front-crypt-floor", col: 24, row: 21, scale: 1.18, rot: -28, band: "mid", zone: "mid-combat-floor", y: 0.07 },
+    { id: "center-combat-left-slab", col: 31, row: 27, scale: 1.32, rot: 16, band: "mid", zone: "mid-combat-floor", y: 0.08, assetKey: "stone-floor-large" },
+    { id: "center-combat-right-slab", col: 41, row: 27, scale: 1.32, rot: -16, band: "mid", zone: "mid-combat-floor", y: 0.08, assetKey: "stone-floor-large" },
+    { id: "right-front-crypt-floor", col: 48, row: 21, scale: 1.18, rot: 28, band: "mid", zone: "mid-combat-floor", y: 0.07 },
+    { id: "left-side-crypt-threshold", col: 10, row: 24, scale: 0.9, rot: 90, band: "low", zone: "left-crypt-low", y: 0.02, assetKey: "grate-threshold" },
+    { id: "right-side-crypt-threshold", col: 62, row: 24, scale: 0.9, rot: -90, band: "low", zone: "right-crypt-low", y: 0.02, assetKey: "grate-threshold" },
+    { id: "left-side-crypt-floor", col: 21, row: 30, scale: 1.04, rot: -8, band: "mid", zone: "left-crypt-low", y: 0.065 },
+    { id: "right-side-crypt-floor", col: 51, row: 30, scale: 1.04, rot: 8, band: "mid", zone: "right-crypt-low", y: 0.065 },
+    { id: "ward-approach-left-landing", col: 32, row: 38, scale: 1.05, rot: -10, band: "high", zone: "ward-approach-high", y: 0.15 },
+    { id: "ward-approach-center-landing", col: 36, row: 38, scale: 1.22, rot: 0, band: "high", zone: "ward-approach-high", y: 0.155, assetKey: "stone-floor-large" },
+    { id: "ward-approach-right-landing", col: 40, row: 38, scale: 1.05, rot: 10, band: "high", zone: "ward-approach-high", y: 0.15 },
+    { id: "ward-platform-left-slab", col: core.col - 3, row: core.row - 1, scale: 1.0, rot: -12, band: "shrine", zone: "ward-shrine", y: 0.2 },
+    { id: "ward-platform-center-slab", col: core.col, row: core.row, scale: 1.1, rot: 45, band: "shrine", zone: "ward-shrine", y: 0.21, assetKey: "stone-floor-large" },
+    { id: "ward-platform-right-slab", col: core.col + 3, row: core.row - 1, scale: 1.0, rot: 12, band: "shrine", zone: "ward-shrine", y: 0.2 },
+    { id: "player-side-ward-apron", col: core.col, row: core.row + 5, scale: 0.98, rot: 0, band: "shrine", zone: "ward-shrine", y: 0.18 },
   ];
 
   return patches.map((patch, index) => ({
-    id: `macro-floor-${patch.id}`,
+    id: `whitebox-floor-${patch.id}`,
     type: "laneFloor",
     assetKey: patch.assetKey || MACRO_FLOOR_KEYS[index % MACRO_FLOOR_KEYS.length],
     cell: { col: patch.col, row: patch.row },
@@ -491,71 +348,44 @@ function macroFloorBreakup(level = LEVEL) {
     scale: patch.scale,
     rotation: patch.rot,
     materialToken: floorMaterialTokenForBand(patch.band),
-    tags: ["floor", "macro-shape", "elevation-zone", "mapbuilder"],
+    tags: ["floor", "whitebox", "macro-shape", "elevation-zone", "mapbuilder"],
   }));
 }
 
-function centralStairArchitecture(level = LEVEL) {
+function broadWardStairArchitecture(level = LEVEL) {
   const core = level.core || { col: 36, row: 47 };
   const shared = {
     laneId: "north-gate",
     allowOverlapGameplay: true,
-    tags: ["verticality", "central-stair", "elevation-connector", "mapbuilder"],
+    tags: ["verticality", "central-stair", "whitebox", "elevation-connector", "mapbuilder"],
   };
-  const stairRows = [
-    { band: "lower", row: core.row - 10, scale: 0.74, visualY: 0.145, elevationZone: "ward-approach-high", elevationBand: "high" },
-    { band: "middle", row: core.row - 7, scale: 0.7, visualY: 0.175, elevationZone: "ward-approach-high", elevationBand: "high" },
-    { band: "upper", row: core.row - 4, scale: 0.66, visualY: 0.205, elevationZone: "ward-shrine", elevationBand: "shrine" },
+  const stepRows = [
+    { id: "lower", row: core.row - 9, scale: 0.96, visualY: 0.14, zone: "ward-approach-high", band: "high" },
+    { id: "mid-low", row: core.row - 7, scale: 1.0, visualY: 0.165, zone: "ward-approach-high", band: "high" },
+    { id: "mid-high", row: core.row - 5, scale: 1.0, visualY: 0.19, zone: "ward-approach-high", band: "high" },
+    { id: "upper", row: core.row - 3, scale: 0.9, visualY: 0.215, zone: "ward-shrine", band: "shrine" },
   ];
-  const stairPieces = stairRows.flatMap((run) => [
-    {
-      id: `central-stair-${run.band}-left`,
-      type: "stair",
-      assetKey: "modular-stair-left",
-      cell: { col: core.col - 2, row: run.row },
-      readabilityRole: "visual-stair",
-      visualY: run.visualY,
-      elevationZone: run.elevationZone,
-      elevationBand: run.elevationBand,
-      materialToken: "ruinedStoneStep",
-      scale: run.scale,
-      ...shared,
-    },
-    {
-      id: run.band === "lower" ? "central-stair-lower-run" : `central-stair-${run.band}-center`,
-      type: "stair",
-      assetKey: "modular-stair-center",
-      cell: { col: core.col, row: run.row },
-      readabilityRole: "visual-stair",
-      visualY: run.visualY + 0.004,
-      elevationZone: run.elevationZone,
-      elevationBand: run.elevationBand,
-      materialToken: "ruinedStoneStep",
-      scale: run.scale,
-      ...shared,
-    },
-    {
-      id: `central-stair-${run.band}-right`,
-      type: "stair",
-      assetKey: "modular-stair-right",
-      cell: { col: core.col + 2, row: run.row },
-      readabilityRole: "visual-stair",
-      visualY: run.visualY,
-      elevationZone: run.elevationZone,
-      elevationBand: run.elevationBand,
-      materialToken: "ruinedStoneStep",
-      scale: run.scale,
-      ...shared,
-    },
-  ]);
+  const stepPieces = stepRows.map((step, index) => ({
+    id: `ward-broad-step-${index + 1}-${step.id}`,
+    type: "stair",
+    assetKey: "stone-landing",
+    cell: { col: core.col, row: step.row },
+    readabilityRole: "broad-stair-step",
+    visualY: step.visualY,
+    elevationZone: step.zone,
+    elevationBand: step.band,
+    materialToken: "ruinedStoneStep",
+    scale: step.scale,
+    rotation: 0,
+    ...shared,
+  }));
   const cheekRows = [
-    { row: core.row - 10, scale: 0.5, visualY: 0.145, zone: "ward-approach-high", band: "high" },
-    { row: core.row - 7, scale: 0.54, visualY: 0.175, zone: "ward-approach-high", band: "high" },
-    { row: core.row - 4, scale: 0.58, visualY: 0.205, zone: "ward-shrine", band: "shrine" },
+    { row: core.row - 8, scale: 0.56, visualY: 0.16, zone: "ward-approach-high", band: "high" },
+    { row: core.row - 4, scale: 0.58, visualY: 0.2, zone: "ward-shrine", band: "shrine" },
   ];
-  const retainingEdges = cheekRows.flatMap((edge) => [
+  const cheeks = cheekRows.flatMap((edge) => [
     {
-      id: `central-stair-left-cheek-${edge.row}`,
+      id: `ward-stair-left-cheek-${edge.row}`,
       type: "edge",
       assetKey: "retaining-wall-half",
       cell: { col: core.col - 4, row: edge.row },
@@ -565,11 +395,11 @@ function centralStairArchitecture(level = LEVEL) {
       visualY: edge.visualY,
       elevationZone: edge.zone,
       elevationBand: edge.band,
-      materialToken: edge.band === "shrine" ? "shrinePlatformStone" : "landingHighStone",
+      materialToken: "shadowEdgeRuin",
       ...shared,
     },
     {
-      id: `central-stair-right-cheek-${edge.row}`,
+      id: `ward-stair-right-cheek-${edge.row}`,
       type: "edge",
       assetKey: "retaining-wall-half",
       cell: { col: core.col + 4, row: edge.row },
@@ -579,14 +409,14 @@ function centralStairArchitecture(level = LEVEL) {
       visualY: edge.visualY,
       elevationZone: edge.zone,
       elevationBand: edge.band,
-      materialToken: edge.band === "shrine" ? "shrinePlatformStone" : "landingHighStone",
+      materialToken: "shadowEdgeRuin",
       ...shared,
     },
   ]);
 
   return [
     {
-      id: "central-crypt-bottom-landing",
+      id: "central-crypt-mid-landing",
       type: "landing",
       assetKey: "stone-landing",
       cell: { col: core.col, row: core.row - 21 },
@@ -595,7 +425,7 @@ function centralStairArchitecture(level = LEVEL) {
       elevationZone: "mid-combat-floor",
       elevationBand: "mid",
       materialToken: "courtyardMidStone",
-      scale: 0.72,
+      scale: 0.78,
       rotation: 0,
       ...shared,
       tags: [...shared.tags, "bottom-landing"],
@@ -606,17 +436,17 @@ function centralStairArchitecture(level = LEVEL) {
       assetKey: "stone-landing",
       cell: { col: core.col, row: core.row - 11 },
       readabilityRole: "stair-landing",
-      visualY: 0.15,
+      visualY: 0.13,
       elevationZone: "ward-approach-high",
       elevationBand: "high",
       materialToken: "landingHighStone",
-      scale: 0.78,
+      scale: 0.88,
       rotation: 0,
       ...shared,
       tags: [...shared.tags, "bottom-landing"],
     },
-    ...stairPieces,
-    ...retainingEdges,
+    ...stepPieces,
+    ...cheeks,
     {
       id: "ward-stair-top-landing",
       type: "landing",
@@ -627,7 +457,7 @@ function centralStairArchitecture(level = LEVEL) {
       elevationZone: "ward-shrine",
       elevationBand: "shrine",
       materialToken: "shrinePlatformStone",
-      scale: 0.82,
+      scale: 0.9,
       rotation: 0,
       ...shared,
       tags: [...shared.tags, "top-landing"],
@@ -635,50 +465,81 @@ function centralStairArchitecture(level = LEVEL) {
   ];
 }
 
-function brokenCryptApproachArchitecture() {
+function chokeWardStones(level) {
+  return (level.lanes || []).filter((lane) => lane.choke).flatMap((lane, index) => {
+    const sideSign = lane.choke.col < level.core.col ? -1 : lane.choke.col > level.core.col ? 1 : (index % 2 ? -1 : 1);
+    const main = {
+      id: `${lane.id}-main-choke-stone`,
+      type: "shrine",
+      assetKey: index % 2 === 0 ? "stone-bricks-small" : "candle-thin-lit",
+      laneId: lane.id,
+      cell: lane.choke,
+      offset: { x: sideSign * 0.86, z: 0.28 },
+      readabilityRole: "in-world-choke-marker",
+      allowOverlapGameplay: true,
+      materialToken: index % 2 === 0 ? "shadowEdgeRuin" : "torchWarm",
+      scale: index % 2 === 0 ? 0.28 : 0.3,
+      rotation: sideSign * 16,
+      tags: ["choke", "whitebox", "ward-marker", "mapbuilder"],
+    };
+    const fallback = lane.fallbackChoke ? {
+      id: `${lane.id}-fallback-choke-stone`,
+      type: "shrine",
+      assetKey: "stone-bricks-small",
+      laneId: lane.id,
+      cell: lane.fallbackChoke,
+      offset: { x: -sideSign * 0.64, z: -0.28 },
+      readabilityRole: "in-world-choke-marker",
+      allowOverlapGameplay: true,
+      materialToken: "shadowEdgeRuin",
+      scale: 0.24,
+      rotation: -sideSign * 14,
+      tags: ["choke", "fallback", "whitebox", "ward-marker", "mapbuilder"],
+    } : null;
+    return fallback ? [main, fallback] : [main];
+  });
+}
+
+function cryptApproachWalls() {
   const lanes = [
     {
       laneId: "northwest-stairs",
       side: "left",
-      cells: [
-        { id: "upper-threshold", cell: { col: 16, row: 10 }, assetKey: "grate-threshold", rotation: 180, type: "laneFloor" },
-        { id: "left-wall-shoulder", cell: { col: 22, row: 14 }, assetKey: "broken-wall", rotation: 18, type: "wall" },
-        { id: "mid-retaining-edge", cell: { col: 28, row: 24 }, assetKey: "retaining-wall-sloped", rotation: 90 },
-        { id: "choke-low-wall", cell: { col: 30, row: 27 }, assetKey: "low-wall", rotation: 0 },
-        { id: "edge-rubble", cell: { col: 23, row: 20 }, assetKey: "decorated-rocks", rotation: -24, type: "prop" },
+      pieces: [
+        { id: "upper-threshold", cell: { col: 16, row: 10 }, assetKey: "grate-threshold", rotation: 180, type: "laneFloor", scale: 0.68 },
+        { id: "left-wall-shoulder", cell: { col: 22, row: 14 }, assetKey: "broken-wall", rotation: 12, type: "wall", scale: 0.52 },
+        { id: "mid-low-wall", cell: { col: 29, row: 25 }, assetKey: "low-wall", rotation: 0, type: "edge", scale: 0.5 },
       ],
     },
     {
       laneId: "northeast-market",
       side: "right",
-      cells: [
-        { id: "upper-threshold", cell: { col: 56, row: 10 }, assetKey: "grate-threshold", rotation: 180, type: "laneFloor" },
-        { id: "right-wall-shoulder", cell: { col: 50, row: 14 }, assetKey: "cracked-wall", rotation: -18, type: "wall" },
-        { id: "mid-retaining-edge", cell: { col: 44, row: 24 }, assetKey: "retaining-wall-sloped", rotation: 90 },
-        { id: "choke-low-wall", cell: { col: 42, row: 27 }, assetKey: "low-wall", rotation: 0 },
-        { id: "edge-crates", cell: { col: 49, row: 20 }, assetKey: "crates-stacked", rotation: 24, type: "prop" },
+      pieces: [
+        { id: "upper-threshold", cell: { col: 56, row: 10 }, assetKey: "grate-threshold", rotation: 180, type: "laneFloor", scale: 0.68 },
+        { id: "right-wall-shoulder", cell: { col: 50, row: 14 }, assetKey: "cracked-wall", rotation: -12, type: "wall", scale: 0.52 },
+        { id: "mid-low-wall", cell: { col: 43, row: 25 }, assetKey: "low-wall", rotation: 0, type: "edge", scale: 0.5 },
       ],
     },
   ];
-  return lanes.flatMap((lane) => lane.cells.map((piece) => ({
+  return lanes.flatMap((lane) => lane.pieces.map((piece) => ({
     id: `${lane.laneId}-${piece.id}`,
-    type: piece.type || "edge",
+    type: piece.type,
     assetKey: piece.assetKey,
     laneId: lane.laneId,
     cell: piece.cell,
     readabilityRole: `front-breach-${lane.side}`,
     allowOverlapGameplay: true,
-    scale: piece.scale || 0.54,
+    scale: piece.scale,
     rotation: piece.rotation || 0,
     materialToken: piece.type === "laneFloor" ? "courtyardLowStone" : "shadowEdgeRuin",
-    tags: ["front-breach", "lane-edge", "mapbuilder"],
+    tags: ["front-breach", "whitebox", "lane-edge", "mapbuilder"],
   })));
 }
 
 function sideCryptArchitecture() {
   const crypts = [
-    { laneId: "southwest-crypt", side: "left", gateCell: { col: 4, row: 24 }, wallCell: { col: 5, row: 20 }, pillarCell: { col: 7, row: 28 }, rubbleCell: { col: 12, row: 28 }, rotation: 90 },
-    { laneId: "southeast-garden", side: "right", gateCell: { col: 68, row: 24 }, wallCell: { col: 67, row: 20 }, pillarCell: { col: 65, row: 28 }, rubbleCell: { col: 60, row: 28 }, rotation: -90 },
+    { laneId: "southwest-crypt", side: "left", gateCell: { col: 4, row: 24 }, wallCell: { col: 5, row: 20 }, pillarCell: { col: 7, row: 28 }, rotation: 90 },
+    { laneId: "southeast-garden", side: "right", gateCell: { col: 68, row: 24 }, wallCell: { col: 67, row: 20 }, pillarCell: { col: 65, row: 28 }, rotation: -90 },
   ];
   return crypts.flatMap((crypt) => [
     {
@@ -692,7 +553,7 @@ function sideCryptArchitecture() {
       scale: 0.62,
       rotation: crypt.rotation,
       materialToken: "shadowEdgeRuin",
-      tags: ["crypt", "spawn", "mapbuilder"],
+      tags: ["crypt", "spawn", "whitebox", "mapbuilder"],
     },
     {
       id: `${crypt.laneId}-broken-crypt-wall`,
@@ -705,7 +566,7 @@ function sideCryptArchitecture() {
       scale: 0.52,
       rotation: crypt.rotation,
       materialToken: "shadowEdgeRuin",
-      tags: ["crypt", "ruin", "mapbuilder"],
+      tags: ["crypt", "ruin", "whitebox", "mapbuilder"],
     },
     {
       id: `${crypt.laneId}-crypt-pillar`,
@@ -715,481 +576,156 @@ function sideCryptArchitecture() {
       cell: crypt.pillarCell,
       readabilityRole: "crypt-breach-frame",
       allowOverlapGameplay: true,
-      scale: 0.54,
+      scale: 0.52,
       rotation: 0,
       materialToken: "shadowRubble",
-      tags: ["crypt", "ruin", "mapbuilder"],
+      tags: ["crypt", "ruin", "whitebox", "mapbuilder"],
     },
     {
-      id: `${crypt.laneId}-crypt-floor-grate`,
+      id: `${crypt.laneId}-crypt-floor-threshold`,
       type: "laneFloor",
       assetKey: "grate-threshold",
       laneId: crypt.laneId,
       cell: { col: crypt.side === "left" ? 7 : 65, row: 24 },
       readabilityRole: "crypt-threshold",
       allowOverlapGameplay: true,
-      scale: 0.68,
+      scale: 0.66,
       rotation: crypt.rotation,
       materialToken: "spawnThresholdBlood",
-      tags: ["crypt", "threshold", "mapbuilder"],
-    },
-    {
-      id: `${crypt.laneId}-crypt-rubble-depth`,
-      type: "prop",
-      assetKey: "rubble-small",
-      laneId: crypt.laneId,
-      cell: crypt.rubbleCell,
-      readabilityRole: "crypt-breach-depth",
-      allowOverlapGameplay: true,
-      scale: 0.5,
-      rotation: crypt.side === "left" ? 24 : -24,
-      materialToken: "shadowRubble",
-      tags: ["crypt", "rubble", "mapbuilder"],
+      tags: ["crypt", "threshold", "whitebox", "mapbuilder"],
     },
   ]);
 }
 
 function wardShrinePieces(level) {
   const core = level.core || { col: 36, row: 47 };
+  const shared = {
+    readabilityRole: "ward-shrine",
+    allowOverlapGameplay: true,
+    elevationZone: "ward-shrine",
+    elevationBand: "shrine",
+    tags: ["ward", "whitebox", "platform", "elevation-zone", "mapbuilder"],
+  };
   return [
     {
-      id: "ward-shrine-raised-foundation",
+      id: "ward-shrine-low-platform",
       type: "platform",
       assetKey: "stone-landing",
       cell: core,
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
-      visualY: 0.03,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
+      visualY: 0.08,
       materialToken: "shrinePlatformStone",
-      scale: 0.94,
+      scale: 0.88,
       rotation: 45,
-      tags: ["ward", "platform", "elevation-zone", "mapbuilder"],
+      ...shared,
     },
     {
-      id: "ward-shrine-core-pedestal",
-      type: "platform",
-      assetKey: "stone-landing",
-      cell: core,
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
-      visualY: 0.1,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
-      materialToken: "landingHighStone",
-      scale: 0.38,
-      rotation: 45,
-      tags: ["ward", "platform", "pedestal", "elevation-zone", "mapbuilder"],
-    },
-    {
-      id: "ward-shrine-green-ring",
+      id: "ward-shrine-magic-ring",
       type: "readabilityMarker",
       assetKey: "primitive-readability-ring",
       cell: core,
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
       materialToken: "wardHaloGreen",
-      visualY: 0.05,
-      scale: { x: 3.35, y: 1, z: 3.35 },
-      tags: ["ward", "ring", "mapbuilder"],
-    },
-    {
-      id: "ward-shrine-left-gem",
-      type: "shrine",
-      assetKey: "ward-gem-small",
-      cell: core,
-      offset: { x: -2.0, z: -1.45 },
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
-      visualY: 0.12,
-      scale: 0.62,
-      rotation: -20,
-      tags: ["ward", "gem", "mapbuilder"],
-    },
-    {
-      id: "ward-shrine-right-gem",
-      type: "shrine",
-      assetKey: "ward-gem-medium",
-      cell: core,
-      offset: { x: 2.0, z: -1.45 },
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
-      visualY: 0.12,
-      scale: 0.54,
-      rotation: 20,
-      tags: ["ward", "gem", "mapbuilder"],
+      visualY: 0.075,
+      scale: { x: 2.25, y: 1, z: 2.25 },
+      ...shared,
+      tags: [...shared.tags, "ring"],
     },
     {
       id: "ward-shrine-left-candle",
       type: "shrine",
       assetKey: "ritual-candle",
       cell: core,
-      offset: { x: -2.65, z: 1.45 },
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
+      offset: { x: -2.35, z: 1.25 },
       visualY: 0.1,
-      scale: 0.56,
-      tags: ["ward", "candle", "mapbuilder"],
+      materialToken: "torchWarm",
+      scale: 0.46,
+      rotation: -12,
+      ...shared,
+      tags: [...shared.tags, "candle"],
     },
     {
       id: "ward-shrine-right-candle",
       type: "shrine",
       assetKey: "ritual-candle",
       cell: core,
-      offset: { x: 2.65, z: 1.45 },
-      readabilityRole: "ward-shrine",
-      allowOverlapGameplay: true,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
+      offset: { x: 2.35, z: 1.25 },
       visualY: 0.1,
-      scale: 0.56,
-      tags: ["ward", "candle", "mapbuilder"],
-    },
-  ];
-}
-
-function wardShrineDepthPieces(level) {
-  const core = level.core || { col: 36, row: 47 };
-  const shared = {
-    readabilityRole: "ward-shrine",
-    allowOverlapGameplay: true,
-    elevationZone: "ward-shrine",
-    elevationBand: "shrine",
-    tags: ["ward", "shrine-depth", "elevation-zone", "mapbuilder"],
-  };
-  const approachShared = {
-    laneId: "north-gate",
-    readabilityRole: "ward-approach-terrace",
-    allowOverlapGameplay: true,
-    elevationZone: "ward-approach-high",
-    elevationBand: "high",
-    tags: ["ward", "ward-approach", "elevation-connector", "mapbuilder"],
-  };
-  return [
-    {
-      id: "ward-approach-lower-landing",
-      type: "landing",
-      assetKey: "stone-landing",
-      cell: { col: core.col, row: core.row - 8 },
-      visualY: 0.16,
-      materialToken: "landingHighStone",
-      scale: 0.74,
-      rotation: 0,
-      ...approachShared,
-    },
-    {
-      id: "ward-approach-upper-landing",
-      type: "landing",
-      assetKey: "stone-landing",
-      cell: { col: core.col, row: core.row - 4 },
-      visualY: 0.2,
-      materialToken: "shrinePlatformStone",
-      scale: 0.66,
-      rotation: 0,
-      ...approachShared,
-      elevationZone: "ward-shrine",
-      elevationBand: "shrine",
-    },
-    {
-      id: "ward-approach-left-retaining-edge",
-      type: "edge",
-      assetKey: "retaining-wall-half",
-      cell: { col: core.col - 4, row: core.row - 6 },
-      visualY: 0.17,
-      materialToken: "floorRubbleDark",
-      scale: 0.52,
-      rotation: 90,
-      ...approachShared,
-    },
-    {
-      id: "ward-approach-right-retaining-edge",
-      type: "edge",
-      assetKey: "retaining-wall-half",
-      cell: { col: core.col + 4, row: core.row - 6 },
-      visualY: 0.17,
-      materialToken: "floorRubbleDark",
-      scale: 0.52,
-      rotation: 90,
-      ...approachShared,
-    },
-    {
-      id: "ward-shrine-player-side-landing",
-      type: "landing",
-      assetKey: "stone-landing",
-      cell: { col: core.col, row: core.row + 3 },
-      visualY: 0.19,
-      materialToken: "shrinePlatformStone",
-      scale: 0.72,
-      rotation: 180,
-      ...shared,
-    },
-    {
-      id: "ward-shrine-front-pedestal-edge",
-      type: "platform",
-      assetKey: "stone-landing",
-      cell: { col: core.col, row: core.row - 3 },
-      visualY: 0.17,
-      materialToken: "shrinePlatformStone",
+      materialToken: "torchWarm",
       scale: 0.46,
-      rotation: 0,
+      rotation: 12,
       ...shared,
+      tags: [...shared.tags, "candle"],
     },
     {
-      id: "ward-shrine-player-platform-edge",
-      type: "platform",
-      assetKey: "stone-landing",
-      cell: { col: core.col, row: core.row + 5 },
-      visualY: 0.16,
-      materialToken: "shrinePlatformStone",
-      scale: 0.48,
-      rotation: 180,
-      ...shared,
-    },
-    {
-      id: "ward-shrine-left-platform-wing",
-      type: "platform",
-      assetKey: "stone-landing",
-      cell: { col: core.col - 4, row: core.row },
-      visualY: 0.13,
-      materialToken: "shrinePlatformStone",
-      scale: 0.42,
-      rotation: 20,
-      ...shared,
-    },
-    {
-      id: "ward-shrine-right-platform-wing",
-      type: "platform",
-      assetKey: "stone-landing",
-      cell: { col: core.col + 4, row: core.row },
-      visualY: 0.13,
-      materialToken: "shrinePlatformStone",
-      scale: 0.42,
+      id: "ward-shrine-left-gem",
+      type: "shrine",
+      assetKey: "ward-gem-small",
+      cell: core,
+      offset: { x: -1.9, z: -1.55 },
+      visualY: 0.1,
+      scale: 0.34,
       rotation: -20,
       ...shared,
+      tags: [...shared.tags, "gem"],
     },
     {
-      id: "ward-shrine-gem-pile",
+      id: "ward-shrine-right-gem",
       type: "shrine",
-      assetKey: "gems-pile-small",
+      assetKey: "ward-gem-small",
       cell: core,
-      offset: { x: 0, z: -2.55 },
-      visualY: 0.12,
-      scale: 0.42,
-      rotation: 30,
-      ...shared,
-    },
-    {
-      id: "ward-shrine-brick-stack",
-      type: "prop",
-      assetKey: "stone-bricks-small",
-      cell: core,
-      offset: { x: -3.05, z: 1.45 },
+      offset: { x: 1.9, z: -1.55 },
       visualY: 0.1,
-      scale: 0.48,
-      rotation: -28,
+      scale: 0.34,
+      rotation: 20,
       ...shared,
-    },
-    {
-      id: "ward-shrine-broken-arms",
-      type: "prop",
-      assetKey: "broken-sword-shield",
-      cell: core,
-      offset: { x: 3.0, z: 1.35 },
-      visualY: 0.1,
-      scale: 0.44,
-      rotation: 110,
-      ...shared,
+      tags: [...shared.tags, "gem"],
     },
   ];
 }
 
-function cryptBoundarySilhouettes(level = LEVEL) {
+function cryptRoomShell(level = LEVEL) {
+  const centerCol = Math.floor((level.cols - 1) / 2);
   return [
-    {
-      id: "upper-left-shadow-wall-depth",
-      type: "wall",
-      assetKey: "broken-wall",
-      cell: { col: 23, row: 1 },
-      readabilityRole: "background-depth",
-      allowOverlapGameplay: true,
-      materialToken: "shadowEdgeRuin",
-      scale: 0.7,
-      rotation: 12,
-      tags: ["background", "ruin", "mapbuilder"],
-    },
-    {
-      id: "upper-right-shadow-wall-depth",
-      type: "wall",
-      assetKey: "cracked-wall",
-      cell: { col: 49, row: 1 },
-      readabilityRole: "background-depth",
-      allowOverlapGameplay: true,
-      materialToken: "shadowEdgeRuin",
-      scale: 0.7,
-      rotation: -12,
-      tags: ["background", "ruin", "mapbuilder"],
-    },
-    {
-      id: "upper-left-candle-inset-depth",
-      type: "wall",
-      assetKey: "wall-inset-candles",
-      cell: { col: 28, row: 3 },
-      readabilityRole: "background-depth",
-      allowOverlapGameplay: true,
-      materialToken: "shadowEdgeRuin",
-      scale: 0.5,
-      tags: ["background", "ruin", "mapbuilder"],
-    },
-    {
-      id: "upper-right-candle-inset-depth",
-      type: "wall",
-      assetKey: "wall-inset-candles",
-      cell: { col: 44, row: 3 },
-      readabilityRole: "background-depth",
-      allowOverlapGameplay: true,
-      materialToken: "shadowEdgeRuin",
-      scale: 0.5,
-      tags: ["background", "ruin", "mapbuilder"],
-    },
-    {
-      id: "upper-left-crypt-pillar",
-      type: "prop",
-      assetKey: "decorated-pillar",
-      cell: { col: 12, row: 8 },
-      readabilityRole: "background-boundary",
-      materialToken: "shadowRubble",
-      scale: 0.58,
-      rotation: 8,
-      tags: ["background", "pillar", "mapbuilder"],
-    },
-    {
-      id: "upper-center-crypt-pillar",
-      type: "prop",
-      assetKey: "decorated-pillar",
-      cell: { col: 36, row: 8 },
-      readabilityRole: "background-boundary",
-      allowOverlapGameplay: true,
-      materialToken: "shadowRubble",
-      scale: 0.62,
-      tags: ["background", "pillar", "mapbuilder"],
-    },
-    {
-      id: "upper-right-crypt-pillar",
-      type: "prop",
-      assetKey: "decorated-pillar",
-      cell: { col: 60, row: 8 },
-      readabilityRole: "background-boundary",
-      materialToken: "shadowRubble",
-      scale: 0.58,
-      rotation: -8,
-      tags: ["background", "pillar", "mapbuilder"],
-    },
-    {
-      id: "west-crypt-frame-wall",
-      type: "wall",
-      assetKey: "broken-wall",
-      cell: { col: 5, row: 18 },
-      readabilityRole: "background-boundary",
-      allowOverlapGameplay: true,
-      materialToken: "shadowEdgeRuin",
-      scale: 0.5,
-      rotation: 90,
-      tags: ["background", "edge", "mapbuilder"],
-    },
-    {
-      id: "east-crypt-frame-wall",
-      type: "wall",
-      assetKey: "cracked-wall",
-      cell: { col: 68, row: 18 },
-      readabilityRole: "background-boundary",
-      allowOverlapGameplay: true,
-      materialToken: "shadowEdgeRuin",
-      scale: 0.5,
-      rotation: -90,
-      tags: ["background", "edge", "mapbuilder"],
-    },
-    {
-      id: "lower-left-player-wall",
-      type: "wall",
-      assetKey: "low-wall",
-      cell: { col: 20, row: 53 },
-      readabilityRole: "background-boundary",
-      materialToken: "shadowEdgeRuin",
-      scale: 0.54,
-      rotation: 0,
-      tags: ["background", "player-side", "mapbuilder"],
-    },
-    {
-      id: "lower-right-player-wall",
-      type: "wall",
-      assetKey: "low-wall",
-      cell: { col: 52, row: 53 },
-      readabilityRole: "background-boundary",
-      materialToken: "shadowEdgeRuin",
-      scale: 0.54,
-      rotation: 0,
-      tags: ["background", "player-side", "mapbuilder"],
-    },
-    {
-      id: "left-crypt-rubble-cluster",
-      type: "prop",
-      assetKey: "rubble-small",
-      cell: { col: 11, row: 31 },
-      readabilityRole: "background-rubble",
-      scale: 0.48,
-      rotation: 24,
-      tags: ["background", "rubble", "mapbuilder"],
-    },
-    {
-      id: "right-crypt-rubble-cluster",
-      type: "prop",
-      assetKey: "rubble-small",
-      cell: { col: 61, row: 31 },
-      readabilityRole: "background-rubble",
-      scale: 0.48,
-      rotation: -24,
-      tags: ["background", "rubble", "mapbuilder"],
-    },
-    {
-      id: "player-right-storage-barrel",
-      type: "prop",
-      assetKey: "decorated-barrel",
-      cell: { col: 55, row: 49 },
-      readabilityRole: "background-story",
-      scale: 0.44,
-      rotation: 12,
-      tags: ["background", "storage", "mapbuilder"],
-    },
-  ];
+    { id: "upper-left-shadow-wall", type: "wall", assetKey: "broken-wall", cell: { col: 23, row: 1 }, scale: 0.72, rotation: 10, role: "background-depth" },
+    { id: "upper-center-shadow-wall", type: "wall", assetKey: "wall-inset-candles", cell: { col: centerCol, row: 2 }, scale: 0.58, rotation: 0, role: "background-depth" },
+    { id: "upper-right-shadow-wall", type: "wall", assetKey: "cracked-wall", cell: { col: 49, row: 1 }, scale: 0.72, rotation: -10, role: "background-depth" },
+    { id: "upper-left-crypt-pillar", type: "prop", assetKey: "decorated-pillar", cell: { col: 12, row: 8 }, scale: 0.52, rotation: 0, role: "background-boundary" },
+    { id: "upper-right-crypt-pillar", type: "prop", assetKey: "decorated-pillar", cell: { col: 60, row: 8 }, scale: 0.52, rotation: 0, role: "background-boundary" },
+    { id: "west-side-crypt-wall", type: "wall", assetKey: "broken-wall", cell: { col: 5, row: 18 }, scale: 0.54, rotation: 90, role: "background-boundary" },
+    { id: "east-side-crypt-wall", type: "wall", assetKey: "cracked-wall", cell: { col: 68, row: 18 }, scale: 0.54, rotation: -90, role: "background-boundary" },
+    { id: "west-mid-low-wall", type: "wall", assetKey: "low-wall", cell: { col: 14, row: 35 }, scale: 0.56, rotation: 90, role: "background-boundary" },
+    { id: "east-mid-low-wall", type: "wall", assetKey: "low-wall", cell: { col: 58, row: 35 }, scale: 0.56, rotation: -90, role: "background-boundary" },
+    { id: "player-left-ward-wall", type: "wall", assetKey: "low-wall", cell: { col: 20, row: 53 }, scale: 0.54, rotation: 0, role: "background-boundary" },
+    { id: "player-right-ward-wall", type: "wall", assetKey: "low-wall", cell: { col: 52, row: 53 }, scale: 0.54, rotation: 0, role: "background-boundary" },
+  ].map((piece) => ({
+    id: piece.id,
+    type: piece.type,
+    assetKey: piece.assetKey,
+    cell: piece.cell,
+    readabilityRole: piece.role,
+    allowOverlapGameplay: true,
+    materialToken: piece.type === "prop" ? "shadowRubble" : "shadowEdgeRuin",
+    scale: piece.scale,
+    rotation: piece.rotation,
+    tags: ["background", "whitebox", "crypt-room-shell", "mapbuilder"],
+  }));
 }
 
 export function firstBreachMapPlan(level = LEVEL) {
   return {
-    id: "first-breach-deeper-well-crypt-v1",
+    id: "first-breach-dd1-crypt-whitebox-v1",
     mapId: "first-breach",
     theme: ACTIVE_MAP_THEME_ID,
     elevationPlan: firstBreachElevationPlan(level),
-    intent: "Deeper-Well-inspired fallen crypt core room with bottom-middle Ward shrine and shadowed crypt breaches.",
+    intent: "Clean DD1-style fallen crypt whitebox with bottom-middle Ward shrine, broad steps, and shadowed breach doors.",
     pieces: [
       ...(level.lanes || []).map(spawnGateCluster),
-      ...laneFloorHints(level),
-      ...laneWardMarkers(level),
-      ...macroFloorBreakup(level),
-      ...laneChokeMarkers(level),
+      ...whiteboxFloorFields(level),
       ...chokeWardStones(level),
-      ...centralStairArchitecture(level),
-      ...brokenCryptApproachArchitecture(level),
+      ...broadWardStairArchitecture(level),
+      ...cryptApproachWalls(level),
       ...sideCryptArchitecture(level),
       ...wardShrinePieces(level),
-      ...wardShrineDepthPieces(level),
-      ...cryptBoundarySilhouettes(level),
+      ...cryptRoomShell(level),
     ],
   };
 }
@@ -1203,3 +739,5 @@ export function buildFirstBreachMapBuilder(level = LEVEL) {
 export function firstBreachMapBuilderAssetNames(level = LEVEL) {
   return buildFirstBreachMapBuilder(level).assetNames;
 }
+
+export { firstBreachElevationPlan };

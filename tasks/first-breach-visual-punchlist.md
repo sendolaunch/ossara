@@ -9,12 +9,14 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 - Keep pushing First Breach away from a flat grid-board read and toward a ruined courtyard with clear architectural framing.
 - Prefer big readable forms: stair massing, shrine platform, spawn gate frames, low boundary walls, and floor slab fields.
 - Avoid solving composition by scattering many small props.
+- DD1 crypt whitebox reset applied: the authored visual layer is intentionally simpler, with a room shell, shadow gates, broad Ward steps, a low Ward platform, and minimal edge/support props. Do not treat the reduced decoration as a bug before human review.
 
 ## Central Stair / Verticality
 
 - Central Stair should read as a built stair-and-landing approach, not a huge dropped ramp/slab.
 - Use modular stair bands, landings, and side retaining edges before adding more decoration.
 - Elevation grammar pass applied: bottom, mid, and top stair landings now carry explicit low/mid/high elevation intent; the central stair has denser tread bands and rising retaining cheeks; the Ward approach now has a small high-to-shrine terrace chain.
+- Whitebox reset replaces the dense modular sawtooth/rib stair language with four broad step bands, one bottom landing, one top landing, and only two simple retaining cheek rows. Future fixes should preserve broad-step readability.
 - Future polish: tune stair asset rotation/scale from screenshots if any step pieces look buried or too repetitive.
 - Future polish: use human review footage to verify whether the new tread rhythm reads from the normal camera before adding more stair decoration.
 
@@ -23,6 +25,7 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 - Ward Crystal should remain the strongest focal point from the normal mission camera.
 - Shrine platform, pedestal, Ward rings, candles, gems, and side wings should support the crystal instead of competing with it.
 - Future polish: consider a small dedicated material/lighting pass around Gem_Large only if human review says it still loses focus.
+- Whitebox reset removed the deep clustered table/box shrine support and keeps a low platform plus a single Ward ring and small accent props. If the shrine still feels weak, fix the platform silhouette first, not prop density.
 
 ## Lane Readability
 
@@ -35,6 +38,7 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 - Green rings/arrows are useful but should feel like ward magic, not editor debug overlays.
 - Keep them present but softer, smaller, and supported by in-world stones/candles where practical.
 - Future polish: replace primitive rings with actual rune/stone assets when a safe imported option exists.
+- Whitebox reset disables the always-on renderer choke rings and removes lane-by-lane Ward floor markers. Build-mode placement feedback and small in-world choke stones now carry most placement readability.
 
 ## In-world Ward Marker Direction
 
@@ -65,6 +69,7 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 - Group props into readable architectural clusters.
 - Remove or scale down props that steal focus from the lane, choke, or Ward Crystal.
 - Avoid adding new small clutter until the macro shape reads well in screenshots.
+- Current whitebox deliberately keeps props structural: gate frames, simple walls, a few pillars, candles, and small Ward gems. Center-lane rubble/crate scatter should stay removed until the blockout is approved.
 
 ## Lighting / Readability
 

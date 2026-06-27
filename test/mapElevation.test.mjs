@@ -68,10 +68,10 @@ const after = stableGameplaySnapshotKey(levelGameplaySnapshot(LEVEL));
 ok(before === after, "elevation intent does not mutate gameplay level data");
 ok(built.elevationPlan?.id === intent.id, "Map Builder build carries elevation intent metadata");
 ok(built.gameplaySnapshotUnchanged, "Map Builder still reports unchanged gameplay snapshot with elevation intent");
-ok(built.placements.some((placement) => placement.id === "central-crypt-bottom-landing" && placement.elevationZone === "mid-combat-floor"), "central crypt bottom landing carries mid-floor elevation intent");
+ok(built.placements.some((placement) => placement.id === "central-crypt-mid-landing" && placement.elevationZone === "mid-combat-floor"), "central crypt landing carries mid-floor elevation intent");
 ok(built.placements.some((placement) => placement.id === "ward-stair-bottom-landing" && placement.elevationZone === "ward-approach-high"), "Ward stair bottom landing carries high-zone elevation intent");
 ok(built.placements.some((placement) => placement.id === "ward-stair-top-landing" && placement.elevationZone === "ward-shrine"), "Ward stair top landing carries shrine-zone elevation intent");
-ok(built.placements.some((placement) => placement.id === "ward-approach-upper-landing" && placement.elevationZone === "ward-shrine"), "Ward approach upper landing carries shrine-zone elevation intent");
+ok(built.placements.some((placement) => placement.id === "ward-broad-step-4-upper" && placement.elevationZone === "ward-shrine"), "upper broad Ward step carries shrine-zone elevation intent");
 ok(built.placements.every((placement) => placement.type !== "stair" || placement.allowOverlapGameplay), "visual stair pieces remain explicit gameplay-overlap art");
 
 const badSameBandStair = validateElevationPlan({

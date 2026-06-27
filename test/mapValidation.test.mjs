@@ -92,48 +92,45 @@ for (const placement of placements) {
 
 for (const lane of LEVEL.lanes) {
   const spawnPieces = placements.filter((placement) => placement.laneId === lane.id && placement.readabilityRole === "spawn-gate");
-  const laneArt = placements.filter((placement) => placement.laneId === lane.id && placement.readabilityRole === "lane-art");
-  const mainChoke = placements.find((placement) => placement.laneId === lane.id && placement.readabilityRole === "main-choke");
-  const fallbackChoke = placements.find((placement) => placement.laneId === lane.id && placement.readabilityRole === "fallback-choke");
+  const mainChoke = placements.find((placement) => placement.id === `${lane.id}-main-choke-stone`);
+  const fallbackChoke = placements.find((placement) => placement.id === `${lane.id}-fallback-choke-stone`);
   ok(spawnPieces.length >= 5, `${lane.id} spawn mouth has gate, torch, and shadow-crypt support`);
   ok(spawnPieces.every((piece) => piece.anchorCol === lane.spawn.col && piece.anchorRow === lane.spawn.row), `${lane.id} spawn pieces anchor to gameplay spawn`);
-  ok(laneArt.length >= 1, `${lane.id} has path-aligned lane art`);
-  ok(!!mainChoke && mainChoke.allowOverlapGameplay, `${lane.id} main choke visual is explicit visual-only overlap`);
-  ok(!!fallbackChoke && fallbackChoke.allowOverlapGameplay, `${lane.id} fallback choke visual is explicit visual-only overlap`);
+  ok(!!mainChoke && mainChoke.allowOverlapGameplay, `${lane.id} main choke has a small in-world marker`);
+  ok(!!fallbackChoke && fallbackChoke.allowOverlapGameplay, `${lane.id} fallback choke has a small in-world marker`);
 }
 
 const wardPieces = placements.filter((placement) => placement.readabilityRole === "ward-shrine");
-ok(wardPieces.length >= 14, "Ward shrine has deeper map-builder art support");
+ok(wardPieces.length === 6, "Ward shrine stays simple for the whitebox reset");
 ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 5 && Math.abs(piece.anchorRow - LEVEL.core.row) <= 5), "Ward shrine pieces stay near the core");
 ok(wardPieces.every((piece) => piece.allowOverlapGameplay), "Ward shrine pieces explicitly allow core-reserve visual overlap");
 
-const centralStairs = placements.filter((placement) => placement.laneId === "north-gate" && placement.readabilityRole === "visual-stair");
-ok(centralStairs.length >= 9, "central route has modular visual stair bands");
+const centralStairs = placements.filter((placement) => placement.laneId === "north-gate" && placement.readabilityRole === "broad-stair-step");
+ok(centralStairs.length === 4, "central route has four broad visual stair bands");
 ok(centralStairs.some((placement) => placement.elevationBand === "high"), "central stair includes a high approach band");
 ok(centralStairs.some((placement) => placement.elevationBand === "shrine"), "central stair connects into the shrine band");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
-ok(placements.some((placement) => placement.readabilityRole === "ward-approach-terrace" && placement.elevationBand === "shrine"), "Ward approach terrace connects into shrine elevation band");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor slabs break up the flat grid-board read");
 ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length >= LEVEL.lanes.length * 2, "choke readability is supported by in-world ward markers");
-ok(placements.filter((placement) => placement.readabilityRole === "in-world-lane-marker").length >= LEVEL.lanes.length, "lane readability is supported by in-world ward markers");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-lane-marker").length === 0, "debug-like lane marker layer is removed");
 ok(placements.filter((placement) => placement.readabilityRole === "crypt-breach-frame").length >= 6, "side crypt breaches have visible frame pieces");
-ok(placements.filter((placement) => placement.readabilityRole?.startsWith("front-breach-")).length >= 8, "front breaches have lane-side architecture support");
+ok(placements.filter((placement) => placement.readabilityRole?.startsWith("front-breach-")).length >= 6, "front breaches have simple lane-side architecture support");
 
 ok(built.audit.missingAssets.length === 0, "audit has no missing asset keys");
 ok(built.audit.disallowedPacks.length === 0, "audit has no disallowed packs");
-ok(built.audit.fallbackPlacements.length === 11, "audit captures the expected fallback readability rings");
+ok(built.audit.fallbackPlacements.length === 1, "audit captures only the intentional Ward magic ring fallback");
 ok(built.assetNames.every((assetName) => typeof assetName === "string" && assetName.length > 0), "asset name list is normalized for renderer preloading");
 ok(mapThemeMaterialToken(theme, "stone") === "ruinedStoneMid", "legacy stone fallback material aliases to themed ruined stone");
 ok(mapThemeMaterialToken(theme, "plague") === "wardRuneSoft", "legacy plague fallback material aliases to soft Ward rune green");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-upper-shadow-center-field"), theme) === "floorRubbleDark", "upper crypt broad slab receives shadow material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-mid-combat-center-slab"), theme) === "courtyardMidStone", "mid combat broad slab receives mid material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-ward-approach-center-landing"), theme) === "landingHighStone", "Ward approach broad slab receives high material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-lower-run"), theme) === "ruinedStoneStep", "central stair run receives readable step material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-crypt-bottom-landing"), theme) === "courtyardMidStone", "central crypt bottom landing receives mid combat material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "whitebox-floor-upper-center-shadow-floor"), theme) === "floorRubbleDark", "upper crypt broad slab receives shadow material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "whitebox-floor-center-combat-left-slab"), theme) === "courtyardMidStone", "mid combat broad slab receives mid material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "whitebox-floor-ward-approach-center-landing"), theme) === "landingHighStone", "Ward approach broad slab receives high material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-broad-step-1-lower"), theme) === "ruinedStoneStep", "broad Ward step receives readable step material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-crypt-mid-landing"), theme) === "courtyardMidStone", "central crypt landing receives mid combat material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-stair-bottom-landing"), theme) === "landingHighStone", "Ward stair bottom landing receives high landing material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-stair-top-landing"), theme) === "shrinePlatformStone", "Ward stair top landing receives shrine platform material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-approach-upper-landing"), theme) === "shrinePlatformStone", "Ward approach upper landing receives shrine platform material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-gem-pile"), theme) === "wardGreenEmissive", "Ward shrine gem pile receives Ward-green material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-low-platform"), theme) === "shrinePlatformStone", "Ward shrine low platform receives shrine platform material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-left-gem"), theme) === "wardGreenEmissive", "Ward shrine small gem receives Ward-green material");
 
 console.log(`mapValidation: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

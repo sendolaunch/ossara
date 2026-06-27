@@ -496,17 +496,20 @@ export class PCRenderer {
 
     }
 
-    const mainChokeMat = this._themeMaterial("wardChokeGlyph", "gold");
-    const fallbackChokeMat = this._themeMaterial("wardRuneSoft", "plague");
-    for (const spec of chokeReadabilitySpecs(level)) {
-      const ring = prim("torus", spec.kind === "main" ? mainChokeMat : fallbackChokeMat);
-      ring.name = `choke-readability-${spec.id}`;
-      ring.render.castShadows = false;
-      ring.render.receiveShadows = false;
-      ring.setLocalEulerAngles(90, 0, 0);
-      ring.setLocalScale(spec.radius, spec.radius, spec.radius);
-      ring.setPosition(spec.x, spec.y, spec.z);
-      this.app.root.addChild(ring);
+    const showPermanentChokeRings = false;
+    if (showPermanentChokeRings) {
+      const mainChokeMat = this._themeMaterial("wardChokeGlyph", "gold");
+      const fallbackChokeMat = this._themeMaterial("wardRuneSoft", "plague");
+      for (const spec of chokeReadabilitySpecs(level)) {
+        const ring = prim("torus", spec.kind === "main" ? mainChokeMat : fallbackChokeMat);
+        ring.name = `choke-readability-${spec.id}`;
+        ring.render.castShadows = false;
+        ring.render.receiveShadows = false;
+        ring.setLocalEulerAngles(90, 0, 0);
+        ring.setLocalScale(spec.radius, spec.radius, spec.radius);
+        ring.setPosition(spec.x, spec.y, spec.z);
+        this.app.root.addChild(ring);
+      }
     }
 
     // THE BREACH — a glowing tear in the world where the dead pour through

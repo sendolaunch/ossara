@@ -32,9 +32,9 @@ function assetPath(name) {
   return `public/models/${pack}/${file}.gltf`;
 }
 
-ok(specs.length > 55 && specs.length < 90, "showcase art pass is present but remains performance-conscious");
-ok(categories.has("floor"), "showcase art includes lane/floor dressing");
-ok(categories.has("lane-side"), "showcase art includes lane-side shoulder dressing");
+ok(specs.length >= 20 && specs.length <= 30, "showcase art stays sparse for the whitebox reset");
+ok(!categories.has("floor"), "legacy lane/floor dressing is removed for the whitebox reset");
+ok(!categories.has("lane-side"), "legacy lane-side clutter is removed for the whitebox reset");
 ok(categories.has("spawn"), "showcase art includes spawn gate dressing");
 ok(categories.has("ward"), "showcase art includes Ward Crystal dressing");
 ok(categories.has("background"), "showcase art includes background depth dressing");
@@ -59,16 +59,16 @@ for (const assetName of assetNames) {
 
 for (const lane of LEVEL.lanes) {
   const spawnSpecs = specs.filter((spec) => spec.category === "spawn" && spec.laneId === lane.id);
-  ok(spawnSpecs.length >= 4, `${lane.id} keeps readable spawn dressing after primary gates move to Map Builder`);
+  ok(spawnSpecs.length >= 2, `${lane.id} keeps sparse readable spawn dressing after primary gates move to Map Builder`);
   ok(spawnSpecs.every((spec) => spec.anchorCol === lane.spawn.col && spec.anchorRow === lane.spawn.row), `${lane.id} spawn dressing anchors to the configured spawn`);
   const laneSpecs = specs.filter((spec) => spec.laneId === lane.id);
   const laneSideSpecs = specs.filter((spec) => spec.category === "lane-side" && spec.laneId === lane.id);
-  ok(laneSideSpecs.length >= 2, `${lane.id} has lane-side shoulder dressing`);
-  ok(laneSpecs.length >= 8, `${lane.id} has per-lane visual support`);
+  ok(laneSideSpecs.length === 0, `${lane.id} has no legacy lane-side clutter`);
+  ok(laneSpecs.length === spawnSpecs.length, `${lane.id} visual support is limited to the spawn mouth in the legacy art layer`);
 }
 
 const wardSpecs = specs.filter((spec) => spec.category === "ward");
-ok(wardSpecs.length >= 10, "Ward Crystal receives ritual art support");
+ok(wardSpecs.length === 4, "Ward Crystal receives minimal ritual art support");
 ok(wardSpecs.every((spec) => spec.anchorCol === LEVEL.core.col && spec.anchorRow === LEVEL.core.row), "Ward dressing anchors to the configured core");
 
 ok(LEVEL.lanes.length === 5, "art pass does not alter First Breach lane count");
