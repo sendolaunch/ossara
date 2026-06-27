@@ -1,6 +1,14 @@
 export const MAP_QUALITY_TAG_CATEGORIES = Object.freeze({
   macro: Object.freeze(["too-gridlike", "too-flat", "macro-shape-weak"]),
-  verticality: Object.freeze(["stair-reads-as-slab", "verticality-unclear"]),
+  verticality: Object.freeze([
+    "elevation-unclear",
+    "stair-missing-landing",
+    "stair-reads-as-slab",
+    "height-transition-unmotivated",
+    "raised-area-not-framed",
+    "visual-height-not-connected-to-lane",
+    "verticality-unclear",
+  ]),
   objective: Object.freeze(["shrine-not-focal"]),
   readability: Object.freeze([
     "lane-markers-too-debug",
@@ -28,4 +36,3 @@ export function mapQualityTagCategory(tag) {
   }
   return null;
 }
-

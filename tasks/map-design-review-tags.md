@@ -30,6 +30,41 @@ Use these tags to convert human screenshot notes into actionable map-design cons
 - Preferred fix: modular steps, landings, retaining edges.
 - Do not: add candles or banners to disguise the stair shape.
 
+## elevation-unclear
+
+- Means: high/low map structure is not readable from the normal camera.
+- Inspect: elevation zones, connector placement, shadows, floor breaks, retaining edges.
+- Preferred fix: define zones and connectors before placing more props.
+- Do not: add unrelated tall objects to fake depth.
+
+## stair-missing-landing
+
+- Means: a stair begins or ends abruptly without a bottom or top landing.
+- Inspect: entry/exit cells, floor transition, player hold space, lane direction.
+- Preferred fix: add or define bottom/top landings and connect them to the lane.
+- Do not: stretch one stair mesh until it covers the missing landing.
+
+## height-transition-unmotivated
+
+- Means: a raised or sunken area has no visual reason to exist.
+- Inspect: edge treatment, walls, terrain break, shrine/platform purpose.
+- Preferred fix: add retaining edges, walls, terraces, or narrative structure.
+- Do not: move gameplay paths to justify a visual-only height cue.
+
+## raised-area-not-framed
+
+- Means: a high platform reads like a floating floor patch.
+- Inspect: platform sides, rear walls, curb/edge pieces, shadow anchors.
+- Preferred fix: add low retaining edges or background framing.
+- Do not: hide the platform edge with clutter.
+
+## visual-height-not-connected-to-lane
+
+- Means: stairs/ramps/platforms do not align with the actual lane route.
+- Inspect: connector entry/exit cells, lane waypoints, choke positions.
+- Preferred fix: align visual connectors to existing lane direction.
+- Do not: change enemy paths during a visual-only pass.
+
 ## verticality-unclear
 
 - Means: height changes are present but not readable or connected to paths.
@@ -141,4 +176,3 @@ Use these tags to convert human screenshot notes into actionable map-design cons
 - Inspect: still frames and short route capture.
 - Preferred fix: pause for review and summarize options.
 - Do not: keep adding geometry while guessing.
-

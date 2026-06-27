@@ -13,7 +13,12 @@ const requiredTags = [
   "too-gridlike",
   "too-flat",
   "macro-shape-weak",
+  "elevation-unclear",
+  "stair-missing-landing",
   "stair-reads-as-slab",
+  "height-transition-unmotivated",
+  "raised-area-not-framed",
+  "visual-height-not-connected-to-lane",
   "verticality-unclear",
   "shrine-not-focal",
   "lane-markers-too-debug",
@@ -44,6 +49,7 @@ for (const tag of requiredTags) {
 ok(!isMapQualityTag("random-prop-density"), "unregistered tags are rejected");
 ok(mapQualityTagCategory("random-prop-density") === null, "unknown tags have no category");
 ok(MAP_QUALITY_TAG_CATEGORIES.macro.includes("too-gridlike"), "macro category includes grid-board feedback");
+ok(MAP_QUALITY_TAG_CATEGORIES.verticality.includes("stair-missing-landing"), "verticality category includes stair construction feedback");
 ok(MAP_QUALITY_TAG_CATEGORIES.material.includes("floor-repetition"), "material category includes floor repetition feedback");
 ok(MAP_QUALITY_TAG_CATEGORIES.review.includes("needs-human-review"), "review category includes human review gating");
 

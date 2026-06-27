@@ -30,6 +30,7 @@ Every map candidate or revision should define:
 - Spawn identity: what each breach/gate/crypt visually says.
 - Choke identity: where the player is invited to hold the lane.
 - Verticality goal: what height changes should communicate.
+- Elevation zones/connectors: which areas read as low, high, shrine, or background, and how stairs/ramps/terraces connect them.
 - Macro shape: the large readable forms before decoration.
 - Focal point: the main visual anchor.
 - Floor language: slabs, cracks, trails, stairs, dirt, runes, or thresholds.
@@ -48,12 +49,13 @@ Use this order for future maps and major map revisions:
 3. Spawn/choke readability.
 4. Objective shrine/focal point.
 5. Floor/material hierarchy.
-6. Verticality/stairs/landings.
-7. Edge framing.
-8. Prop grouping.
-9. Lighting readability.
-10. Final detail.
-11. Capture review.
+6. Elevation zones/connectors.
+7. Verticality/stairs/landings.
+8. Edge framing.
+9. Prop grouping.
+10. Lighting readability.
+11. Final detail.
+12. Capture review.
 
 Do not skip from gameplay graph to detail props. If a map still feels flat, solve the large forms first.
 
@@ -62,6 +64,7 @@ Do not skip from gameplay graph to detail props. If a map still feels flat, solv
 Codex should:
 
 - Audit current assets before suggesting visual direction.
+- Define elevation intent before treating stairs, ramps, or platforms as art pieces.
 - Use registered Map Builder pieces whenever map art is being placed.
 - Output missing desired assets clearly instead of inventing paths.
 - Propose small staged passes with one dominant visual goal.
@@ -100,3 +103,4 @@ After the macro environment pass, First Breach is improved but still carries the
 
 The next safe visual step is a targeted floor/material readability pass, not another geometry-density pass.
 
+For maps with stairs, ramps, bridges, or raised platforms, read `tasks/map-elevation-grammar.md` before placing pieces. Use it to define lower floor zones, landings, connectors, retaining edges, and gameplay safety constraints.

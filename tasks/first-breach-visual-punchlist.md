@@ -2,7 +2,7 @@
 
 This punch-list tracks visual issues for the compact First Breach vertical slice. Gameplay layout, lanes, pathing, build zones, waves, Warden tuning, enemy stats, loot, Forge, and rewards stay locked unless a separate gameplay task explicitly changes them.
 
-Use `tasks/map-intelligence-system.md` and `tasks/map-design-review-tags.md` when turning future screenshot notes into small map passes. Active post-macro review tags include `floor-repetition`, `too-green`, `material-separation-weak`, `lane-markers-too-debug`, and `edge-void`.
+Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `tasks/map-design-review-tags.md` when turning future screenshot notes into small map passes. Active post-macro review tags include `floor-repetition`, `too-green`, `material-separation-weak`, `lane-markers-too-debug`, `edge-void`, and `elevation-unclear`.
 
 ## Macro Shape
 
@@ -15,6 +15,7 @@ Use `tasks/map-intelligence-system.md` and `tasks/map-design-review-tags.md` whe
 - Central Stair should read as a built stair-and-landing approach, not a huge dropped ramp/slab.
 - Use modular stair bands, landings, and side retaining edges before adding more decoration.
 - Future polish: tune stair asset rotation/scale from screenshots if any step pieces look buried or too repetitive.
+- Future polish: use the First Breach elevation intent to verify bottom landing, stepped connector, top landing, and retaining edges before adding more stair decoration.
 
 ## Ward Crystal Shrine
 

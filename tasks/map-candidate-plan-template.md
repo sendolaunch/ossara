@@ -64,6 +64,35 @@ Describe the large forms before props.
 - Height cues visible from normal camera:
 - Gameplay paths that must remain unchanged:
 
+## Elevation Zones
+
+Use `tasks/map-elevation-grammar.md`.
+
+- Zone id:
+- Band (`sunken`, `low`, `mid`, `high`, `shrine`, `backgroundHigh`):
+- Approximate bounds:
+- Visual height:
+- Gameplay/visual role:
+- Floor material:
+- Edge treatment:
+
+## Elevation Connectors
+
+For each stair, ramp, bridge, terrace, drop edge, or background wall:
+
+- Connector id:
+- Type:
+- From zone:
+- To zone:
+- Lane id if any:
+- Entry cell:
+- Exit cell:
+- Bottom landing:
+- Top landing:
+- Step count if stair:
+- Edge treatment:
+- Visual-only safety:
+
 ## Spawn Gate Treatment
 
 For each spawn:
@@ -141,6 +170,7 @@ If assets fail or are missing:
 Use tags from `tasks/map-design-review-tags.md`.
 
 - Active risk tags:
+- Elevation risk tags:
 - Likely screenshot failure:
 - Preferred small fix:
 - What not to do:
@@ -181,4 +211,3 @@ Use normal mission camera.
 - Are enemies and defenses visible?
 - Are markers useful or too debug-looking?
 - What is the one biggest visual issue to fix next?
-

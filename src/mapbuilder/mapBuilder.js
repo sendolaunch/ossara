@@ -1,5 +1,6 @@
 import { ACTIVE_MAP_THEME_ID } from "../config/mapThemes.js";
 import { cellToWorldPosition, anchorCellForPiece, levelGameplaySnapshot, stableGameplaySnapshotKey } from "./mapCoordinates.js";
+import { elevationZoneById, getElevationBandHeight } from "./mapElevation.js";
 import { mapBuilderAssetNames } from "./mapPieceRegistry.js";
 import { collectMapBuilderAudit, resolveMapPieceTheme } from "./mapThemeResolver.js";
 
@@ -48,13 +49,25 @@ export function expandMapPlanPieces(plan = {}) {
   return out;
 }
 
-export function normalizeMapPiece(piece, { level, registry, themeId = ACTIVE_MAP_THEME_ID } = {}) {
+export function normalizeMapPiece(piece, { level, registry, themeId = ACTIVE_MAP_THEME_ID, elevationPlan = null } = {}) {
   const anchor = anchorCellForPiece(piece);
   const theme = piece.theme || themeId;
   const resolved = resolveMapPieceTheme({ ...piece, theme }, registry);
+  const zones = elevationPlan ? elevationZoneById(elevationPlan) : new Map();
+  const elevationZone = piece.elevationZone ? zones.get(piece.elevationZone) : null;
+  const elevationBand = piece.elevationBand || elevationZone?.band || null;
+  const inheritedVisualY = Number.isFinite(piece.visualY)
+    ? piece.visualY
+    : Number.isFinite(piece.elevation)
+      ? piece.elevation
+      : elevationZone
+        ? elevationZone.visualY
+        : elevationBand
+          ? getElevationBandHeight(elevationBand)
+          : 0;
   const position = piece.position && Number.isFinite(piece.position.x) && Number.isFinite(piece.position.z)
-    ? { x: piece.position.x, y: piece.position.y ?? piece.visualY ?? 0, z: piece.position.z }
-    : cellToWorldPosition(level, anchor || { col: 0, row: 0 }, piece.offset || {}, piece.visualY || piece.elevation || 0);
+    ? { x: piece.position.x, y: piece.position.y ?? inheritedVisualY, z: piece.position.z }
+    : cellToWorldPosition(level, anchor || { col: 0, row: 0 }, piece.offset || {}, inheritedVisualY);
   const scale = normalizeScale(piece.scale || 1);
   return {
     id: piece.id,
@@ -82,18 +95,25 @@ export function normalizeMapPiece(piece, { level, registry, themeId = ACTIVE_MAP
     tags: [...new Set([...(resolved.tags || []), ...(piece.tags || [])])],
     readabilityRole: piece.readabilityRole || null,
     allowOverlapGameplay: !!piece.allowOverlapGameplay,
-    elevationBand: piece.elevationBand || null,
+    elevationZone: piece.elevationZone || null,
+    elevationBand,
   };
 }
 
 export function buildMapPlacements(plan = {}, { level, registry, themeId = plan.theme || ACTIVE_MAP_THEME_ID } = {}) {
   const before = stableGameplaySnapshotKey(levelGameplaySnapshot(level));
-  const placements = expandMapPlanPieces(plan).map((piece) => normalizeMapPiece(piece, { level, registry, themeId }));
+  const placements = expandMapPlanPieces(plan).map((piece) => normalizeMapPiece(piece, {
+    level,
+    registry,
+    themeId,
+    elevationPlan: plan.elevationPlan || null,
+  }));
   const after = stableGameplaySnapshotKey(levelGameplaySnapshot(level));
   const audit = collectMapBuilderAudit(placements);
   return {
     planId: plan.id,
     themeId,
+    elevationPlan: plan.elevationPlan || null,
     placements,
     assetNames: mapBuilderAssetNames(placements),
     audit,
