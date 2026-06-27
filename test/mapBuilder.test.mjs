@@ -24,7 +24,7 @@ ok(built.planId === FIRST_BREACH_MAP_PLAN.id, "build result carries the plan id"
 ok(built.gameplaySnapshotUnchanged, "map-builder build reports unchanged gameplay snapshot");
 ok(before === after, "map-builder does not mutate level geometry or gameplay data");
 ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "map-builder output is deterministic");
-ok(placements.length >= 160 && placements.length <= 175, "First Breach builder adds a stronger but bounded macro-shape visual subset");
+ok(placements.length >= 180 && placements.length <= 195, "First Breach builder adds a stronger but bounded macro-shape visual subset");
 ok(new Set(placements.map((placement) => placement.id)).size === placements.length, "every map-builder placement has a stable unique id");
 
 for (const placement of placements) {
@@ -56,7 +56,8 @@ ok(placements.filter((placement) => placement.readabilityRole === "visual-stair"
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central stair has a visual-only landing");
 ok(placements.some((placement) => placement.readabilityRole === "stair-retaining-edge"), "central stair has retaining edge pieces");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor breakup reduces flat grid-board feeling with broad floor fields");
-ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke markers get in-world ward stone/candle support");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length >= LEVEL.lanes.length * 2, "choke markers get in-world ward stone/candle support");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-lane-marker").length >= LEVEL.lanes.length, "lane helpers get in-world Ward stone/gem support");
 ok(placements.some((placement) => placement.readabilityRole === "crypt-breach-frame"), "crypt breaches get builder-driven gate framing");
 ok(placements.some((placement) => placement.readabilityRole === "front-breach-left"), "left front breach has lane-side builder architecture");
 ok(placements.some((placement) => placement.readabilityRole === "front-breach-right"), "right front breach has lane-side builder architecture");

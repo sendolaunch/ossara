@@ -46,6 +46,7 @@ For social, keep the edit mission-focused: shrine, build, wave start, Warden act
 
 - Ward Crystal shrine hero shot.
 - Central stair / verticality shot.
+- In-world Ward marker shot: floor seams, small glyph stones/gems, and softened choke markings.
 - Build placement shot with `Warden Barricade`.
 - Build placement shot with `Spike-gate`.
 - Enemy approach shot with Rotlings entering the central lane.
@@ -58,6 +59,7 @@ For social, keep the edit mission-focused: shrine, build, wave start, Warden act
 ## What To Avoid Showing
 
 - Do not linger on artificial choke rings too long.
+- Avoid tight framing on any remaining temporary helper primitives; show them as part of the in-world Ward floor language instead.
 - Do not frame unfinished edges, greybox seams, or debug-looking helper geometry as final art.
 - Do not focus on Inventory / Forge art for long; it is functional/basic.
 - Do not show dev-only reward controls in public-facing clips.
@@ -101,4 +103,4 @@ After recording, review the clip with these questions:
 - Keep the camera in normal mission gameplay view.
 - Normal enemy physical loot drops remain disabled by design.
 - Moving while attacking can still create a small glide; keep action shots short and focused on the approved attack pose.
-- Existing readability rings are intentional helper/fallback visuals. They are useful for review but should not dominate the clip.
+- Existing readability rings are now intentionally softened fallback glyphs. Let the new floor stones/gems/seams carry the route read where possible.

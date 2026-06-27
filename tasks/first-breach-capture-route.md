@@ -8,7 +8,7 @@ Use the normal mission camera. Do not rely on photo mode or debug-only framing.
 2. Hold on the opening view long enough to show the rear Ward Crystal shrine, central stair route, and side breach silhouettes.
 3. Select `Warden Barricade` with `1` and place it at the central stair/main choke.
 4. Select `Spike-gate` with `2` and place it on a nearby lane choke so the two blockade roles are readable.
-5. Briefly show the softened build/choke markers and the Ward-green spawn/lane language.
+5. Briefly show the in-world Ward marker language: softened floor seams, small ward stones/gems, and dimmer choke glyphs.
 
 ## Combat Beat
 
@@ -32,5 +32,7 @@ Use the normal mission camera. Do not rely on photo mode or debug-only framing.
 ## Notes
 
 - The current goal is readability: Ward Crystal focal point, lane direction, chokes, and enemy/defense contrast.
+- For public capture, avoid the `devLoot` controls and do not linger on any remaining temporary helper primitives.
+- The best marker-language framing is the normal camera view down the central stair into the Ward shrine, with the Wave 1 route visible.
 - Normal enemy physical loot drops remain disabled by design.
 - Moving while attacking can still create a small glide; keep the shot focused on the approved attack pose and mission readability.

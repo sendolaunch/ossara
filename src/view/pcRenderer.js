@@ -413,8 +413,8 @@ export class PCRenderer {
     // low direction chips. These are visual aids only; pathing/placement still
     // comes from the sim sets below.
     const laneBedMat = this._themeMaterial("laneStoneBed", "rot");
-    const laneEdgeMat = this._themeMaterial("lanePlagueSeam", "plague");
-    const laneChipMat = this._themeMaterial("laneDirectionGold", "gold");
+    const laneEdgeMat = this._themeMaterial("wardLaneSeam", "plague");
+    const laneChipMat = this._themeMaterial("wardRuneSoft", "plague");
     const addLaneStrip = (seg) => {
       const group = new pc.Entity(`lane-strip-${seg.id}`);
       group.setPosition(seg.x, 0, seg.z);
@@ -422,15 +422,15 @@ export class PCRenderer {
       const bed = prim("box", laneBedMat);
       bed.render.castShadows = false;
       bed.render.receiveShadows = false;
-      bed.setLocalScale(seg.width, 0.026, seg.length + 0.14);
-      bed.setLocalPosition(0, 0.016, 0);
+      bed.setLocalScale(seg.width * 0.86, 0.02, seg.length + 0.06);
+      bed.setLocalPosition(0, 0.012, 0);
       group.addChild(bed);
       for (const side of [-1, 1]) {
         const edge = prim("box", laneEdgeMat);
         edge.render.castShadows = false;
         edge.render.receiveShadows = false;
-        edge.setLocalScale(0.038, 0.028, seg.length + 0.08);
-        edge.setLocalPosition(side * seg.width * 0.52, 0.032, 0);
+        edge.setLocalScale(0.022, 0.022, seg.length * 0.86);
+        edge.setLocalPosition(side * seg.width * 0.45, 0.024, 0);
         group.addChild(edge);
       }
       this.app.root.addChild(group);
@@ -441,23 +441,23 @@ export class PCRenderer {
 
     const dirYaw = { north: 180, south: 0, east: 90, west: -90 };
     for (const tele of level.laneTelegraphs || []) {
-      if ((tele.index || 0) % 2 !== 0) continue;
+      if ((tele.index || 0) % 4 !== 0) continue;
       const w = gridToWorld(tele.col, tele.row, level);
       const chip = new pc.Entity(`lane-direction-chip-${tele.laneId || "lane"}`);
-      chip.setPosition(w.x, 0.064, w.z);
+      chip.setPosition(w.x, 0.052, w.z);
       chip.setLocalEulerAngles(0, dirYaw[tele.dir] ?? 0, 0);
       const shaft = prim("box", laneChipMat);
       shaft.render.castShadows = false;
       shaft.render.receiveShadows = false;
-      shaft.setLocalScale(0.1, 0.034, 0.36);
-      shaft.setLocalPosition(0, 0, -0.1);
+      shaft.setLocalScale(0.064, 0.024, 0.24);
+      shaft.setLocalPosition(0, 0, -0.06);
       chip.addChild(shaft);
       const head = prim("box", laneChipMat);
       head.render.castShadows = false;
       head.render.receiveShadows = false;
-      head.setLocalScale(0.21, 0.04, 0.21);
+      head.setLocalScale(0.135, 0.026, 0.135);
       head.setLocalEulerAngles(0, 45, 0);
-      head.setLocalPosition(0, 0.004, 0.16);
+      head.setLocalPosition(0, 0.003, 0.112);
       chip.addChild(head);
       this.app.root.addChild(chip);
     }
@@ -468,12 +468,12 @@ export class PCRenderer {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
       const tile = prim("box", laneMat);
-      tile.setLocalScale(0.34, 0.02, 0.28);
-      tile.setPosition(w.x, 0.038, w.z);
+      tile.setLocalScale(0.25, 0.014, 0.22);
+      tile.setPosition(w.x, 0.032, w.z);
       this.app.root.addChild(tile);
     }
 
-    const buildHintMat = this._themeMaterial("buildableGoldSoft", "gold");
+    const buildHintMat = this._themeMaterial("wardBuildHintSoft", "gold");
     for (const cell of expandRects(level.buildableZones || [])) {
       const key = `${cell.col},${cell.row}`;
       if (world.pathSet.has(key) || world.blockedSet.has(key) || world.reservedSet.has(key)) continue;
@@ -481,13 +481,15 @@ export class PCRenderer {
       const tile = prim("box", buildHintMat);
       tile.render.castShadows = false;
       tile.render.receiveShadows = false;
-      tile.setLocalScale(0.32, 0.018, 0.32);
-      tile.setPosition(w.x, 0.01, w.z);
+      const hintScale = 0.22 + ((cell.col * 11 + cell.row * 7) % 4) * 0.018;
+      tile.setLocalScale(hintScale, 0.012, hintScale * (0.86 + ((cell.col + cell.row) % 2) * 0.12));
+      tile.setLocalEulerAngles(0, ((cell.col * 13 + cell.row * 5) % 16) - 8, 0);
+      tile.setPosition(w.x, 0.008, w.z);
       this.app.root.addChild(tile);
     }
 
-    const mainChokeMat = this._themeMaterial("mainChokeGold", "gold");
-    const fallbackChokeMat = this._themeMaterial("chokeReadabilityGreen", "plague");
+    const mainChokeMat = this._themeMaterial("wardChokeGlyph", "gold");
+    const fallbackChokeMat = this._themeMaterial("wardRuneSoft", "plague");
     for (const spec of chokeReadabilitySpecs(level)) {
       const ring = prim("torus", spec.kind === "main" ? mainChokeMat : fallbackChokeMat);
       ring.name = `choke-readability-${spec.id}`;
@@ -506,8 +508,8 @@ export class PCRenderer {
     const markerMat = this._themeMaterial("shadowRubble", "rot");
     const portalMat = this._themeMaterial("wardGreenEmissive", "plague");
     const thresholdMat = this._themeMaterial("spawnThresholdBlood", "blood");
-    const gateRingMat = this._themeMaterial("spawnGateWardRing", "plague");
-    const gateArrowMat = this._themeMaterial("laneDirectionGold", "gold");
+    const gateRingMat = this._themeMaterial("wardSpawnBreach", "plague");
+    const gateArrowMat = this._themeMaterial("wardRuneSoft", "plague");
     const addGatePortal = (lane, x, z, side = "north") => {
       const horizontal = side === "north" || side === "south";
       const sx = horizontal ? 3.2 : 0.8;
@@ -527,7 +529,7 @@ export class PCRenderer {
       gateRing.render.castShadows = false;
       gateRing.render.receiveShadows = false;
       gateRing.setLocalEulerAngles(90, 0, 0);
-      gateRing.setLocalScale(horizontal ? 1.82 : 1.46, horizontal ? 1.82 : 1.46, horizontal ? 1.82 : 1.46);
+      gateRing.setLocalScale(horizontal ? 1.56 : 1.28, horizontal ? 1.56 : 1.28, horizontal ? 1.56 : 1.28);
       gateRing.setPosition(x, 0.16, z);
       this.app.root.addChild(gateRing);
       const spawn = lane.spawn || lane.waypoints?.[0] || { col: 0, row: 0 };
@@ -540,20 +542,20 @@ export class PCRenderer {
       const fx = fdx / fl;
       const fz = fdz / fl;
       const gateArrow = new pc.Entity(`${lane.id}-gate-arrow`);
-      gateArrow.setPosition(x + fx * 2.15, 0.09, z + fz * 2.15);
+      gateArrow.setPosition(x + fx * 2.0, 0.072, z + fz * 2.0);
       gateArrow.setLocalEulerAngles(0, (Math.atan2(fx, fz) * 180) / Math.PI, 0);
       const gateShaft = prim("box", gateArrowMat);
       gateShaft.render.castShadows = false;
       gateShaft.render.receiveShadows = false;
-      gateShaft.setLocalScale(0.26, 0.05, 0.82);
-      gateShaft.setLocalPosition(0, 0, -0.16);
+      gateShaft.setLocalScale(0.14, 0.035, 0.52);
+      gateShaft.setLocalPosition(0, 0, -0.1);
       gateArrow.addChild(gateShaft);
       const gateHead = prim("box", gateArrowMat);
       gateHead.render.castShadows = false;
       gateHead.render.receiveShadows = false;
-      gateHead.setLocalScale(0.48, 0.06, 0.48);
+      gateHead.setLocalScale(0.28, 0.042, 0.28);
       gateHead.setLocalEulerAngles(0, 45, 0);
-      gateHead.setLocalPosition(0, 0.006, 0.34);
+      gateHead.setLocalPosition(0, 0.004, 0.22);
       gateArrow.addChild(gateHead);
       this.app.root.addChild(gateArrow);
       const portal = prim("sphere", portalMat);
@@ -933,27 +935,27 @@ export class PCRenderer {
     this.spawnIndicatorEntities = [];
     for (const ent of this.laneTelegraphEntities || []) ent.destroy();
     this.laneTelegraphEntities = [];
-    const auraMat = mat("plague", 0.9);
-    const crystalMat = mat("plague", 1.45);
-    const barMat = mat("bone", 0.25);
+    const auraMat = this._themeMaterial("wardSpawnBreach", "plague");
+    const crystalMat = this._themeMaterial("wardGreenEmissive", "plague");
+    const barMat = this._themeMaterial("boneAsh", "bone");
     for (const spec of spawnIndicatorSpecs(level)) {
       const group = new pc.Entity(`spawn-indicator-${spec.id}`);
       const aura = prim("torus", auraMat);
-      aura.setLocalScale(1.15 + spec.threatRating * 0.12, 1.15 + spec.threatRating * 0.12, 1.15 + spec.threatRating * 0.12);
+      aura.setLocalScale(0.95 + spec.threatRating * 0.1, 0.95 + spec.threatRating * 0.1, 0.95 + spec.threatRating * 0.1);
       aura.setLocalEulerAngles(90, 0, 0);
-      aura.setLocalPosition(0, 0.24, 0);
+      aura.setLocalPosition(0, 0.18, 0);
       group.addChild(aura);
       const crystal = prim("cone", crystalMat);
-      crystal.setLocalScale(0.32, 0.78, 0.32);
-      crystal.setLocalPosition(0, spec.y + 0.82, 0);
+      crystal.setLocalScale(0.26, 0.66, 0.26);
+      crystal.setLocalPosition(0, spec.y + 0.76, 0);
       group.addChild(crystal);
       const threatBar = prim("box", barMat);
-      threatBar.setLocalScale(0.55 + spec.threatRating * 0.35, 0.08, 0.22);
-      threatBar.setLocalPosition(0, spec.y + 1.58, 0);
+      threatBar.setLocalScale(0.42 + spec.threatRating * 0.28, 0.06, 0.16);
+      threatBar.setLocalPosition(0, spec.y + 1.42, 0);
       group.addChild(threatBar);
       const stem = prim("box", barMat);
-      stem.setLocalScale(0.045, 0.42, 0.045);
-      stem.setLocalPosition(0, spec.y + 0.42, 0);
+      stem.setLocalScale(0.035, 0.34, 0.035);
+      stem.setLocalPosition(0, spec.y + 0.36, 0);
       group.addChild(stem);
       group.setPosition(spec.x, 0, spec.z);
       group.setLocalEulerAngles(0, (spec.facing * 180) / Math.PI, 0);
@@ -961,21 +963,21 @@ export class PCRenderer {
       this.app.root.addChild(group);
       this.spawnIndicatorEntities.push(group);
     }
-    const arrowMat = mat("plague", 0.72);
+    const arrowMat = this._themeMaterial("wardRuneSoft", "plague");
     const dirYaw = { north: 180, south: 0, east: 90, west: -90 };
     for (const tele of level.laneTelegraphs || []) {
       const w = gridToWorld(tele.col, tele.row, level);
       const group = new pc.Entity(`lane-telegraph-${tele.laneId || "lane"}`);
       const shaft = prim("box", arrowMat);
-      shaft.setLocalScale(0.18, 0.07, 0.62);
-      shaft.setLocalPosition(0, 0, -0.12);
+      shaft.setLocalScale(0.12, 0.045, 0.42);
+      shaft.setLocalPosition(0, 0, -0.08);
       group.addChild(shaft);
       const head = prim("box", arrowMat);
-      head.setLocalScale(0.34, 0.08, 0.34);
+      head.setLocalScale(0.22, 0.052, 0.22);
       head.setLocalEulerAngles(0, 45, 0);
-      head.setLocalPosition(0, 0.01, 0.32);
+      head.setLocalPosition(0, 0.008, 0.22);
       group.addChild(head);
-      group.setPosition(w.x, tele.y ?? 0.34, w.z);
+      group.setPosition(w.x, Math.max(0.18, (tele.y ?? 0.34) * 0.72), w.z);
       group.setLocalEulerAngles(0, dirYaw[tele.dir] ?? 0, 0);
       group._ossaraBaseScale = 1;
       this.app.root.addChild(group);

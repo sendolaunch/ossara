@@ -52,7 +52,7 @@ for (const lane of LEVEL.lanes) {
   ok(main.col === lane.choke.col && main.row === lane.choke.row, `${lane.id} main choke helper follows lane choke data`);
   ok(fallback.col === lane.fallbackChoke.col && fallback.row === lane.fallbackChoke.row, `${lane.id} fallback helper follows lane fallback data`);
   ok(Number.isFinite(main.x) && Number.isFinite(main.z) && main.radius > 1, `${lane.id} main choke helper has a readable world ring`);
-  ok(Number.isFinite(fallback.x) && Number.isFinite(fallback.z) && fallback.radius > 1, `${lane.id} fallback choke helper has a readable world ring`);
+  ok(Number.isFinite(fallback.x) && Number.isFinite(fallback.z) && fallback.radius >= 0.8, `${lane.id} fallback choke helper has a softened readable world ring`);
 }
 
 const wardSpec = wardCoreReadabilitySpec(LEVEL);

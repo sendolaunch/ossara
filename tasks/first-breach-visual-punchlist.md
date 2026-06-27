@@ -36,12 +36,22 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 - Keep them present but softer, smaller, and supported by in-world stones/candles where practical.
 - Future polish: replace primitive rings with actual rune/stone assets when a safe imported option exists.
 
+## In-world Ward Marker Direction
+
+- Lane helpers should feel like Ward magic embedded into the ruined floor: worn seams, small stones, gem sparks, and low glyph chips instead of bright editor arrows.
+- Chokes should feel like ward-etched defensive positions, not debug circles. Rings may remain as temporary fallback helpers, but they should be smaller, dimmer, and supported by nearby ward stones/candles/gems.
+- Spawn entrances should stay readable as enemy breach points, while using cursed gate thresholds and softer Ward-green accents instead of neon UI markers.
+- Build readability should remain clear enough for first-run placement, but buildable hints should read as faint Ward-lit stone patches rather than a uniform tile overlay.
+- Public capture should avoid lingering on any remaining synthetic helper geometry. Frame the Ward marker language as floor detail, route guidance, and shrine magic.
+- Remaining synthetic helpers are temporary until real rune decals, etched floor textures, or dedicated in-world marker assets exist.
+
 ## Ground / Floor Breakup
 
 - Break up the uniform grid with larger stone slab patches around the central stair, main choke, fallback choke, and Ward apron.
 - Preserve placement readability; do not hide valid/invalid placement feedback.
 - Floor/material readability pass applied: broad low-courtyard, mid-transition, high-landing, and shrine slab fields now carry distinct material tokens; repeated path/build helper squares were softened and reduced so the mid-courtyard reads less like a checker board.
 - Remaining checker read should now come mostly from intentional gameplay helper hints, not the authored art layer.
+- In-world marker pass applied: lane seams, direction chips, choke rings, build hints, and spawn gate helper arrows are softer and supported by small Ward stones/gems/candles plus a few extra broad slab fields.
 - Future polish: migrate more floor breakup from renderer hints into Map Builder-authored floor fields only after another human capture review.
 
 ## Material Hierarchy

@@ -41,6 +41,13 @@ for (const tokenName of [
   "shadowRubble",
   "chokeReadabilityGreen",
   "buildableGoldSoft",
+  "wardRuneSoft",
+  "wardLaneSeam",
+  "wardChokeGlyph",
+  "wardBuildHintSoft",
+  "wardSpawnBreach",
+  "wardCrackGlow",
+  "shadowEdgeRuin",
 ]) {
   ok(!!theme.materialTokens[tokenName], `${tokenName} material token resolves`);
 }
@@ -108,7 +115,8 @@ ok(centralStairs.some((placement) => placement.elevationBand === "high"), "centr
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
 ok(placements.some((placement) => placement.readabilityRole === "ward-approach-terrace" && placement.elevationBand === "shrine"), "Ward approach terrace connects into shrine elevation band");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor slabs break up the flat grid-board read");
-ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke readability is supported by in-world ward markers");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length >= LEVEL.lanes.length * 2, "choke readability is supported by in-world ward markers");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-lane-marker").length >= LEVEL.lanes.length, "lane readability is supported by in-world ward markers");
 ok(placements.filter((placement) => placement.readabilityRole === "crypt-breach-frame").length >= 6, "side crypt breaches have visible frame pieces");
 ok(placements.filter((placement) => placement.readabilityRole?.startsWith("front-breach-")).length >= 8, "front breaches have lane-side architecture support");
 
@@ -117,7 +125,7 @@ ok(built.audit.disallowedPacks.length === 0, "audit has no disallowed packs");
 ok(built.audit.fallbackPlacements.length === 11, "audit captures the expected fallback readability rings");
 ok(built.assetNames.every((assetName) => typeof assetName === "string" && assetName.length > 0), "asset name list is normalized for renderer preloading");
 ok(mapThemeMaterialToken(theme, "stone") === "ruinedStoneMid", "legacy stone fallback material aliases to themed ruined stone");
-ok(mapThemeMaterialToken(theme, "plague") === "chokeReadabilityGreen", "legacy plague fallback material aliases to softened choke green");
+ok(mapThemeMaterialToken(theme, "plague") === "wardRuneSoft", "legacy plague fallback material aliases to soft Ward rune green");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-front-courtyard-west-field"), theme) === "courtyardLowStone", "front courtyard broad slab receives low material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-mid-courtyard-west-slab"), theme) === "courtyardMidStone", "mid courtyard broad slab receives mid material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-high-landing-center-slab"), theme) === "landingHighStone", "high landing broad slab receives high material");
