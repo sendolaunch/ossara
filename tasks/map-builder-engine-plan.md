@@ -93,6 +93,8 @@ Fallbacks are for simple visual guides such as choke/Ward rings. They are not ga
 
 ## Authoring Rules
 
+Use `tasks/map-intelligence-system.md` before starting a new map or major visual revision. The Map Intelligence System defines the design grammar, build order, human-review tags, and candidate-plan template that should shape Map Builder plans before any pieces are placed.
+
 Each map-builder piece should have:
 
 - stable `id`
@@ -134,6 +136,8 @@ The renderer visualizes normalized placements only. It does not decide gameplay 
 
 Future map passes can build on this by:
 
+- using `tasks/map-candidate-plan-template.md` for new mission candidates before adding map pieces
+- tagging screenshot feedback with `tasks/map-design-review-tags.md` and `src/mapbuilder/mapQualityTags.js`
 - moving more `missionArt.js` hard-coded specs into map plans
 - adding reusable recipe helpers for spawn gates, lane shoulders, and shrine dressing
 - adding per-map theme selection

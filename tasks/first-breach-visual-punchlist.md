@@ -2,6 +2,8 @@
 
 This punch-list tracks visual issues for the compact First Breach vertical slice. Gameplay layout, lanes, pathing, build zones, waves, Warden tuning, enemy stats, loot, Forge, and rewards stay locked unless a separate gameplay task explicitly changes them.
 
+Use `tasks/map-intelligence-system.md` and `tasks/map-design-review-tags.md` when turning future screenshot notes into small map passes. Active post-macro review tags include `floor-repetition`, `too-green`, `material-separation-weak`, `lane-markers-too-debug`, and `edge-void`.
+
 ## Macro Shape
 
 - Keep pushing First Breach away from a flat grid-board read and toward a ruined courtyard with clear architectural framing.
