@@ -40,7 +40,15 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 
 - Break up the uniform grid with larger stone slab patches around the central stair, main choke, fallback choke, and Ward apron.
 - Preserve placement readability; do not hide valid/invalid placement feedback.
-- Future polish: migrate more floor breakup from renderer hints into Map Builder-authored floor fields.
+- Floor/material readability pass applied: broad low-courtyard, mid-transition, high-landing, and shrine slab fields now carry distinct material tokens; repeated path/build helper squares were softened and reduced so the mid-courtyard reads less like a checker board.
+- Remaining checker read should now come mostly from intentional gameplay helper hints, not the authored art layer.
+- Future polish: migrate more floor breakup from renderer hints into Map Builder-authored floor fields only after another human capture review.
+
+## Material Hierarchy
+
+- Current hierarchy: low/front courtyard uses darker `courtyardLowStone`, central transition uses `courtyardMidStone`, stair treads keep `ruinedStoneStep`, high landings use `landingHighStone`, and the Ward platform uses `shrinePlatformStone`.
+- This improves separation between floor, stairs, landing, and shrine without changing gameplay elevation or pathing.
+- Future real material pass: replace token-only color separation with proper stone texture variation, grime masks, and in-world floor decals when the asset/texture pipeline is ready.
 
 ## Prop Scale / Clutter
 
@@ -57,5 +65,6 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 ## Deferred Final Art / Material Work
 
 - Final terrain blending, bespoke rune decals, richer cathedral walls, higher-quality stair meshes, and full material polish are deferred.
+- Lane arrows/rings remain useful temporary Ward-magic helpers, but still need future in-world rune/stone marker replacements before final art.
 - Inventory / Forge and UI art are functional/basic and should not drive this environment pass.
 - Mission 2 planning or a heavier First Breach material pass should wait until this macro-shape pass is reviewed in motion.

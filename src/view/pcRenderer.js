@@ -423,14 +423,14 @@ export class PCRenderer {
       bed.render.castShadows = false;
       bed.render.receiveShadows = false;
       bed.setLocalScale(seg.width, 0.026, seg.length + 0.14);
-      bed.setLocalPosition(0, 0.018, 0);
+      bed.setLocalPosition(0, 0.016, 0);
       group.addChild(bed);
       for (const side of [-1, 1]) {
         const edge = prim("box", laneEdgeMat);
         edge.render.castShadows = false;
         edge.render.receiveShadows = false;
-        edge.setLocalScale(0.055, 0.034, seg.length + 0.08);
-        edge.setLocalPosition(side * seg.width * 0.52, 0.036, 0);
+        edge.setLocalScale(0.038, 0.028, seg.length + 0.08);
+        edge.setLocalPosition(side * seg.width * 0.52, 0.032, 0);
         group.addChild(edge);
       }
       this.app.root.addChild(group);
@@ -449,15 +449,15 @@ export class PCRenderer {
       const shaft = prim("box", laneChipMat);
       shaft.render.castShadows = false;
       shaft.render.receiveShadows = false;
-      shaft.setLocalScale(0.14, 0.04, 0.46);
+      shaft.setLocalScale(0.1, 0.034, 0.36);
       shaft.setLocalPosition(0, 0, -0.1);
       chip.addChild(shaft);
       const head = prim("box", laneChipMat);
       head.render.castShadows = false;
       head.render.receiveShadows = false;
-      head.setLocalScale(0.27, 0.048, 0.27);
+      head.setLocalScale(0.21, 0.04, 0.21);
       head.setLocalEulerAngles(0, 45, 0);
-      head.setLocalPosition(0, 0.004, 0.2);
+      head.setLocalPosition(0, 0.004, 0.16);
       chip.addChild(head);
       this.app.root.addChild(chip);
     }
@@ -468,8 +468,8 @@ export class PCRenderer {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
       const tile = prim("box", laneMat);
-      tile.setLocalScale(0.52, 0.028, 0.48);
-      tile.setPosition(w.x, 0.046, w.z);
+      tile.setLocalScale(0.34, 0.02, 0.28);
+      tile.setPosition(w.x, 0.038, w.z);
       this.app.root.addChild(tile);
     }
 
@@ -481,8 +481,8 @@ export class PCRenderer {
       const tile = prim("box", buildHintMat);
       tile.render.castShadows = false;
       tile.render.receiveShadows = false;
-      tile.setLocalScale(0.54, 0.026, 0.54);
-      tile.setPosition(w.x, 0.012, w.z);
+      tile.setLocalScale(0.32, 0.018, 0.32);
+      tile.setPosition(w.x, 0.01, w.z);
       this.app.root.addChild(tile);
     }
 

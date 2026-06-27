@@ -30,6 +30,11 @@ for (const tokenName of [
   "ruinedStoneDark",
   "ruinedStoneMid",
   "ruinedStoneStep",
+  "courtyardLowStone",
+  "courtyardMidStone",
+  "landingHighStone",
+  "shrinePlatformStone",
+  "floorRubbleDark",
   "wardGreenEmissive",
   "torchWarm",
   "boneAsh",
@@ -102,7 +107,7 @@ ok(centralStairs.some((placement) => placement.elevationBand === "mid"), "centra
 ok(centralStairs.some((placement) => placement.elevationBand === "high"), "central stair includes a high exit band");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
 ok(placements.some((placement) => placement.readabilityRole === "ward-approach-terrace" && placement.elevationBand === "shrine"), "Ward approach terrace connects into shrine elevation band");
-ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 10, "macro floor slabs break up the flat grid-board read");
+ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor slabs break up the flat grid-board read");
 ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke readability is supported by in-world ward markers");
 ok(placements.filter((placement) => placement.readabilityRole === "crypt-breach-frame").length >= 6, "side crypt breaches have visible frame pieces");
 ok(placements.filter((placement) => placement.readabilityRole?.startsWith("front-breach-")).length >= 8, "front breaches have lane-side architecture support");
@@ -113,8 +118,14 @@ ok(built.audit.fallbackPlacements.length === 11, "audit captures the expected fa
 ok(built.assetNames.every((assetName) => typeof assetName === "string" && assetName.length > 0), "asset name list is normalized for renderer preloading");
 ok(mapThemeMaterialToken(theme, "stone") === "ruinedStoneMid", "legacy stone fallback material aliases to themed ruined stone");
 ok(mapThemeMaterialToken(theme, "plague") === "chokeReadabilityGreen", "legacy plague fallback material aliases to softened choke green");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-front-courtyard-west-field"), theme) === "courtyardLowStone", "front courtyard broad slab receives low material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-mid-courtyard-west-slab"), theme) === "courtyardMidStone", "mid courtyard broad slab receives mid material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-high-landing-center-slab"), theme) === "landingHighStone", "high landing broad slab receives high material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-lower-run"), theme) === "ruinedStoneStep", "central stair run receives readable step material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-approach-upper-landing"), theme) === "wardApproachGold", "Ward approach upper landing receives direct shrine approach material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-bottom-landing"), theme) === "courtyardLowStone", "central stair bottom landing receives low courtyard material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-mid-landing"), theme) === "courtyardMidStone", "central stair mid landing receives mid transition material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-main-landing"), theme) === "landingHighStone", "central stair top landing receives high landing material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-approach-upper-landing"), theme) === "shrinePlatformStone", "Ward approach upper landing receives shrine platform material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-gem-pile"), theme) === "wardGreenEmissive", "Ward shrine gem pile receives Ward-green material");
 
 console.log(`mapValidation: ${pass}/${pass + fail} checks passed`);

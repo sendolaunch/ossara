@@ -13,6 +13,21 @@ const SPAWN_DRESSING = Object.freeze({
 const LANE_FLOOR_KEYS = ["broken-floor-tile", "stone-floor-large", "lane-floor-rocks", "weed-floor-a", "weed-floor-b"];
 const MACRO_FLOOR_KEYS = ["stone-floor-large", "lane-floor-rocks", "broken-floor-tile", "weed-floor-a"];
 
+function floorMaterialTokenForBand(band) {
+  if (band === "shrine") return "shrinePlatformStone";
+  if (band === "high") return "landingHighStone";
+  if (band === "mid") return "courtyardMidStone";
+  return "courtyardLowStone";
+}
+
+function laneHintMaterialToken(tele, level) {
+  const coreRow = level.core?.row ?? 10;
+  if (tele.row <= coreRow + 8) return "shrinePlatformStone";
+  if (tele.row <= 36) return "landingHighStone";
+  if (tele.row <= 46) return "courtyardMidStone";
+  return "courtyardLowStone";
+}
+
 export function firstBreachElevationPlan(level = LEVEL) {
   const core = level.core || { col: 36, row: 10 };
   return {
@@ -270,8 +285,9 @@ function laneFloorHints(level) {
       readabilityRole: "lane-art",
       allowOverlapGameplay: true,
       visualY: 0.055,
-      scale: 0.78,
+      scale: 0.68 + ((tele.col + tele.row) % 3) * 0.06,
       rotation: ((tele.col * 19 + tele.row * 13) % 80) - 40,
+      materialToken: laneHintMaterialToken(tele, level),
       tags: ["lane", "path-aligned", "mapbuilder"],
     }));
 }
@@ -346,11 +362,16 @@ function chokeWardStones(level) {
 
 function macroFloorBreakup() {
   const patches = [
+    { id: "front-courtyard-west-field", col: 29, row: 51, scale: 1.28, rot: -19, zone: "front-courtyard-low", band: "low", y: 0.014, assetKey: "stone-floor-large" },
+    { id: "front-courtyard-east-field", col: 43, row: 51, scale: 1.28, rot: 17, zone: "front-courtyard-low", band: "low", y: 0.014, assetKey: "stone-floor-large" },
     { id: "central-lower-left", col: 33, row: 50, scale: 0.95, rot: -8, zone: "front-courtyard-low", band: "low", y: 0.018 },
     { id: "central-lower-mid", col: 36, row: 50, scale: 1.04, rot: 3, zone: "front-courtyard-low", band: "low", y: 0.018 },
     { id: "central-lower-right", col: 39, row: 50, scale: 0.95, rot: 9, zone: "front-courtyard-low", band: "low", y: 0.018 },
+    { id: "mid-courtyard-west-slab", col: 30, row: 43, scale: 1.2, rot: 31, zone: "central-stair-mid", band: "mid", y: 0.078, assetKey: "lane-floor-rocks" },
+    { id: "mid-courtyard-east-slab", col: 42, row: 43, scale: 1.2, rot: -29, zone: "central-stair-mid", band: "mid", y: 0.078, assetKey: "lane-floor-rocks" },
     { id: "central-mid-left", col: 33, row: 44, scale: 1.02, rot: 12, zone: "central-stair-mid", band: "mid", y: 0.085 },
     { id: "central-mid-right", col: 39, row: 44, scale: 1.02, rot: -12, zone: "central-stair-mid", band: "mid", y: 0.085 },
+    { id: "high-landing-center-slab", col: 36, row: 35, scale: 1.16, rot: 45, zone: "main-landing-high", band: "high", y: 0.155, assetKey: "stone-floor-large" },
     { id: "central-landing-left", col: 32, row: 35, scale: 0.96, rot: -18, zone: "main-landing-high", band: "high", y: 0.16 },
     { id: "central-landing-right", col: 40, row: 35, scale: 0.96, rot: 18, zone: "main-landing-high", band: "high", y: 0.16 },
     { id: "fallback-left-apron", col: 32, row: 22, scale: 0.92, rot: 26, zone: "main-landing-high", band: "high", y: 0.15 },
@@ -363,7 +384,7 @@ function macroFloorBreakup() {
   return patches.map((patch, index) => ({
     id: `macro-floor-${patch.id}`,
     type: "laneFloor",
-    assetKey: MACRO_FLOOR_KEYS[index % MACRO_FLOOR_KEYS.length],
+    assetKey: patch.assetKey || MACRO_FLOOR_KEYS[index % MACRO_FLOOR_KEYS.length],
     cell: { col: patch.col, row: patch.row },
     readabilityRole: "macro-floor-breakup",
     allowOverlapGameplay: true,
@@ -372,7 +393,7 @@ function macroFloorBreakup() {
     elevationBand: patch.band,
     scale: patch.scale,
     rotation: patch.rot,
-    materialToken: patch.band === "shrine" ? "wardApproachGold" : patch.band === "high" ? "ruinedStoneStep" : "ruinedStoneDark",
+    materialToken: floorMaterialTokenForBand(patch.band),
     tags: ["floor", "macro-shape", "elevation-zone", "mapbuilder"],
   }));
 }
@@ -451,7 +472,7 @@ function centralStairArchitecture() {
       visualY: edge.visualY,
       elevationZone: edge.zone,
       elevationBand: edge.band,
-      materialToken: "ruinedStoneDark",
+      materialToken: edge.band === "high" ? "landingHighStone" : edge.band === "mid" ? "courtyardMidStone" : "floorRubbleDark",
       ...shared,
     },
     {
@@ -465,7 +486,7 @@ function centralStairArchitecture() {
       visualY: edge.visualY,
       elevationZone: edge.zone,
       elevationBand: edge.band,
-      materialToken: "ruinedStoneDark",
+      materialToken: edge.band === "high" ? "landingHighStone" : edge.band === "mid" ? "courtyardMidStone" : "floorRubbleDark",
       ...shared,
     },
   ]);
@@ -492,7 +513,7 @@ function centralStairArchitecture() {
       visualY: 0.02,
       elevationZone: "front-courtyard-low",
       elevationBand: "low",
-      materialToken: "ruinedStoneMid",
+      materialToken: "courtyardLowStone",
       scale: 0.78,
       rotation: 180,
       ...shared,
@@ -508,7 +529,7 @@ function centralStairArchitecture() {
       visualY: 0.096,
       elevationZone: "central-stair-mid",
       elevationBand: "mid",
-      materialToken: "ruinedStoneStep",
+      materialToken: "courtyardMidStone",
       scale: 0.72,
       rotation: 180,
       ...shared,
@@ -524,7 +545,7 @@ function centralStairArchitecture() {
       visualY: 0.175,
       elevationZone: "main-landing-high",
       elevationBand: "high",
-      materialToken: "ruinedStoneStep",
+      materialToken: "landingHighStone",
       scale: 0.82,
       rotation: 180,
       ...shared,
@@ -539,7 +560,7 @@ function centralStairArchitecture() {
       visualY: 0.16,
       elevationZone: "main-landing-high",
       elevationBand: "high",
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       scale: 0.62,
       rotation: 18,
       ...shared,
@@ -553,7 +574,7 @@ function centralStairArchitecture() {
       visualY: 0.16,
       elevationZone: "main-landing-high",
       elevationBand: "high",
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       scale: 0.62,
       rotation: -18,
       ...shared,
@@ -682,7 +703,7 @@ function wardShrinePieces(level) {
       visualY: 0.02,
       elevationZone: "ward-shrine",
       elevationBand: "shrine",
-      materialToken: "ruinedStoneDark",
+      materialToken: "shrinePlatformStone",
       scale: 1.18,
       rotation: 45,
       tags: ["ward", "platform", "elevation-zone", "mapbuilder"],
@@ -697,7 +718,7 @@ function wardShrinePieces(level) {
       visualY: 0.09,
       elevationZone: "ward-shrine",
       elevationBand: "shrine",
-      materialToken: "ruinedStoneStep",
+      materialToken: "landingHighStone",
       scale: 0.58,
       rotation: 45,
       tags: ["ward", "platform", "pedestal", "elevation-zone", "mapbuilder"],
@@ -799,7 +820,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "stone-landing",
       cell: { col: core.col, row: core.row + 12 },
       visualY: 0.15,
-      materialToken: "ruinedStoneStep",
+      materialToken: "landingHighStone",
       scale: 0.72,
       rotation: 180,
       ...approachShared,
@@ -810,7 +831,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "stone-landing",
       cell: { col: core.col, row: core.row + 7 },
       visualY: 0.19,
-      materialToken: "wardApproachGold",
+      materialToken: "shrinePlatformStone",
       scale: 0.66,
       rotation: 180,
       ...approachShared,
@@ -823,7 +844,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "retaining-wall-half",
       cell: { col: core.col - 4, row: core.row + 9 },
       visualY: 0.17,
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       scale: 0.58,
       rotation: 90,
       ...approachShared,
@@ -834,7 +855,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "retaining-wall-half",
       cell: { col: core.col + 4, row: core.row + 9 },
       visualY: 0.17,
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       scale: 0.58,
       rotation: 90,
       ...approachShared,
@@ -845,7 +866,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "stone-landing",
       cell: { col: core.col, row: core.row + 3 },
       visualY: 0.2,
-      materialToken: "wardApproachGold",
+      materialToken: "shrinePlatformStone",
       scale: 0.78,
       rotation: 180,
       ...shared,
@@ -856,7 +877,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "raised-platform-edge",
       cell: { col: core.col, row: core.row - 3 },
       visualY: 0.18,
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       scale: 0.82,
       ...shared,
     },
@@ -866,7 +887,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "raised-platform-edge",
       cell: { col: core.col, row: core.row + 5 },
       visualY: 0.16,
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       scale: 0.9,
       rotation: 180,
       ...shared,
@@ -877,7 +898,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "raised-foundation",
       cell: { col: core.col - 4, row: core.row + 2 },
       visualY: 0.14,
-      materialToken: "ruinedStoneDark",
+      materialToken: "shrinePlatformStone",
       scale: 0.62,
       rotation: 20,
       ...shared,
@@ -888,7 +909,7 @@ function wardShrineDepthPieces(level) {
       assetKey: "raised-foundation",
       cell: { col: core.col + 4, row: core.row + 2 },
       visualY: 0.14,
-      materialToken: "ruinedStoneDark",
+      materialToken: "shrinePlatformStone",
       scale: 0.62,
       rotation: -20,
       ...shared,
@@ -901,7 +922,7 @@ function wardShrineDepthPieces(level) {
       scale: 0.62,
       rotation: 90,
       visualY: 0.12,
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       ...shared,
     },
     {
@@ -912,7 +933,7 @@ function wardShrineDepthPieces(level) {
       scale: 0.62,
       rotation: 90,
       visualY: 0.12,
-      materialToken: "ruinedStoneDark",
+      materialToken: "floorRubbleDark",
       ...shared,
     },
     {

@@ -55,7 +55,7 @@ ok(placements.filter((placement) => placement.tags.includes("verticality") && pl
 ok(placements.filter((placement) => placement.readabilityRole === "visual-stair").length >= 15, "central stair uses modular step bands instead of one slab");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central stair has a visual-only landing");
 ok(placements.some((placement) => placement.readabilityRole === "stair-retaining-edge"), "central stair has retaining edge pieces");
-ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 10, "macro floor breakup reduces flat grid-board feeling");
+ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor breakup reduces flat grid-board feeling with broad floor fields");
 ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke markers get in-world ward stone/candle support");
 ok(placements.some((placement) => placement.readabilityRole === "crypt-breach-frame"), "crypt breaches get builder-driven gate framing");
 ok(placements.some((placement) => placement.readabilityRole === "front-breach-left"), "left front breach has lane-side builder architecture");
@@ -97,10 +97,17 @@ ok(byId.get("central-stair-lower-run")?.elevationBand === "low", "central stair 
 ok(byId.get("central-stair-middle-center")?.elevationBand === "mid", "central stair middle run carries mid elevation band intent");
 ok(byId.get("central-stair-upper-center")?.elevationBand === "high", "central stair upper run carries high landing intent");
 ok(byId.get("central-stair-lower-run")?.materialToken === "ruinedStoneStep", "central stair material token is preserved for renderer material resolution");
+ok(byId.get("macro-floor-front-courtyard-west-field")?.materialToken === "courtyardLowStone", "front courtyard broad floor field uses low courtyard material");
+ok(byId.get("macro-floor-mid-courtyard-west-slab")?.materialToken === "courtyardMidStone", "mid courtyard broad floor slab uses mid transition material");
+ok(byId.get("macro-floor-high-landing-center-slab")?.materialToken === "landingHighStone", "main landing broad floor slab uses high landing material");
+ok(byId.get("central-stair-bottom-landing")?.materialToken === "courtyardLowStone", "central bottom landing separates from stair tread material");
+ok(byId.get("central-stair-mid-landing")?.materialToken === "courtyardMidStone", "central mid landing separates from stair tread material");
+ok(byId.get("central-main-landing")?.materialToken === "landingHighStone", "central top landing separates from stair tread material");
 ok(byId.has("ward-approach-lower-landing"), "Ward approach lower landing has a stable id");
 ok(byId.has("ward-approach-upper-landing"), "Ward approach upper landing has a stable id");
 ok(byId.get("ward-approach-lower-landing")?.elevationBand === "high", "Ward approach starts on the high landing band");
 ok(byId.get("ward-approach-upper-landing")?.elevationBand === "shrine", "Ward approach upper landing connects into the shrine band");
+ok(byId.get("ward-approach-upper-landing")?.materialToken === "shrinePlatformStone", "Ward approach upper landing uses shrine platform material");
 ok(byId.has("ward-shrine-raised-foundation"), "Ward shrine foundation has a stable id");
 ok(byId.has("ward-shrine-core-pedestal"), "Ward shrine core pedestal has a stable id");
 ok(byId.has("ward-shrine-front-landing"), "Ward shrine front landing has a stable id");
