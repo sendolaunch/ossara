@@ -11,6 +11,7 @@ const SPAWN_DRESSING = Object.freeze({
 });
 
 const LANE_FLOOR_KEYS = ["broken-floor-tile", "stone-floor-large", "lane-floor-rocks", "weed-floor-a", "weed-floor-b"];
+const MACRO_FLOOR_KEYS = ["stone-floor-large", "lane-floor-rocks", "broken-floor-tile", "weed-floor-a"];
 
 function spawnGateCluster(lane) {
   const spec = SPAWN_DRESSING[lane.id] || SPAWN_DRESSING["north-gate"];
@@ -100,7 +101,8 @@ function laneChokeMarkers(level) {
         cell: lane.choke,
         readabilityRole: "main-choke",
         allowOverlapGameplay: true,
-        scale: { x: 2.2, y: 1, z: 2.2 },
+        materialToken: "mainChokeGold",
+        scale: { x: 1.85, y: 1, z: 1.85 },
         tags: ["choke", "main", "mapbuilder"],
       });
     }
@@ -113,7 +115,8 @@ function laneChokeMarkers(level) {
         cell: lane.fallbackChoke,
         readabilityRole: "fallback-choke",
         allowOverlapGameplay: true,
-        scale: { x: 1.65, y: 1, z: 1.65 },
+        materialToken: "chokeReadabilityGreen",
+        scale: { x: 1.35, y: 1, z: 1.35 },
         tags: ["choke", "fallback", "mapbuilder"],
       });
     }
@@ -134,8 +137,124 @@ function laneChokeMarkers(level) {
   return pieces;
 }
 
+function chokeWardStones(level) {
+  return (level.lanes || []).filter((lane) => lane.choke).map((lane, index) => {
+    const lateral = lane.choke.col < level.core.col ? -0.85 : lane.choke.col > level.core.col ? 0.85 : (index % 2 ? -0.85 : 0.85);
+    const forward = lane.choke.row > level.core.row ? 0.45 : -0.45;
+    return {
+      id: `${lane.id}-choke-ward-stone`,
+      type: "shrine",
+      assetKey: index % 2 === 0 ? "stone-bricks-small" : "candle-thin-lit",
+      laneId: lane.id,
+      cell: lane.choke,
+      offset: { x: lateral, z: forward },
+      readabilityRole: "in-world-choke-marker",
+      allowOverlapGameplay: true,
+      scale: index % 2 === 0 ? 0.36 : 0.44,
+      rotation: lane.spawn.col < level.core.col ? -18 : 18,
+      tags: ["choke", "ward-rune", "mapbuilder"],
+    };
+  });
+}
+
+function macroFloorBreakup() {
+  const patches = [
+    { id: "central-lower-left", col: 33, row: 50, scale: 0.95, rot: -8 },
+    { id: "central-lower-mid", col: 36, row: 50, scale: 1.04, rot: 3 },
+    { id: "central-lower-right", col: 39, row: 50, scale: 0.95, rot: 9 },
+    { id: "central-mid-left", col: 33, row: 44, scale: 1.02, rot: 12 },
+    { id: "central-mid-right", col: 39, row: 44, scale: 1.02, rot: -12 },
+    { id: "central-landing-left", col: 32, row: 35, scale: 0.96, rot: -18 },
+    { id: "central-landing-right", col: 40, row: 35, scale: 0.96, rot: 18 },
+    { id: "fallback-left-apron", col: 32, row: 22, scale: 0.92, rot: 26 },
+    { id: "fallback-right-apron", col: 40, row: 22, scale: 0.92, rot: -26 },
+    { id: "ward-front-left-apron", col: 32, row: 16, scale: 1.0, rot: -10 },
+    { id: "ward-front-right-apron", col: 40, row: 16, scale: 1.0, rot: 10 },
+    { id: "ward-rear-slab", col: 36, row: 13, scale: 1.05, rot: 45 },
+  ];
+
+  return patches.map((patch, index) => ({
+    id: `macro-floor-${patch.id}`,
+    type: "laneFloor",
+    assetKey: MACRO_FLOOR_KEYS[index % MACRO_FLOOR_KEYS.length],
+    cell: { col: patch.col, row: patch.row },
+    readabilityRole: "macro-floor-breakup",
+    allowOverlapGameplay: true,
+    visualY: 0.035,
+    scale: patch.scale,
+    rotation: patch.rot,
+    tags: ["floor", "macro-shape", "mapbuilder"],
+  }));
+}
+
 function centralStairArchitecture() {
   const shared = { laneId: "north-gate", allowOverlapGameplay: true, tags: ["verticality", "central-stair", "mapbuilder"] };
+  const stairRows = [
+    { band: "lower", row: 49, scale: 0.8 },
+    { band: "middle", row: 45, scale: 0.78 },
+    { band: "upper", row: 40, scale: 0.74 },
+  ];
+  const stairPieces = stairRows.flatMap((run) => [
+    {
+      id: `central-stair-${run.band}-left`,
+      type: "stair",
+      assetKey: "modular-stair-left",
+      cell: { col: 34, row: run.row },
+      readabilityRole: "visual-stair",
+      visualY: 0.02,
+      scale: run.scale,
+      ...shared,
+    },
+    {
+      id: run.band === "lower" ? "central-stair-lower-run" : `central-stair-${run.band}-center`,
+      type: "stair",
+      assetKey: "modular-stair-center",
+      cell: { col: 36, row: run.row },
+      readabilityRole: "visual-stair",
+      visualY: 0.025,
+      scale: run.scale,
+      ...shared,
+    },
+    {
+      id: `central-stair-${run.band}-right`,
+      type: "stair",
+      assetKey: "modular-stair-right",
+      cell: { col: 38, row: run.row },
+      readabilityRole: "visual-stair",
+      visualY: 0.02,
+      scale: run.scale,
+      ...shared,
+    },
+  ]);
+  const cheekRows = [
+    { row: 49, scale: 0.52 },
+    { row: 45, scale: 0.54 },
+    { row: 40, scale: 0.56 },
+    { row: 36, scale: 0.58 },
+  ];
+  const retainingEdges = cheekRows.flatMap((edge) => [
+    {
+      id: `central-stair-left-cheek-${edge.row}`,
+      type: "edge",
+      assetKey: edge.row <= 40 ? "retaining-wall-sloped" : "retaining-wall-half",
+      cell: { col: 32, row: edge.row },
+      readabilityRole: "stair-retaining-edge",
+      rotation: 90,
+      scale: edge.scale,
+      ...shared,
+    },
+    {
+      id: `central-stair-right-cheek-${edge.row}`,
+      type: "edge",
+      assetKey: edge.row <= 40 ? "retaining-wall-sloped" : "retaining-wall-half",
+      cell: { col: 40, row: edge.row },
+      readabilityRole: "stair-retaining-edge",
+      rotation: 90,
+      scale: edge.scale,
+      ...shared,
+    },
+  ]);
+
   return [
     {
       id: "central-spawn-threshold-grate",
@@ -147,65 +266,29 @@ function centralStairArchitecture() {
       ...shared,
     },
     {
-      id: "central-stair-lower-run",
-      type: "stair",
-      assetKey: "ruined-stone-stair-long",
-      cell: { col: 36, row: 49 },
-      readabilityRole: "visual-stair",
-      visualY: 0.02,
-      scale: 0.72,
+      id: "central-stair-bottom-landing",
+      type: "landing",
+      assetKey: "stone-landing",
+      cell: { col: 36, row: 52 },
+      readabilityRole: "stair-landing",
+      visualY: 0.008,
+      scale: 0.78,
+      rotation: 180,
       ...shared,
     },
+    ...stairPieces,
     {
-      id: "central-stair-mid-run",
-      type: "stair",
-      assetKey: "ruined-stone-stair-wide",
+      id: "central-stair-mid-landing",
+      type: "landing",
+      assetKey: "stone-landing",
       cell: { col: 36, row: 43 },
-      readabilityRole: "visual-stair",
-      visualY: 0.03,
-      scale: 0.68,
+      readabilityRole: "stair-landing",
+      visualY: 0.012,
+      scale: 0.72,
+      rotation: 180,
       ...shared,
     },
-    {
-      id: "central-stair-left-cheek",
-      type: "edge",
-      assetKey: "retaining-wall-half",
-      cell: { col: 33, row: 46 },
-      readabilityRole: "stair-retaining-edge",
-      rotation: 90,
-      scale: 0.64,
-      ...shared,
-    },
-    {
-      id: "central-stair-right-cheek",
-      type: "edge",
-      assetKey: "retaining-wall-half",
-      cell: { col: 39, row: 46 },
-      readabilityRole: "stair-retaining-edge",
-      rotation: 90,
-      scale: 0.64,
-      ...shared,
-    },
-    {
-      id: "central-stair-left-upper-cheek",
-      type: "edge",
-      assetKey: "retaining-wall-sloped",
-      cell: { col: 33, row: 39 },
-      readabilityRole: "stair-retaining-edge",
-      rotation: 90,
-      scale: 0.58,
-      ...shared,
-    },
-    {
-      id: "central-stair-right-upper-cheek",
-      type: "edge",
-      assetKey: "retaining-wall-sloped",
-      cell: { col: 39, row: 39 },
-      readabilityRole: "stair-retaining-edge",
-      rotation: 90,
-      scale: 0.58,
-      ...shared,
-    },
+    ...retainingEdges,
     {
       id: "central-main-landing",
       type: "landing",
@@ -344,13 +427,26 @@ function wardShrinePieces(level) {
       tags: ["ward", "platform", "mapbuilder"],
     },
     {
+      id: "ward-shrine-core-pedestal",
+      type: "platform",
+      assetKey: "raised-foundation",
+      cell: core,
+      readabilityRole: "ward-shrine",
+      allowOverlapGameplay: true,
+      visualY: 0.045,
+      scale: 0.58,
+      rotation: 45,
+      tags: ["ward", "platform", "mapbuilder"],
+    },
+    {
       id: "ward-shrine-green-ring",
       type: "readabilityMarker",
       assetKey: "primitive-readability-ring",
       cell: core,
       readabilityRole: "ward-shrine",
       allowOverlapGameplay: true,
-      scale: { x: 4.2, y: 1, z: 4.2 },
+      materialToken: "wardHaloGreen",
+      scale: { x: 3.65, y: 1, z: 3.65 },
       tags: ["ward", "ring", "mapbuilder"],
     },
     {
@@ -423,6 +519,36 @@ function wardShrineDepthPieces(level) {
       cell: { col: core.col, row: core.row - 3 },
       visualY: -0.02,
       scale: 0.82,
+      ...shared,
+    },
+    {
+      id: "ward-shrine-front-pedestal-edge",
+      type: "platform",
+      assetKey: "raised-platform-edge",
+      cell: { col: core.col, row: core.row + 5 },
+      visualY: -0.01,
+      scale: 0.9,
+      rotation: 180,
+      ...shared,
+    },
+    {
+      id: "ward-shrine-left-platform-wing",
+      type: "platform",
+      assetKey: "raised-foundation",
+      cell: { col: core.col - 4, row: core.row + 2 },
+      visualY: -0.03,
+      scale: 0.62,
+      rotation: 20,
+      ...shared,
+    },
+    {
+      id: "ward-shrine-right-platform-wing",
+      type: "platform",
+      assetKey: "raised-foundation",
+      cell: { col: core.col + 4, row: core.row + 2 },
+      visualY: -0.03,
+      scale: 0.62,
+      rotation: -20,
       ...shared,
     },
     {
@@ -565,6 +691,28 @@ function backgroundRuinSilhouettes() {
       tags: ["background", "ruin", "mapbuilder"],
     },
     {
+      id: "rear-cathedral-left-shoulder",
+      type: "wall",
+      assetKey: "broken-wall",
+      cell: { col: 17, row: 9 },
+      readabilityRole: "background-boundary",
+      allowOverlapGameplay: true,
+      scale: 0.62,
+      rotation: 18,
+      tags: ["background", "edge", "mapbuilder"],
+    },
+    {
+      id: "rear-cathedral-right-shoulder",
+      type: "wall",
+      assetKey: "cracked-wall",
+      cell: { col: 55, row: 9 },
+      readabilityRole: "background-boundary",
+      allowOverlapGameplay: true,
+      scale: 0.62,
+      rotation: -18,
+      tags: ["background", "edge", "mapbuilder"],
+    },
+    {
       id: "front-left-ruin-pillar",
       type: "prop",
       assetKey: "decorated-pillar",
@@ -595,6 +743,17 @@ function backgroundRuinSilhouettes() {
       tags: ["background", "edge", "mapbuilder"],
     },
     {
+      id: "west-crypt-frame-wall",
+      type: "wall",
+      assetKey: "broken-wall",
+      cell: { col: 5, row: 23 },
+      readabilityRole: "background-boundary",
+      allowOverlapGameplay: true,
+      scale: 0.5,
+      rotation: 90,
+      tags: ["background", "edge", "mapbuilder"],
+    },
+    {
       id: "east-low-boundary-wall",
       type: "wall",
       assetKey: "low-wall",
@@ -602,6 +761,39 @@ function backgroundRuinSilhouettes() {
       readabilityRole: "background-boundary",
       scale: 0.58,
       rotation: 90,
+      tags: ["background", "edge", "mapbuilder"],
+    },
+    {
+      id: "east-crypt-frame-wall",
+      type: "wall",
+      assetKey: "cracked-wall",
+      cell: { col: 68, row: 23 },
+      readabilityRole: "background-boundary",
+      allowOverlapGameplay: true,
+      scale: 0.5,
+      rotation: -90,
+      tags: ["background", "edge", "mapbuilder"],
+    },
+    {
+      id: "front-left-courtyard-shoulder",
+      type: "wall",
+      assetKey: "low-wall",
+      cell: { col: 24, row: 55 },
+      readabilityRole: "background-boundary",
+      allowOverlapGameplay: true,
+      scale: 0.55,
+      rotation: 0,
+      tags: ["background", "edge", "mapbuilder"],
+    },
+    {
+      id: "front-right-courtyard-shoulder",
+      type: "wall",
+      assetKey: "low-wall",
+      cell: { col: 48, row: 55 },
+      readabilityRole: "background-boundary",
+      allowOverlapGameplay: true,
+      scale: 0.55,
+      rotation: 0,
       tags: ["background", "edge", "mapbuilder"],
     },
     {
@@ -640,14 +832,16 @@ function backgroundRuinSilhouettes() {
 
 export function firstBreachMapPlan(level = LEVEL) {
   return {
-    id: "first-breach-mapbuilder-art-v3",
+    id: "first-breach-mapbuilder-macro-shape-v1",
     mapId: "first-breach",
     theme: ACTIVE_MAP_THEME_ID,
-    intent: "Visual-only Map Builder art pass for compact First Breach vertical readability.",
+    intent: "Visual-only macro environment shape pass for compact First Breach readability.",
     pieces: [
       ...(level.lanes || []).map(spawnGateCluster),
       ...laneFloorHints(level),
+      ...macroFloorBreakup(level),
       ...laneChokeMarkers(level),
+      ...chokeWardStones(level),
       ...centralStairArchitecture(level),
       ...frontBreachArchitecture(level),
       ...cryptBreachArchitecture(level),

@@ -64,7 +64,7 @@ export function chokeReadabilitySpecs(level) {
         x: w.x,
         z: w.z,
         y: 0.11,
-        radius: 1.55,
+        radius: 1.35,
         threatRating: lane.threatRating || 1,
       });
     }
@@ -79,7 +79,7 @@ export function chokeReadabilitySpecs(level) {
         x: w.x,
         z: w.z,
         y: 0.1,
-        radius: 1.2,
+        radius: 1.02,
         threatRating: lane.threatRating || 1,
       });
     }

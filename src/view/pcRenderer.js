@@ -468,7 +468,7 @@ export class PCRenderer {
       const [c, r] = key.split(",").map(Number);
       const w = gridToWorld(c, r, level);
       const tile = prim("box", laneMat);
-      tile.setLocalScale(0.76, 0.038, 0.68);
+      tile.setLocalScale(0.52, 0.028, 0.48);
       tile.setPosition(w.x, 0.046, w.z);
       this.app.root.addChild(tile);
     }
@@ -481,7 +481,7 @@ export class PCRenderer {
       const tile = prim("box", buildHintMat);
       tile.render.castShadows = false;
       tile.render.receiveShadows = false;
-      tile.setLocalScale(0.82, 0.035, 0.82);
+      tile.setLocalScale(0.54, 0.026, 0.54);
       tile.setPosition(w.x, 0.012, w.z);
       this.app.root.addChild(tile);
     }
@@ -838,7 +838,10 @@ export class PCRenderer {
 
   _createMapBuilderFallback(root, placement) {
     const fallback = placement.fallback || {};
-    const material = this._mapBuilderFallbackMaterial(fallback.material || "stone");
+    const tokenName = mapMaterialTokenForPlacement(placement, this.mapTheme);
+    const material = tokenName
+      ? this._themeMaterial(tokenName, fallback.material || "stone")
+      : this._mapBuilderFallbackMaterial(fallback.material || "stone");
     const ent = prim(fallback.primitive || "box", material);
     const sx = (fallback.scale?.x ?? 1) * (placement.scaleX || placement.scale || 1);
     const sy = (fallback.scale?.y ?? 1) * (placement.scaleY || placement.scale || 1);

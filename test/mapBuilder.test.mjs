@@ -19,12 +19,12 @@ const byId = new Map(placements.map((placement) => [placement.id, placement]));
 const laneIds = new Set((LEVEL.lanes || []).map((lane) => lane.id));
 const pathCells = pathCellSet(LEVEL);
 
-ok(FIRST_BREACH_MAP_PLAN.id === "first-breach-mapbuilder-art-v3", "First Breach exposes a stable map-builder art-pass plan id");
+ok(FIRST_BREACH_MAP_PLAN.id === "first-breach-mapbuilder-macro-shape-v1", "First Breach exposes a stable macro-shape map-builder plan id");
 ok(built.planId === FIRST_BREACH_MAP_PLAN.id, "build result carries the plan id");
 ok(built.gameplaySnapshotUnchanged, "map-builder build reports unchanged gameplay snapshot");
 ok(before === after, "map-builder does not mutate level geometry or gameplay data");
 ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "map-builder output is deterministic");
-ok(placements.length >= 100 && placements.length <= 125, "First Breach builder adds a stronger but bounded visual subset");
+ok(placements.length >= 140 && placements.length <= 155, "First Breach builder adds a stronger but bounded macro-shape visual subset");
 ok(new Set(placements.map((placement) => placement.id)).size === placements.length, "every map-builder placement has a stable unique id");
 
 for (const placement of placements) {
@@ -52,8 +52,11 @@ for (const lane of LEVEL.lanes) {
 }
 
 ok(placements.filter((placement) => placement.tags.includes("verticality") && placement.type === "stair").length >= 2, "map-builder includes multiple visual-only stair pieces");
+ok(placements.filter((placement) => placement.readabilityRole === "visual-stair").length >= 9, "central stair uses modular step bands instead of one slab");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central stair has a visual-only landing");
 ok(placements.some((placement) => placement.readabilityRole === "stair-retaining-edge"), "central stair has retaining edge pieces");
+ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 10, "macro floor breakup reduces flat grid-board feeling");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke markers get in-world ward stone/candle support");
 ok(placements.some((placement) => placement.readabilityRole === "crypt-breach-frame"), "crypt breaches get builder-driven gate framing");
 ok(placements.some((placement) => placement.readabilityRole === "front-breach-left"), "left front breach has lane-side builder architecture");
 ok(placements.some((placement) => placement.readabilityRole === "front-breach-right"), "right front breach has lane-side builder architecture");
@@ -83,9 +86,12 @@ ok(LEVEL.lanes.length === 5, "map-builder does not change lane count");
 ok(WAVES.length === 5, "map-builder does not change First Breach wave count");
 
 ok(byId.has("central-stair-lower-run"), "central lower stair run has a stable id");
+ok(byId.has("central-stair-bottom-landing"), "central lower landing has a stable id");
 ok(byId.has("central-main-landing"), "central landing has a stable id");
 ok(byId.has("ward-shrine-raised-foundation"), "Ward shrine foundation has a stable id");
+ok(byId.has("ward-shrine-core-pedestal"), "Ward shrine core pedestal has a stable id");
 ok(byId.has("ward-shrine-front-landing"), "Ward shrine front landing has a stable id");
+ok(byId.has("rear-cathedral-left-shoulder"), "rear edge framing has a stable id");
 ok(byId.has("field-planning-map"), "background prop has a stable id");
 
 console.log(`mapBuilder: ${pass}/${pass + fail} checks passed`);

@@ -92,12 +92,14 @@ for (const lane of LEVEL.lanes) {
 
 const wardPieces = placements.filter((placement) => placement.readabilityRole === "ward-shrine");
 ok(wardPieces.length >= 14, "Ward shrine has deeper map-builder art support");
-ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 5 && Math.abs(piece.anchorRow - LEVEL.core.row) <= 4), "Ward shrine pieces stay near the core");
+ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 5 && Math.abs(piece.anchorRow - LEVEL.core.row) <= 5), "Ward shrine pieces stay near the core");
 ok(wardPieces.every((piece) => piece.allowOverlapGameplay), "Ward shrine pieces explicitly allow core-reserve visual overlap");
 
 const centralStairs = placements.filter((placement) => placement.laneId === "north-gate" && placement.readabilityRole === "visual-stair");
-ok(centralStairs.length >= 2, "central route has multiple visual stair runs");
+ok(centralStairs.length >= 9, "central route has modular visual stair bands");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
+ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 10, "macro floor slabs break up the flat grid-board read");
+ok(placements.filter((placement) => placement.readabilityRole === "in-world-choke-marker").length === LEVEL.lanes.length, "choke readability is supported by in-world ward markers");
 ok(placements.filter((placement) => placement.readabilityRole === "crypt-breach-frame").length >= 6, "side crypt breaches have visible frame pieces");
 ok(placements.filter((placement) => placement.readabilityRole?.startsWith("front-breach-")).length >= 8, "front breaches have lane-side architecture support");
 
