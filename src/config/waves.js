@@ -33,16 +33,16 @@ export const TUTORIAL_WAVES = [
 export const WAVES = [
   {
     name: "Rotlings",
-    hint: "Use [1]/[2], click a green Central Stair choke, then Start Wave or Enter.",
-    warning: "Rotlings only. Basic lane pressure down the Central Stair.",
+    hint: "Use [1]/[2], build near the central crypt choke, then Start Wave or Enter.",
+    warning: "Rotlings only. Basic pressure from the Central Crypt.",
     prepTime: 34,
     reward: 45,
     groups: [{ type: "rotling", laneId: "north-gate", count: 7, interval: 1.35, delay: 0 }],
   },
   {
     name: "Gravebreaker Pressure",
-    hint: "A Gravebreaker anchors the lane. Barricades buy time against heavy enemies.",
-    warning: "Rotlings push first, then a slow Gravebreaker tests your wall.",
+    hint: "A Gravebreaker anchors the crypt approach. Barricades buy time against heavy enemies.",
+    warning: "Rotlings push first, then a slow Gravebreaker climbs toward the Ward.",
     prepTime: 26,
     reward: 50,
     groups: [
@@ -53,7 +53,7 @@ export const WAVES = [
   {
     name: "Bonebow Backline",
     hint: "Bonebows stop at range. Step out or build coverage that reaches behind the front.",
-    warning: "The Broken Stair opens with ranged Bonebow pressure.",
+    warning: "The left broken crypt opens with ranged Bonebow pressure.",
     prepTime: 24,
     reward: 60,
     groups: [
@@ -65,7 +65,7 @@ export const WAVES = [
   {
     name: "Plaguewick Fuse",
     hint: "Plaguewicks rush defenses and explode. Hunt them before they reach your wall.",
-    warning: "Bombers enter from the Plague Garden while Rotlings hold your attention.",
+    warning: "Bombers enter from the right side crypt while Rotlings hold your attention.",
     prepTime: 22,
     reward: 70,
     groups: [

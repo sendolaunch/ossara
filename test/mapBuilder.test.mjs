@@ -19,12 +19,12 @@ const byId = new Map(placements.map((placement) => [placement.id, placement]));
 const laneIds = new Set((LEVEL.lanes || []).map((lane) => lane.id));
 const pathCells = pathCellSet(LEVEL);
 
-ok(FIRST_BREACH_MAP_PLAN.id === "first-breach-mapbuilder-macro-shape-v1", "First Breach exposes a stable macro-shape map-builder plan id");
+ok(FIRST_BREACH_MAP_PLAN.id === "first-breach-deeper-well-crypt-v1", "First Breach exposes a stable crypt recomposition map-builder plan id");
 ok(built.planId === FIRST_BREACH_MAP_PLAN.id, "build result carries the plan id");
 ok(built.gameplaySnapshotUnchanged, "map-builder build reports unchanged gameplay snapshot");
 ok(before === after, "map-builder does not mutate level geometry or gameplay data");
 ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "map-builder output is deterministic");
-ok(placements.length >= 180 && placements.length <= 195, "First Breach builder adds a stronger but bounded macro-shape visual subset");
+ok(placements.length >= 160 && placements.length <= 180, "First Breach builder adds a bounded crypt-room visual subset");
 ok(new Set(placements.map((placement) => placement.id)).size === placements.length, "every map-builder placement has a stable unique id");
 
 for (const placement of placements) {
@@ -52,7 +52,7 @@ for (const lane of LEVEL.lanes) {
 }
 
 ok(placements.filter((placement) => placement.tags.includes("verticality") && placement.type === "stair").length >= 2, "map-builder includes multiple visual-only stair pieces");
-ok(placements.filter((placement) => placement.readabilityRole === "visual-stair").length >= 15, "central stair uses modular step bands instead of one slab");
+ok(placements.filter((placement) => placement.readabilityRole === "visual-stair").length >= 9, "central Ward approach uses modular step bands instead of one slab");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central stair has a visual-only landing");
 ok(placements.some((placement) => placement.readabilityRole === "stair-retaining-edge"), "central stair has retaining edge pieces");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor breakup reduces flat grid-board feeling with broad floor fields");
@@ -82,28 +82,27 @@ ok(expanded.length === placements.length, "expanded plan piece count matches nor
 const waveLaneIds = new Set(WAVES.flatMap((wave) => wave.groups || []).map((group) => group.laneId).filter(Boolean));
 ok([...waveLaneIds].every((laneId) => laneIds.has(laneId)), "existing wave lane ids still resolve against the level");
 ok(LEVEL.cols === 73 && LEVEL.rows === 57, "map-builder does not change First Breach compact bounds");
-ok(LEVEL.core.col === 36 && LEVEL.core.row === 10, "map-builder does not change Ward Crystal core position");
+ok(LEVEL.core.col === 36 && LEVEL.core.row === 47, "map-builder follows the bottom-middle Ward Crystal core position");
 ok(LEVEL.lanes.length === 5, "map-builder does not change lane count");
 ok(WAVES.length === 5, "map-builder does not change First Breach wave count");
 
 ok(byId.has("central-stair-lower-run"), "central lower stair run has a stable id");
-ok(byId.has("central-stair-lower-mid-center"), "central lower-mid stair band has a stable id");
-ok(byId.has("central-stair-upper-mid-center"), "central upper-mid stair band has a stable id");
-ok(byId.has("central-stair-bottom-landing"), "central lower landing has a stable id");
-ok(byId.has("central-main-landing"), "central landing has a stable id");
-ok(byId.get("central-stair-bottom-landing")?.tags.includes("bottom-landing"), "central stair bottom landing is tagged as the entry landing");
-ok(byId.get("central-stair-mid-landing")?.tags.includes("mid-landing"), "central stair mid landing is tagged as the transition landing");
-ok(byId.get("central-main-landing")?.tags.includes("top-landing"), "central stair top landing is tagged as the exit landing");
-ok(byId.get("central-stair-lower-run")?.elevationBand === "low", "central stair lower run carries low elevation band intent");
-ok(byId.get("central-stair-middle-center")?.elevationBand === "mid", "central stair middle run carries mid elevation band intent");
-ok(byId.get("central-stair-upper-center")?.elevationBand === "high", "central stair upper run carries high landing intent");
+ok(byId.has("central-stair-middle-center"), "central middle stair band has a stable id");
+ok(byId.has("central-stair-upper-center"), "central upper stair band has a stable id");
+ok(byId.has("ward-stair-bottom-landing"), "Ward stair bottom landing has a stable id");
+ok(byId.has("ward-stair-top-landing"), "Ward stair top landing has a stable id");
+ok(byId.get("ward-stair-bottom-landing")?.tags.includes("bottom-landing"), "Ward stair bottom landing is tagged as the entry landing");
+ok(byId.get("ward-stair-top-landing")?.tags.includes("top-landing"), "Ward stair top landing is tagged as the exit landing");
+ok(byId.get("central-stair-lower-run")?.elevationBand === "high", "central stair lower run carries high approach band intent");
+ok(byId.get("central-stair-middle-center")?.elevationBand === "high", "central stair middle run carries high approach band intent");
+ok(byId.get("central-stair-upper-center")?.elevationBand === "shrine", "central stair upper run carries shrine band intent");
 ok(byId.get("central-stair-lower-run")?.materialToken === "ruinedStoneStep", "central stair material token is preserved for renderer material resolution");
-ok(byId.get("macro-floor-front-courtyard-west-field")?.materialToken === "courtyardLowStone", "front courtyard broad floor field uses low courtyard material");
-ok(byId.get("macro-floor-mid-courtyard-west-slab")?.materialToken === "courtyardMidStone", "mid courtyard broad floor slab uses mid transition material");
-ok(byId.get("macro-floor-high-landing-center-slab")?.materialToken === "landingHighStone", "main landing broad floor slab uses high landing material");
-ok(byId.get("central-stair-bottom-landing")?.materialToken === "courtyardLowStone", "central bottom landing separates from stair tread material");
-ok(byId.get("central-stair-mid-landing")?.materialToken === "courtyardMidStone", "central mid landing separates from stair tread material");
-ok(byId.get("central-main-landing")?.materialToken === "landingHighStone", "central top landing separates from stair tread material");
+ok(byId.get("macro-floor-upper-shadow-center-field")?.materialToken === "floorRubbleDark", "upper crypt broad floor field uses dark shadow material");
+ok(byId.get("macro-floor-mid-combat-center-slab")?.materialToken === "courtyardMidStone", "mid combat broad floor slab uses mid transition material");
+ok(byId.get("macro-floor-ward-approach-center-landing")?.materialToken === "landingHighStone", "Ward approach broad floor slab uses high landing material");
+ok(byId.get("central-crypt-bottom-landing")?.materialToken === "courtyardMidStone", "central crypt landing separates from stair tread material");
+ok(byId.get("ward-stair-bottom-landing")?.materialToken === "landingHighStone", "Ward stair bottom landing uses high landing material");
+ok(byId.get("ward-stair-top-landing")?.materialToken === "shrinePlatformStone", "Ward stair top landing uses shrine platform material");
 ok(byId.has("ward-approach-lower-landing"), "Ward approach lower landing has a stable id");
 ok(byId.has("ward-approach-upper-landing"), "Ward approach upper landing has a stable id");
 ok(byId.get("ward-approach-lower-landing")?.elevationBand === "high", "Ward approach starts on the high landing band");
@@ -111,9 +110,9 @@ ok(byId.get("ward-approach-upper-landing")?.elevationBand === "shrine", "Ward ap
 ok(byId.get("ward-approach-upper-landing")?.materialToken === "shrinePlatformStone", "Ward approach upper landing uses shrine platform material");
 ok(byId.has("ward-shrine-raised-foundation"), "Ward shrine foundation has a stable id");
 ok(byId.has("ward-shrine-core-pedestal"), "Ward shrine core pedestal has a stable id");
-ok(byId.has("ward-shrine-front-landing"), "Ward shrine front landing has a stable id");
-ok(byId.has("rear-cathedral-left-shoulder"), "rear edge framing has a stable id");
-ok(byId.has("field-planning-map"), "background prop has a stable id");
+ok(byId.has("ward-shrine-player-side-landing"), "Ward shrine player-side landing has a stable id");
+ok(byId.has("upper-left-shadow-wall-depth"), "upper shadow wall framing has a stable id");
+ok(byId.has("player-right-storage-barrel"), "player-side background prop has a stable id without shrine-blocking crate clutter");
 
 console.log(`mapBuilder: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

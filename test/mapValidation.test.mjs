@@ -95,7 +95,7 @@ for (const lane of LEVEL.lanes) {
   const laneArt = placements.filter((placement) => placement.laneId === lane.id && placement.readabilityRole === "lane-art");
   const mainChoke = placements.find((placement) => placement.laneId === lane.id && placement.readabilityRole === "main-choke");
   const fallbackChoke = placements.find((placement) => placement.laneId === lane.id && placement.readabilityRole === "fallback-choke");
-  ok(spawnPieces.length >= 5, `${lane.id} spawn mouth has gate, torch, and banner support`);
+  ok(spawnPieces.length >= 5, `${lane.id} spawn mouth has gate, torch, and shadow-crypt support`);
   ok(spawnPieces.every((piece) => piece.anchorCol === lane.spawn.col && piece.anchorRow === lane.spawn.row), `${lane.id} spawn pieces anchor to gameplay spawn`);
   ok(laneArt.length >= 1, `${lane.id} has path-aligned lane art`);
   ok(!!mainChoke && mainChoke.allowOverlapGameplay, `${lane.id} main choke visual is explicit visual-only overlap`);
@@ -108,10 +108,9 @@ ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 5 &
 ok(wardPieces.every((piece) => piece.allowOverlapGameplay), "Ward shrine pieces explicitly allow core-reserve visual overlap");
 
 const centralStairs = placements.filter((placement) => placement.laneId === "north-gate" && placement.readabilityRole === "visual-stair");
-ok(centralStairs.length >= 15, "central route has modular visual stair bands");
-ok(centralStairs.some((placement) => placement.elevationBand === "low"), "central stair includes a low entry band");
-ok(centralStairs.some((placement) => placement.elevationBand === "mid"), "central stair includes a mid transition band");
-ok(centralStairs.some((placement) => placement.elevationBand === "high"), "central stair includes a high exit band");
+ok(centralStairs.length >= 9, "central route has modular visual stair bands");
+ok(centralStairs.some((placement) => placement.elevationBand === "high"), "central stair includes a high approach band");
+ok(centralStairs.some((placement) => placement.elevationBand === "shrine"), "central stair connects into the shrine band");
 ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
 ok(placements.some((placement) => placement.readabilityRole === "ward-approach-terrace" && placement.elevationBand === "shrine"), "Ward approach terrace connects into shrine elevation band");
 ok(placements.filter((placement) => placement.readabilityRole === "macro-floor-breakup").length >= 15, "macro floor slabs break up the flat grid-board read");
@@ -126,13 +125,13 @@ ok(built.audit.fallbackPlacements.length === 11, "audit captures the expected fa
 ok(built.assetNames.every((assetName) => typeof assetName === "string" && assetName.length > 0), "asset name list is normalized for renderer preloading");
 ok(mapThemeMaterialToken(theme, "stone") === "ruinedStoneMid", "legacy stone fallback material aliases to themed ruined stone");
 ok(mapThemeMaterialToken(theme, "plague") === "wardRuneSoft", "legacy plague fallback material aliases to soft Ward rune green");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-front-courtyard-west-field"), theme) === "courtyardLowStone", "front courtyard broad slab receives low material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-mid-courtyard-west-slab"), theme) === "courtyardMidStone", "mid courtyard broad slab receives mid material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-high-landing-center-slab"), theme) === "landingHighStone", "high landing broad slab receives high material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-upper-shadow-center-field"), theme) === "floorRubbleDark", "upper crypt broad slab receives shadow material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-mid-combat-center-slab"), theme) === "courtyardMidStone", "mid combat broad slab receives mid material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "macro-floor-ward-approach-center-landing"), theme) === "landingHighStone", "Ward approach broad slab receives high material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-lower-run"), theme) === "ruinedStoneStep", "central stair run receives readable step material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-bottom-landing"), theme) === "courtyardLowStone", "central stair bottom landing receives low courtyard material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-stair-mid-landing"), theme) === "courtyardMidStone", "central stair mid landing receives mid transition material");
-ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-main-landing"), theme) === "landingHighStone", "central stair top landing receives high landing material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "central-crypt-bottom-landing"), theme) === "courtyardMidStone", "central crypt bottom landing receives mid combat material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-stair-bottom-landing"), theme) === "landingHighStone", "Ward stair bottom landing receives high landing material");
+ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-stair-top-landing"), theme) === "shrinePlatformStone", "Ward stair top landing receives shrine platform material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-approach-upper-landing"), theme) === "shrinePlatformStone", "Ward approach upper landing receives shrine platform material");
 ok(mapMaterialTokenForPlacement(placements.find((placement) => placement.id === "ward-shrine-gem-pile"), theme) === "wardGreenEmissive", "Ward shrine gem pile receives Ward-green material");
 

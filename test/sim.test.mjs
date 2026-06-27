@@ -77,7 +77,7 @@ section("pathing");
   ok(Array.isArray(LEVEL.lanes) && LEVEL.lanes.length === 5, "first breach defines five enemy lanes");
   const expectedLaneIds = ["north-gate", "northwest-stairs", "northeast-market", "southwest-crypt", "southeast-garden"];
   ok(LEVEL.cols === 73 && LEVEL.rows === 57, "first breach uses the compact Deeper-Well-inspired footprint");
-  ok(LEVEL.core.col === 36 && LEVEL.core.row === 10, "Ward Crystal sits on the rear shrine coordinate");
+  ok(LEVEL.core.col === 36 && LEVEL.core.row === 47, "Ward Crystal sits on the bottom-middle crypt shrine coordinate");
   ok(expectedLaneIds.every((id) => LEVEL.lanes.some((lane) => lane.id === id)), "all five required lane ids exist");
   for (const lane of LEVEL.lanes) {
     ok(!!lane.id, `${lane.name || "lane"} has an id`);
@@ -144,7 +144,7 @@ section("first breach pacing");
   ok(WAVES.length === 5, "first breach has five intentional waves");
   ok(WAVES.every((w) => w.name && w.hint && w.warning), "each wave has teaching/pressure HUD copy");
   ok(!`${WAVES[0].hint} ${WAVES[0].warning}`.includes("Main Gate"), "wave 1 copy avoids stale pre-refit lane names");
-  ok(`${WAVES[0].hint} ${WAVES[0].warning}`.includes("Central Stair"), "wave 1 copy points at the current central route");
+  ok(`${WAVES[0].hint} ${WAVES[0].warning}`.toLowerCase().includes("central crypt"), "wave 1 copy points at the current central route");
   ok(WAVES[0].hint.includes("[1]/[2]") && WAVES[0].hint.includes("Enter"), "wave 1 copy explains build selection and start controls");
   ok(WAVES[0].prepTime >= 30, "wave 1 gives a long first build phase");
   ok(WAVES[0].groups.every((g) => g.type === "rotling"), "wave 1 teaches with Rotlings only");

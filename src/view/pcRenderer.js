@@ -235,13 +235,14 @@ const MISSION_CAMERA = {
   maxPitch: 1.08,
   dist: 10.5,
   minDist: 4.6,
-  maxDist: 24,
+  maxDist: 11.5,
   targetY: 0.8,
   laneLead: 0.25,
   followSharpness: 0.025,
   fov: 56,
 };
 
+const BUILD_PREVIEW_BLUE = 0x8fdcff;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeOut = (v) => 1 - Math.pow(1 - clamp(v, 0, 1), 3);
@@ -409,6 +410,11 @@ export class PCRenderer {
     ground.setPosition(0, -0.1, 0);
     this.app.root.addChild(ground);
 
+    const showStaticBoardHelpers = false;
+    // Permanent route/build helpers made First Breach read like a board. The
+    // crypt layout relies on Map Builder architecture and active placement
+    // ghost/hover feedback instead.
+    if (showStaticBoardHelpers) {
     // Readability-only lane language: broad worn strips, faint ward seams, and
     // low direction chips. These are visual aids only; pathing/placement still
     // comes from the sim sets below.
@@ -488,6 +494,8 @@ export class PCRenderer {
       this.app.root.addChild(tile);
     }
 
+    }
+
     const mainChokeMat = this._themeMaterial("wardChokeGlyph", "gold");
     const fallbackChokeMat = this._themeMaterial("wardRuneSoft", "plague");
     for (const spec of chokeReadabilitySpecs(level)) {
@@ -532,6 +540,8 @@ export class PCRenderer {
       gateRing.setLocalScale(horizontal ? 1.56 : 1.28, horizontal ? 1.56 : 1.28, horizontal ? 1.56 : 1.28);
       gateRing.setPosition(x, 0.16, z);
       this.app.root.addChild(gateRing);
+      const showGateArrows = false;
+      if (showGateArrows) {
       const spawn = lane.spawn || lane.waypoints?.[0] || { col: 0, row: 0 };
       const next = lane.waypoints?.[1] || spawn;
       const sw = gridToWorld(spawn.col, spawn.row, level);
@@ -558,6 +568,7 @@ export class PCRenderer {
       gateHead.setLocalPosition(0, 0.004, 0.22);
       gateArrow.addChild(gateHead);
       this.app.root.addChild(gateArrow);
+      }
       const portal = prim("sphere", portalMat);
       portal.setLocalScale(horizontal ? 0.75 : 0.55, 2.4, horizontal ? 0.55 : 0.75);
       portal.setPosition(x, 1.1, z);
@@ -716,8 +727,8 @@ export class PCRenderer {
     this.hover = prim("box", null);
     this.hover.setLocalScale(1, 0.12, 1);
     this.hoverMat = new pc.StandardMaterial();
-    this.hoverMat.diffuse = col(PALETTE.plague);
-    this.hoverMat.opacity = 0.4;
+    this.hoverMat.diffuse = col(BUILD_PREVIEW_BLUE);
+    this.hoverMat.opacity = 0.34;
     this.hoverMat.blendType = pc.BLEND_NORMAL;
     this.hoverMat.update();
     if (this.hover.render && this.hover.render.meshInstances[0]) this.hover.render.meshInstances[0].material = this.hoverMat;
@@ -728,10 +739,10 @@ export class PCRenderer {
     // (One entity with its own render component — avoids enable/transparency
     // quirks of a bare parent group.)
     this.ghostMat = new pc.StandardMaterial();
-    this.ghostMat.diffuse = col(PALETTE.plague);
-    this.ghostMat.emissive = col(PALETTE.plague);
-    this.ghostMat.emissiveIntensity = 1.0;
-    this.ghostMat.opacity = 0.5;
+    this.ghostMat.diffuse = col(BUILD_PREVIEW_BLUE);
+    this.ghostMat.emissive = col(BUILD_PREVIEW_BLUE);
+    this.ghostMat.emissiveIntensity = 0.72;
+    this.ghostMat.opacity = 0.42;
     this.ghostMat.blendType = pc.BLEND_NORMAL;
     this.ghostMat.depthWrite = false;
     this.ghostMat.cull = pc.CULLFACE_NONE;
@@ -1638,7 +1649,7 @@ export class PCRenderer {
     }
     const w = gridToWorld(col2, row, level);
     const okc = state === "ok";
-    const tint = col(okc ? PALETTE.plague : PALETTE.blood);
+    const tint = col(okc ? BUILD_PREVIEW_BLUE : PALETTE.blood);
     const tower = opts.towerId ? TOWERS[opts.towerId] : null;
     const range = opts.range || tower?.range || 1;
     this.hover.enabled = false;

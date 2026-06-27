@@ -54,8 +54,10 @@ ok(validation.ok, `First Breach elevation intent validates: ${validation.errors.
 ok(validation.warnings.length === 0, "First Breach elevation intent has no warnings");
 ok(validation.plan.visualOnly, "First Breach elevation intent is visual-only");
 ok(validation.plan.zones.some((z) => z.id === "ward-shrine" && z.band === "shrine"), "Ward shrine is a shrine elevation band");
-ok(validation.plan.zones.some((z) => z.id === "rear-cathedral-background" && z.band === "backgroundHigh"), "rear cathedral frame uses backgroundHigh band");
-ok(validation.plan.connectors.some((c) => c.id === "central-stair-connector" && c.type === "stair" && c.stepCount > 1), "central stair is modeled as a multi-step connector");
+ok(validation.plan.zones.some((z) => z.id === "upper-crypt-low" && z.band === "sunken"), "upper crypt floor uses the sunken enemy-origin band");
+ok(validation.plan.zones.some((z) => z.id === "rear-shadow-wall" && z.band === "backgroundHigh"), "rear shadow crypt frame uses backgroundHigh band");
+ok(validation.plan.connectors.some((c) => c.id === "central-crypt-rise" && c.type === "stair" && c.stepCount > 1), "central crypt rise is modeled as a multi-step connector");
+ok(validation.plan.connectors.some((c) => c.id === "ward-approach-stair" && c.type === "stair" && c.stepCount > 1), "Ward approach stair is modeled as a multi-step connector");
 ok(validation.plan.connectors.every((c) => c.visualOnly), "all current First Breach connectors remain visual-only");
 ok(validation.plan.connectors.every((c) => !c.laneId || LEVEL.lanes.some((lane) => lane.id === c.laneId)), "lane-tied connectors reference valid lane ids");
 ok(JSON.stringify(normalizedElevationPlan(intent)) === JSON.stringify(normalizedElevationPlan(firstBreachElevationPlan(LEVEL))), "elevation normalization is deterministic");
@@ -66,8 +68,9 @@ const after = stableGameplaySnapshotKey(levelGameplaySnapshot(LEVEL));
 ok(before === after, "elevation intent does not mutate gameplay level data");
 ok(built.elevationPlan?.id === intent.id, "Map Builder build carries elevation intent metadata");
 ok(built.gameplaySnapshotUnchanged, "Map Builder still reports unchanged gameplay snapshot with elevation intent");
-ok(built.placements.some((placement) => placement.id === "central-stair-bottom-landing" && placement.elevationZone === "front-courtyard-low"), "central stair bottom landing carries lower-zone elevation intent");
-ok(built.placements.some((placement) => placement.id === "central-main-landing" && placement.elevationZone === "main-landing-high"), "central stair top landing carries high-zone elevation intent");
+ok(built.placements.some((placement) => placement.id === "central-crypt-bottom-landing" && placement.elevationZone === "mid-combat-floor"), "central crypt bottom landing carries mid-floor elevation intent");
+ok(built.placements.some((placement) => placement.id === "ward-stair-bottom-landing" && placement.elevationZone === "ward-approach-high"), "Ward stair bottom landing carries high-zone elevation intent");
+ok(built.placements.some((placement) => placement.id === "ward-stair-top-landing" && placement.elevationZone === "ward-shrine"), "Ward stair top landing carries shrine-zone elevation intent");
 ok(built.placements.some((placement) => placement.id === "ward-approach-upper-landing" && placement.elevationZone === "ward-shrine"), "Ward approach upper landing carries shrine-zone elevation intent");
 ok(built.placements.every((placement) => placement.type !== "stair" || placement.allowOverlapGameplay), "visual stair pieces remain explicit gameplay-overlap art");
 

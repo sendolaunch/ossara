@@ -32,7 +32,7 @@ function assetPath(name) {
   return `public/models/${pack}/${file}.gltf`;
 }
 
-ok(specs.length > 75 && specs.length < 120, "showcase art pass is present but remains performance-conscious");
+ok(specs.length > 55 && specs.length < 90, "showcase art pass is present but remains performance-conscious");
 ok(categories.has("floor"), "showcase art includes lane/floor dressing");
 ok(categories.has("lane-side"), "showcase art includes lane-side shoulder dressing");
 ok(categories.has("spawn"), "showcase art includes spawn gate dressing");
@@ -59,20 +59,20 @@ for (const assetName of assetNames) {
 
 for (const lane of LEVEL.lanes) {
   const spawnSpecs = specs.filter((spec) => spec.category === "spawn" && spec.laneId === lane.id);
-  ok(spawnSpecs.length >= 7, `${lane.id} keeps readable spawn dressing after primary gates move to Map Builder`);
+  ok(spawnSpecs.length >= 4, `${lane.id} keeps readable spawn dressing after primary gates move to Map Builder`);
   ok(spawnSpecs.every((spec) => spec.anchorCol === lane.spawn.col && spec.anchorRow === lane.spawn.row), `${lane.id} spawn dressing anchors to the configured spawn`);
   const laneSpecs = specs.filter((spec) => spec.laneId === lane.id);
   const laneSideSpecs = specs.filter((spec) => spec.category === "lane-side" && spec.laneId === lane.id);
   ok(laneSideSpecs.length >= 2, `${lane.id} has lane-side shoulder dressing`);
-  ok(laneSpecs.length >= 10, `${lane.id} has per-lane visual support`);
+  ok(laneSpecs.length >= 8, `${lane.id} has per-lane visual support`);
 }
 
 const wardSpecs = specs.filter((spec) => spec.category === "ward");
-ok(wardSpecs.length >= 12, "Ward Crystal receives ritual art support");
+ok(wardSpecs.length >= 10, "Ward Crystal receives ritual art support");
 ok(wardSpecs.every((spec) => spec.anchorCol === LEVEL.core.col && spec.anchorRow === LEVEL.core.row), "Ward dressing anchors to the configured core");
 
 ok(LEVEL.lanes.length === 5, "art pass does not alter First Breach lane count");
-ok(LEVEL.core.col === 36 && LEVEL.core.row === 10, "showcase art follows the compact Ward shrine layout");
+ok(LEVEL.core.col === 36 && LEVEL.core.row === 47, "showcase art follows the bottom-middle Ward shrine layout");
 ok(LEVEL.coreHp === 24, "Ward Crystal visual work does not change core health");
 ok(WARD_CRYSTAL_MODEL_URL === "models/resource/Gem_Large.gltf", "Ward Crystal uses the imported Gem_Large runtime URL");
 ok(existsSync(WARD_CRYSTAL_MODEL_PATH), "Ward Crystal Gem_Large asset exists in an already-imported runtime folder");
