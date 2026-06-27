@@ -142,3 +142,67 @@ Future map passes can build on this by:
 - adding a final First Breach art pass that uses Map Builder as the source of truth
 
 Do not generalize into a full map editor yet. Keep it practical, data-driven, and test-covered.
+
+## First Breach Art Pass v3
+
+The first serious builder-driven art pass expands the foundation from a proof layer into a readable compact-fantasy structure while keeping gameplay locked.
+
+Builder-owned additions:
+
+- central stair sequence with threshold grate, lower/upper stair runs, retaining wall cheeks, and a landing
+- front breach lane-side edges and ruined low-wall support
+- side crypt breach frames with gated/candle wall pieces, broken walls, pillars, threshold grates, and rubble
+- deeper Ward shrine support with front/rear landings, retaining edges, gem/candle clusters, broken arms, and brick stacks
+- sparse background ruin silhouettes using broken/cracked walls, inset candles, pillars, low walls, rubble, and planning props
+
+Reusable map piece keys added for v3 include:
+
+- `ruined-stone-stair-short`
+- `ruined-stone-stair-wide`
+- `ruined-stone-stair-long`
+- `modular-stair-center`
+- `modular-stair-left`
+- `modular-stair-right`
+- `stone-landing`
+- `raised-platform-edge`
+- `retaining-wall-half`
+- `retaining-wall-sloped`
+- `broken-wall`
+- `cracked-wall`
+- `arched-gate-scaffold`
+- `crypt-corner-gate`
+- `grate-threshold`
+- `stone-floor-large`
+- `lane-floor-rocks`
+- `weed-floor-a`
+- `weed-floor-b`
+- `candle-triple`
+- `candle-thin-lit`
+- `gems-pile-small`
+- `stone-bricks-small`
+- `broken-sword-shield`
+- `decorated-pillar`
+- `wall-inset-candles`
+- `decorated-rocks`
+- `crates-stacked`
+- `decorated-barrel`
+
+Partial migration from `missionArt.js`:
+
+- primary spawn gate silhouettes are now builder-owned
+- old showcase spawn detail props remain for torches, banners, rubble, shelves, crates, and surrounding clutter
+- old showcase Ward and background dressing remains active until the builder plan can replace it in smaller future slices
+
+Current v3 output:
+
+- `109` builder placements
+- `35` runtime asset names
+- `11` intentional primitive fallback rings
+- no missing registered assets
+- no gameplay layout, lane, wave, build-zone, reward, enemy, or Warden changes
+
+Remaining placeholders:
+
+- choke and Ward readability rings still use primitive cylinder fallback markers
+- visual stairs/platforms remain art-only and do not change pathing or elevation gameplay
+- the old showcase layer is still present; future passes should migrate more lane-side and Ward dressing gradually

@@ -72,6 +72,8 @@ const SPAWN_DRESSING = {
   },
 };
 
+const MAP_BUILDER_MIGRATED_SPAWN_GATES = new Set(["wall_gated", "wall_archedwindow_gated"]);
+
 const LANE_FLOOR_ASSETS = [
   "floor_tile_small_broken_A",
   "floor_tile_small_broken_B",
@@ -170,6 +172,7 @@ function addSpawnDressing(out, level) {
     const dressing = SPAWN_DRESSING[lane.id];
     if (!dressing) continue;
     dressing.props.forEach((prop, index) => {
+      if (index === 0 && MAP_BUILDER_MIGRATED_SPAWN_GATES.has(prop.name)) return;
       out.push(atCell(level, lane.spawn.col, lane.spawn.row, {
         ...prop,
         id: `${lane.id}-spawn-${index}`,

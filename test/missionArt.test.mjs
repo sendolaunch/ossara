@@ -59,7 +59,7 @@ for (const assetName of assetNames) {
 
 for (const lane of LEVEL.lanes) {
   const spawnSpecs = specs.filter((spec) => spec.category === "spawn" && spec.laneId === lane.id);
-  ok(spawnSpecs.length >= 8, `${lane.id} has readable spawn-gate dressing`);
+  ok(spawnSpecs.length >= 7, `${lane.id} keeps readable spawn dressing after primary gates move to Map Builder`);
   ok(spawnSpecs.every((spec) => spec.anchorCol === lane.spawn.col && spec.anchorRow === lane.spawn.row), `${lane.id} spawn dressing anchors to the configured spawn`);
   const laneSpecs = specs.filter((spec) => spec.laneId === lane.id);
   const laneSideSpecs = specs.filter((spec) => spec.category === "lane-side" && spec.laneId === lane.id);

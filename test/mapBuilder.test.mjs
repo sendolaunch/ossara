@@ -19,12 +19,12 @@ const byId = new Map(placements.map((placement) => [placement.id, placement]));
 const laneIds = new Set((LEVEL.lanes || []).map((lane) => lane.id));
 const pathCells = pathCellSet(LEVEL);
 
-ok(FIRST_BREACH_MAP_PLAN.id === "first-breach-mapbuilder-v1", "First Breach exposes a stable map-builder plan id");
+ok(FIRST_BREACH_MAP_PLAN.id === "first-breach-mapbuilder-art-v3", "First Breach exposes a stable map-builder art-pass plan id");
 ok(built.planId === FIRST_BREACH_MAP_PLAN.id, "build result carries the plan id");
 ok(built.gameplaySnapshotUnchanged, "map-builder build reports unchanged gameplay snapshot");
 ok(before === after, "map-builder does not mutate level geometry or gameplay data");
 ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "map-builder output is deterministic");
-ok(placements.length >= 60 && placements.length <= 80, "First Breach builder keeps a focused visual subset");
+ok(placements.length >= 100 && placements.length <= 125, "First Breach builder adds a stronger but bounded visual subset");
 ok(new Set(placements.map((placement) => placement.id)).size === placements.length, "every map-builder placement has a stable unique id");
 
 for (const placement of placements) {
@@ -51,9 +51,14 @@ for (const lane of LEVEL.lanes) {
   ok(fallback.anchorCol === lane.fallbackChoke.col && fallback.anchorRow === lane.fallbackChoke.row, `${lane.id} fallback choke marker follows lane fallback data`);
 }
 
-ok(placements.some((placement) => placement.tags.includes("verticality") && placement.type === "stair"), "map-builder includes a visual-only stair/elevation sample");
+ok(placements.filter((placement) => placement.tags.includes("verticality") && placement.type === "stair").length >= 2, "map-builder includes multiple visual-only stair pieces");
+ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central stair has a visual-only landing");
+ok(placements.some((placement) => placement.readabilityRole === "stair-retaining-edge"), "central stair has retaining edge pieces");
+ok(placements.some((placement) => placement.readabilityRole === "crypt-breach-frame"), "crypt breaches get builder-driven gate framing");
+ok(placements.some((placement) => placement.readabilityRole === "front-breach-left"), "left front breach has lane-side builder architecture");
+ok(placements.some((placement) => placement.readabilityRole === "front-breach-right"), "right front breach has lane-side builder architecture");
 ok(placements.some((placement) => placement.tags.includes("verticality") && placement.type === "platform"), "map-builder includes visual-only platform samples");
-ok(placements.filter((placement) => placement.readabilityRole === "ward-shrine").length >= 6, "Ward shrine gets clustered map-builder support");
+ok(placements.filter((placement) => placement.readabilityRole === "ward-shrine").length >= 14, "Ward shrine gets deeper clustered map-builder support");
 ok(placements.some((placement) => placement.assetKey === "primitive-readability-ring" && placement.fallback), "primitive fallback rings are intentional and available");
 ok(built.audit.missingAssets.length === 0, "map-builder has no missing registry entries");
 ok(built.audit.disallowedPacks.length === 0, "map-builder has no disallowed asset packs");
@@ -77,8 +82,10 @@ ok(LEVEL.core.col === 36 && LEVEL.core.row === 10, "map-builder does not change 
 ok(LEVEL.lanes.length === 5, "map-builder does not change lane count");
 ok(WAVES.length === 5, "map-builder does not change First Breach wave count");
 
-ok(byId.has("central-visual-stair-run"), "central visual stair has a stable id");
+ok(byId.has("central-stair-lower-run"), "central lower stair run has a stable id");
+ok(byId.has("central-main-landing"), "central landing has a stable id");
 ok(byId.has("ward-shrine-raised-foundation"), "Ward shrine foundation has a stable id");
+ok(byId.has("ward-shrine-front-landing"), "Ward shrine front landing has a stable id");
 ok(byId.has("field-planning-map"), "background prop has a stable id");
 
 console.log(`mapBuilder: ${pass}/${pass + fail} checks passed`);

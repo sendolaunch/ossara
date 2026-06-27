@@ -70,9 +70,15 @@ for (const lane of LEVEL.lanes) {
 }
 
 const wardPieces = placements.filter((placement) => placement.readabilityRole === "ward-shrine");
-ok(wardPieces.length >= 6, "Ward shrine has multiple map-builder pieces");
-ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 2 && Math.abs(piece.anchorRow - LEVEL.core.row) <= 3), "Ward shrine pieces stay near the core");
+ok(wardPieces.length >= 14, "Ward shrine has deeper map-builder art support");
+ok(wardPieces.every((piece) => Math.abs(piece.anchorCol - LEVEL.core.col) <= 5 && Math.abs(piece.anchorRow - LEVEL.core.row) <= 4), "Ward shrine pieces stay near the core");
 ok(wardPieces.every((piece) => piece.allowOverlapGameplay), "Ward shrine pieces explicitly allow core-reserve visual overlap");
+
+const centralStairs = placements.filter((placement) => placement.laneId === "north-gate" && placement.readabilityRole === "visual-stair");
+ok(centralStairs.length >= 2, "central route has multiple visual stair runs");
+ok(placements.some((placement) => placement.readabilityRole === "stair-landing"), "central route has a visual landing");
+ok(placements.filter((placement) => placement.readabilityRole === "crypt-breach-frame").length >= 6, "side crypt breaches have visible frame pieces");
+ok(placements.filter((placement) => placement.readabilityRole?.startsWith("front-breach-")).length >= 8, "front breaches have lane-side architecture support");
 
 ok(built.audit.missingAssets.length === 0, "audit has no missing asset keys");
 ok(built.audit.disallowedPacks.length === 0, "audit has no disallowed packs");
