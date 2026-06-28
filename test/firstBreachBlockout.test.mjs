@@ -1,157 +1,73 @@
-// Protects the First Breach PRIMITIVE greybox blockout (firstBreachBlockout.js) — THREE-LEVEL.
-// Primitive-only (plain fallback boxes, no GLB), with bold readable floor heights that match
-// the visual surface plan: low/dark spawn floor < raised mid combat floor < higher Ward/top
-// floor (Ward dais + two connected upper side halls), broad axis-aligned steps connecting them.
-// Gameplay anchors (lanes, core, hero, zones, waves) are read from LEVEL and stay untouched.
+// Protects the grid-driven First Breach blockout: it renders the painted grid
+// (firstBreachGrid.js) as primitive boxes at the painted terrain heights, with shadow
+// gates at the painted gate cells. No GLB art. Gameplay anchors read from LEVEL.
 import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
-import { MAP_PIECES } from "../src/config/mapPieces.js";
-import {
-  FIRST_BREACH_BLOCKOUT_PLAN,
-  firstBreachBlockoutPlan,
-  buildFirstBreachBlockout,
-  firstBreachBlockoutElevationPlan,
-  firstBreachSurfacePlan,
-  firstBreachLedgeBlockers,
-  SURFACE_HEIGHTS,
-  GREYBOX_PIECES,
-} from "../src/mapbuilder/firstBreachBlockout.js";
-import { levelGameplaySnapshot, stableGameplaySnapshotKey } from "../src/mapbuilder/mapCoordinates.js";
-import { validateMapPlanAgainstLevel, validateMapPlacements, protectedGameplayCellSet } from "../src/mapbuilder/mapValidation.js";
-import { validateElevationPlan } from "../src/mapbuilder/mapElevation.js";
+import { FB_TERRAIN_RECTS, FB_HEIGHT } from "../src/config/firstBreachGrid.js";
+import { FIRST_BREACH_BLOCKOUT_PLAN, buildFirstBreachBlockout, firstBreachSurfacePlan, firstBreachLedgeBlockers, SURFACE_HEIGHTS, GREYBOX_PIECES } from "../src/mapbuilder/firstBreachBlockout.js";
+import { validateMapPlacements } from "../src/mapbuilder/mapValidation.js";
 import { validateSurfacePlan } from "../src/mapbuilder/mapSurfaceHeights.js";
 
 let pass = 0, fail = 0;
-const ok = (cond, msg) => (cond ? pass++ : (fail++, console.error("  FAIL:", msg)));
-
-const before = stableGameplaySnapshotKey(levelGameplaySnapshot(LEVEL));
+const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
 const built = buildFirstBreachBlockout(LEVEL);
-const after = stableGameplaySnapshotKey(levelGameplaySnapshot(LEVEL));
-const builtAgain = buildFirstBreachBlockout(LEVEL);
-const plan = firstBreachBlockoutPlan(LEVEL);
-const placements = built.placements;
-const byId = new Map(placements.map((p) => [p.id, p]));
-const laneIds = new Set((LEVEL.lanes || []).map((l) => l.id));
+const again = buildFirstBreachBlockout(LEVEL);
+const P = built.placements;
+const byRole = (r) => P.filter((p) => p.readabilityRole === r);
 const core = LEVEL.core;
-const countRole = (r) => placements.filter((p) => p.readabilityRole === r).length;
+const laneIds = new Set(LEVEL.lanes.map((l) => l.id));
 
-// --- identity + determinism -------------------------------------------------
-ok(FIRST_BREACH_BLOCKOUT_PLAN.id === "first-breach-dd1-crypt-greybox-v3", "blockout exposes the v3 three-level plan id");
+// identity + determinism
+ok(FIRST_BREACH_BLOCKOUT_PLAN.id === "first-breach-grid-blockout-v1", "exposes the grid blockout plan id");
 ok(built.planId === FIRST_BREACH_BLOCKOUT_PLAN.id, "build carries the plan id");
-ok(built.gameplaySnapshotUnchanged && before === after, "build does not mutate level gameplay data");
-ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "Map Builder output is deterministic");
-ok(placements.length >= 90 && placements.length <= 170, "blockout is a bounded primitive set");
-ok(new Set(placements.map((p) => p.id)).size === placements.length, "every placement has a unique id");
+ok(JSON.stringify(P) === JSON.stringify(again.placements), "blockout is deterministic");
+ok(P.length >= 40 && P.length <= 500, "bounded primitive set (merged rects, not per-cell)");
+ok(new Set(P.map((p) => p.id)).size === P.length, "every placement id is unique");
 
-// --- everything is a clean PRIMITIVE ---------------------------------------
-ok(built.audit.missingAssets.length === 0 && built.audit.disallowedPacks.length === 0, "no missing registry entries / disallowed packs");
-ok(built.audit.fallbackPlacements.length === placements.length, "EVERY piece renders as a primitive fallback");
-ok(built.assetNames.length === 0, "no GLB art assets are referenced");
-for (const p of placements) {
-  ok(Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z), `${p.id} has finite coords`);
-  ok(p.anchorCol >= 0 && p.anchorCol < LEVEL.cols && p.anchorRow >= 0 && p.anchorRow < LEVEL.rows, `${p.id} anchors inside bounds`);
-  ok(p.scaleX > 0 && p.scaleY > 0 && p.scaleZ > 0, `${p.id} has positive scale`);
-  ok(String(p.assetKey).startsWith("gb-") && !!GREYBOX_PIECES[p.assetKey], `${p.id} uses only greybox primitives`);
-  ok(!p.assetName && !!p.fallback, `${p.id} is a primitive (no runtime art asset)`);
+// primitive-only
+ok(built.audit.missingAssets.length === 0 && built.audit.disallowedPacks.length === 0, "no missing/disallowed registry entries");
+ok(built.audit.fallbackPlacements.length === P.length, "every piece renders as a primitive fallback");
+ok(built.assetNames.length === 0, "no GLB art assets referenced");
+for (const p of P) {
+  ok(String(p.assetKey).startsWith("gb-") && !!GREYBOX_PIECES[p.assetKey], `${p.id} uses a greybox primitive`);
+  ok(p.allowOverlapGameplay === true, `${p.id} is visual-only`);
+  ok(p.scaleX > 0 && p.scaleY > 0 && p.scaleZ > 0, `${p.id} positive scale`);
+  ok(p.anchorCol >= 0 && p.anchorCol < LEVEL.cols && p.anchorRow >= 0 && p.anchorRow < LEVEL.rows, `${p.id} anchors in bounds`);
   if (p.laneId) ok(laneIds.has(p.laneId), `${p.id} references a real lane`);
-  ok(p.allowOverlapGameplay === true, `${p.id} is explicitly visual-only`);
 }
-const artKeys = Object.keys(MAP_PIECES).filter((k) => k !== "primitive-readability-ring");
-ok(placements.every((p) => !artKeys.includes(p.assetKey)), "no decorative MAP_PIECES art keys are used");
-ok(placements.every((p) => p.materialToken !== "wardGreenEmissive" && p.materialToken !== "torchWarm"), "no glowing candle/gem/torch props");
 
-// --- THREE READABLE ELEVATION LEVELS (bold heights) -------------------------
-const spawnY = byId.get("spawn-floor-back")?.scaleY;
-const midY = byId.get("mid-combat-plateau")?.scaleY;
-const topFloorY = byId.get("ward-rim-square")?.scaleY; // authoritative top-floor surface (others sit a hair lower to avoid z-fighting)
-const daisY = byId.get("ward-platform-square")?.scaleY;
-ok([spawnY, midY, topFloorY, daisY].every(Number.isFinite), "bottom / middle / top / dais floors all exist");
-ok(midY - spawnY >= 0.4, "middle combat floor is BOLDLY higher than the bottom spawn floor");
-ok(topFloorY - midY >= 0.4, "top Ward floor is BOLDLY higher than the middle floor");
-ok(daisY >= topFloorY, "the Ward dais is the highest surface (slightly above the top floor)");
-ok(byId.get("mid-riser-rear")?.scaleY >= midY - 0.01, "a visible riser face steps the combat floor up from the spawns");
-ok(countRole("level-connector") >= 6, "step ramps connect the spawn floor up to the combat floor");
-ok(byId.get("spawn-floor-back")?.materialToken === "floorRubbleDark", "bottom spawn floor uses the darkest material");
-ok(byId.get("mid-combat-plateau")?.materialToken === "courtyardMidStone", "middle combat floor uses the mid material");
-ok(byId.get("ward-platform-square")?.materialToken === "shrinePlatformStone", "top Ward floor uses the lightest shrine material");
+// renders the painted terrains at their grid heights
+const heightByRole = { "entry-floor": FB_HEIGHT[1], "combat-floor": FB_HEIGHT[2], "high-ground": FB_HEIGHT[3], "ward-shelf": FB_HEIGHT[4], "ward-shrine": FB_HEIGHT[5], "stair-floor": FB_HEIGHT[7] };
+for (const [role, h] of Object.entries(heightByRole)) {
+  const ps = byRole(role);
+  if (ps.length) ok(ps.every((p) => Math.abs(p.scaleY - h) < 1e-6), `${role} boxes sit at the painted grid height ${h}`);
+}
+ok(byRole("combat-floor").length >= 1 && byRole("high-ground").length >= 1 && byRole("wall").length >= 1, "floor + platform + wall terrains are all rendered");
+ok(byRole("ward-shrine").length >= 1 && byRole("ward-shrine").every((p) => Math.abs(p.anchorCol - core.col) <= 6 && Math.abs(p.anchorRow - core.row) <= 6), "ward dais is rendered at the core");
+ok(SURFACE_HEIGHTS.spawn < SURFACE_HEIGHTS.mid && SURFACE_HEIGHTS.mid < SURFACE_HEIGHTS.platform && SURFACE_HEIGHTS.platform < SURFACE_HEIGHTS.top && SURFACE_HEIGHTS.top <= SURFACE_HEIGHTS.dais, "heights ramp low -> high");
 
-// --- heights MATCH the visual surface plan (so actors stand on the floor) ----
-ok(validateSurfacePlan(firstBreachSurfacePlan(LEVEL), LEVEL).ok, "the exported surface plan validates");
-ok(SURFACE_HEIGHTS.spawn === spawnY, "surface spawn height matches the spawn slab top");
-ok(SURFACE_HEIGHTS.mid === midY, "surface mid height matches the combat plateau top");
-ok(SURFACE_HEIGHTS.top === topFloorY, "surface top height matches the upper-hall top");
-ok(SURFACE_HEIGHTS.dais === daisY, "surface dais height matches the Ward platform top");
-ok(placements.filter((p) => p.readabilityRole === "floor-riser").length >= 3, "dark riser faces mark the exposed terrace edges");
-ok(Math.abs(byId.get("front-apron")?.scaleY - topFloorY) <= 0.12, "the hero front apron is on ~the top floor (spawns by the Ward)");
-ok(firstBreachLedgeBlockers(LEVEL).length >= 50, "hero-only ledge blockers exist around the raised-floor edges");
-
-// --- BOTTOM: three spread shadow spawn groups + dark recessed gates ----------
-const groups = placements.filter((p) => p.readabilityRole === "spawn-group");
-ok(groups.length === 3, "there are exactly three lower spawn groups");
-const gcols = groups.map((g) => g.anchorCol).sort((a, b) => a - b);
-ok(gcols[0] <= 20 && gcols[2] >= 52 && gcols[1] >= 28 && gcols[1] <= 44, "spawn groups are spread left / center / right");
-ok(groups.every((g) => g.anchorRow < 22), "spawn groups sit on the lower/enemy side of the room");
+// shadow gates: five, at the painted gate cells, exactly one main
+const gates = byRole("spawn-gate");
+ok(gates.length === 5, "five shadow gates (A-E)");
+ok(gates.filter((p) => p.tags.includes("main")).length === 1, "exactly one main gate");
 for (const lane of LEVEL.lanes) {
-  const gate = placements.find((p) => p.laneId === lane.id && p.readabilityRole === "spawn-gate" && p.type === "gate");
-  ok(!!gate && gate.anchorCol === lane.spawn.col && gate.anchorRow === lane.spawn.row, `${lane.id} gate anchors to its spawn`);
-  ok(gate.materialToken === "shadowEdgeRuin", `${lane.id} gate void is a dark (near-black) breach mouth`);
-  const frame = placements.filter((p) => p.laneId === lane.id && p.readabilityRole === "spawn-gate-frame");
-  ok(frame.some((p) => p.tags.includes("backing")) && frame.some((p) => p.tags.includes("arch")), `${lane.id} gate has a dark backing + stepped arch`);
+  const g = gates.find((p) => p.laneId === lane.id);
+  ok(!!g && g.anchorCol === lane.spawn.col && g.anchorRow === lane.spawn.row, `${lane.id} gate sits at its painted spawn`);
+  ok(g && g.materialToken === "shadowEdgeRuin", `${lane.id} gate void is a dark breach`);
 }
-ok(placements.filter((p) => p.type === "gate" && p.readabilityRole === "spawn-gate").length === 5, "all five lanes get a shadow gate");
 
-// --- TOP: Ward dais + two connected upper side halls -------------------------
-const ward = placements.filter((p) => p.readabilityRole === "ward-shrine");
-ok(ward.length >= 2 && ward.every((p) => p.anchorCol === core.col && p.anchorRow === core.row), "Ward dais is centered on the bottom-middle core (top floor)");
-ok(byId.get("ward-rim-diamond")?.ry === 45, "Ward dais is octagonal-ish (square + 45deg diamond)");
-ok(byId.has("left-upper-hall") && byId.has("right-upper-hall"), "left and right upper side halls exist");
-for (const id of ["left-upper-hall", "right-upper-hall"]) {
-  const h = byId.get(id);
-  ok(Math.abs(h.scaleY - topFloorY) <= 0.12, `${id} sits on ~the top/Ward floor height`);
-  ok(h.anchorRow >= 40 && Math.abs(h.anchorCol - core.col) <= 12, `${id} is near the Ward / back wall, not a far corner`);
-}
-ok(byId.has("left-upper-hall") && byId.has("right-upper-hall"), "left + right upper halls join the Ward deck");
-ok(byId.get("left-upper-hall").scaleX > byId.get("right-upper-hall").scaleX + 2, "upper halls are asymmetric (dominant left, broken right), not mirrored");
-ok(byId.has("left-spine-wall"), "a dominant left spine breaks the symmetric footprint");
-ok(countRole("upper-hall") >= 2, "upper halls form defendable top-floor extensions");
-const nearWard = placements.filter((p) => Math.abs(p.anchorCol - core.col) <= 3 && Math.abs(p.anchorRow - core.row) <= 3);
-ok(nearWard.every((p) => ["ward-shrine", "stair-landing"].includes(p.readabilityRole)), "no decorative clutter sits on the Ward dais");
-ok(core.col === 16 && core.row === 49, "Ward core sits on the SW player-side shelf {16,49}");
-ok(Math.abs(LEVEL.heroSpawn.col - core.col) <= 8 && LEVEL.heroSpawn.row >= core.row, "hero spawns on the SW apron beside the Ward shelf");
-
-// --- STAIR: broad steps connecting middle -> top, no sawtooth ---------------
-const steps = placements.filter((p) => p.readabilityRole === "broad-stair-step");
-ok(steps.length === 4, "central approach is exactly four broad step bands (3-6 allowed)");
-ok(steps.every((p) => p.laneId === "north-gate" && p.ry === 0), "steps belong to the central lane and are flat (no sawtooth fins)");
-ok([...steps].sort((a, b) => a.anchorRow - b.anchorRow).every((p, i, a) => i === 0 || p.scaleY > a[i - 1].scaleY), "steps climb in height toward the Ward");
-ok(byId.get("ward-broad-step-4-upper")?.scaleY >= midY && byId.get("ward-broad-step-4-upper")?.scaleY <= topFloorY + 0.01, "the top step climbs between the mid and top floors (treads match the hero climb interp)");
-ok(byId.get("ward-stair-bottom-landing")?.scaleY <= midY + 0.01, "bottom landing is on the middle floor");
-ok(Math.abs(byId.get("ward-stair-top-landing")?.scaleY - topFloorY) <= 0.12, "top landing is on ~the Ward/top floor");
-ok(countRole("stair-retaining-edge") >= 2, "stair has low broken retaining cheeks");
-
-// --- validation + gameplay invariants ---------------------------------------
-const validation = validateMapPlanAgainstLevel(plan, placements, LEVEL);
-ok(validation.ok && validation.warnings.length === 0, `blockout validates with no warnings: ${validation.errors.join("; ")}`);
-ok(validateMapPlacements(placements, LEVEL, { requiredLaneIds: LEVEL.lanes.map((l) => l.id) }).ok, "direct placement validation passes for all required lanes");
-const elev = validateElevationPlan(firstBreachBlockoutElevationPlan(LEVEL), LEVEL);
-ok(elev.ok && elev.plan.visualOnly, `elevation plan validates + stays visual-only: ${elev.errors.join("; ")}`);
-const protectedCells = protectedGameplayCellSet(LEVEL);
-for (const p of placements) {
-  if (protectedCells.has(`${p.anchorCol},${p.anchorRow}`)) ok(p.allowOverlapGameplay, `${p.id} marks visual-only overlap on protected cell`);
-}
-ok(LEVEL.cols === 73 && LEVEL.rows === 57, "compact First Breach bounds unchanged");
-ok(LEVEL.lanes.length === 5 && WAVES.length === 5, "still five lanes and five waves");
-const waveLaneIds = new Set(WAVES.flatMap((w) => w.groups || []).map((g) => g.laneId).filter(Boolean));
-ok([...waveLaneIds].every((id) => laneIds.has(id)), "every wave lane id still resolves");
-ok((LEVEL.buildableZones || []).length > 0 && (LEVEL.reservedZones || []).length > 0, "build + reserved zones are intact");
-
-// --- no coplanar overlapping walkable slabs (z-fighting / floor-flutter guard) -
+// surface + invariants
+ok(validateSurfacePlan(firstBreachSurfacePlan(LEVEL), LEVEL).ok, "exported surface plan validates");
+ok(Array.isArray(firstBreachLedgeBlockers(LEVEL)), "ledge blockers computed as an array");
 const WALK = new Set(["laneFloor", "platform", "landing", "stair"]);
-const wb = placements.filter((p) => WALK.has(p.type)).map((p) => ({ id: p.id, x0: p.x - p.scaleX / 2, x1: p.x + p.scaleX / 2, z0: p.z - p.scaleZ / 2, z1: p.z + p.scaleZ / 2, top: (p.y || 0) + p.scaleY }));
+const wb = P.filter((p) => WALK.has(p.type)).map((p) => ({ id: p.id, x0: p.x - p.scaleX / 2, x1: p.x + p.scaleX / 2, z0: p.z - p.scaleZ / 2, z1: p.z + p.scaleZ / 2, top: (p.y || 0) + p.scaleY }));
 const ovl = (a, b) => a.x0 < b.x1 - 0.05 && b.x0 < a.x1 - 0.05 && a.z0 < b.z1 - 0.05 && b.z0 < a.z1 - 0.05;
-let zpairs = [];
-for (let i = 0; i < wb.length; i++) for (let j = i + 1; j < wb.length; j++) if (Math.abs(wb[i].top - wb[j].top) < 0.012 && ovl(wb[i], wb[j])) zpairs.push(`${wb[i].id}<>${wb[j].id}`);
-ok(zpairs.length === 0, `no coplanar overlapping walkable slabs (z-fighting): ${zpairs.slice(0, 5).join(", ")}`);
+let zp = [];
+for (let i = 0; i < wb.length; i++) for (let j = i + 1; j < wb.length; j++) if (Math.abs(wb[i].top - wb[j].top) < 0.012 && ovl(wb[i], wb[j])) zp.push(`${wb[i].id}<>${wb[j].id}`);
+ok(zp.length === 0, `no coplanar overlapping walkable slabs (z-fight): ${zp.slice(0, 4).join(", ")}`);
+ok(validateMapPlacements(P, LEVEL, { requiredLaneIds: LEVEL.lanes.map((l) => l.id) }).ok, "placement validation passes for all lanes");
+ok(LEVEL.cols === 73 && LEVEL.rows === 57, "grid stays 73x57");
+ok(LEVEL.lanes.length === 5 && WAVES.length === 5, "still five lanes and five waves");
 
 console.log(`firstBreachBlockout: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

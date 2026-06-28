@@ -52,11 +52,11 @@ const BACKGROUND_DRESSING = [
   { id: "upper-left-broken-wall", name: "wall_broken", col: 24, row: 2, dx: 0, dz: 0, scale: 0.66, ry: 12 },
   { id: "upper-right-cracked-wall", name: "wall_cracked", col: 48, row: 2, dx: 0, dz: 0, scale: 0.66, ry: -12 },
   { id: "west-low-barrier", name: "barrier_half", col: 8, row: 34, dx: 0, dz: 0, scale: 0.56, ry: 90 },
-  { id: "east-low-barrier", name: "barrier_half", col: 64, row: 34, dx: 0, dz: 0, scale: 0.56, ry: 90 },
+  { id: "east-low-barrier", name: "barrier_half", col: 64, row: 38, dx: 0, dz: 0, scale: 0.56, ry: 90 },
   { id: "player-left-pillar", name: "pillar_decorated", col: 25, row: 53, dx: 0, dz: 0, scale: 0.44, ry: 8 },
   { id: "player-right-pillar", name: "pillar_decorated", col: 47, row: 53, dx: 0, dz: 0, scale: 0.44, ry: -8 },
   { id: "crypt-left-candles", name: "shelf_small_candles", col: 8, row: 29, dx: -0.4, dz: 0.7, scale: 0.38, ry: 30 },
-  { id: "crypt-right-rocks", name: "rocks_small", col: 52, row: 52, dx: 0, dz: 0, scale: 0.42, ry: -28 },
+  { id: "crypt-right-rocks", name: "rocks_small", col: 60, row: 3, dx: 0, dz: 0, scale: 0.42, ry: -28 },
 ];
 
 export const MISSION_ART_ASSET_NAMES = Object.freeze([...new Set([

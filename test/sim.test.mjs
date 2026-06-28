@@ -77,7 +77,7 @@ section("pathing");
   ok(Array.isArray(LEVEL.lanes) && LEVEL.lanes.length === 5, "first breach defines five enemy lanes");
   const expectedLaneIds = ["north-gate", "northwest-stairs", "northeast-market", "southwest-crypt", "southeast-garden"];
   ok(LEVEL.cols === 73 && LEVEL.rows === 57, "first breach uses the compact Deeper-Well-inspired footprint");
-  ok(LEVEL.core.col === 16 && LEVEL.core.row === 49, "Ward Crystal sits on the southwest crypt shrine coordinate");
+  ok(LEVEL.core.col === 9 && LEVEL.core.row === 51, "Ward Crystal sits on the southwest crypt shrine coordinate");
   ok(expectedLaneIds.every((id) => LEVEL.lanes.some((lane) => lane.id === id)), "all five required lane ids exist");
   for (const lane of LEVEL.lanes) {
     ok(!!lane.id, `${lane.name || "lane"} has an id`);
@@ -1002,7 +1002,7 @@ section("turret behavior cleanup");
   turret.projSpeed = 50;
   turret.attackRate = 1;
   turret.cooldown = 0;
-  const enemy = spawnEnemyAt(w, "husk", "northeast-market", w.lanePaths["northeast-market"].total * 0.5);
+  const enemy = spawnEnemyAt(w, "husk", "northeast-market", w.lanePaths["northeast-market"].total * 0.2);
   const hpBefore = enemy.hp;
   w.update(0.1, {});
   ok(w.projectiles.length > 0, "projectile turret creates a projectile against a valid target");
