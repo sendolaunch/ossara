@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OSSARA — First Breach Blueprint Editor (dev)</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0c08; color: #cfe0cf; font-family: ui-monospace, monospace; }
+    header { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #222; flex-wrap: wrap; }
+    header h1 { font-size: 13px; margin: 0 8px 0 0; color: #9fb89f; font-weight: 700; }
+    button { font: inherit; font-size: 12px; padding: 5px 9px; background: #1c241a; color: #cfe0cf; border: 1px solid #3a4a3a; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #28361f; }
+    button.danger { border-color: #5a2a2a; } button.danger:hover { background: #3a1c1c; }
+    .pill { font-size: 12px; padding: 4px 8px; border: 1px solid #2a3a2a; border-radius: 6px; background: #12160f; }
+    .ok { color: #5cff8f; } .bad { color: #ff7a7a; }
+    #coords { color: #ffe14a; min-width: 96px; }
+    #wrap { display: flex; gap: 0; height: calc(100vh - 46px); }
+    #stage { flex: 1; padding: 10px; overflow: auto; }
+    #panel { width: 250px; border-left: 1px solid #222; padding: 10px; overflow: auto; font-size: 12px; }
+    #panel h2 { font-size: 12px; color: #9fb89f; margin: 0 0 6px; }
+    #panel label { display: block; margin: 6px 0 2px; color: #8a9a8a; }
+    #panel input, #panel select { width: 100%; font: inherit; font-size: 12px; padding: 4px; background: #12160f; color: #cfe0cf; border: 1px solid #2a3a2a; border-radius: 4px; }
+    .row2 { display: flex; gap: 6px; } .row2 > div { flex: 1; }
+    svg { background: #0a0c08; touch-action: none; user-select: none; }
+    .hint { color: #7a8a7a; font-size: 11px; line-height: 1.5; }
+    .selbox { fill: none; stroke: #ffffff; stroke-width: 2; stroke-dasharray: 4 3; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BLUEPRINT EDITOR</h1>
+    <button data-add="zone">+ Zone</button>
+    <button data-add="gate">+ Gate</button>
+    <button data-add="choke">+ Choke</button>
+    <button data-add="stair">+ Stair</button>
+    <button data-add="routept">+ Route pt</button>
+    <button id="del" class="danger">Delete</button>
+    <span class="pill" id="valid">…</span>
+    <span class="pill" id="coords">–,–</span>
+    <button id="copyjs">Copy .js source</button>
+    <button id="dljson">Download JSON</button>
+    <span class="pill">dev-only</span>
+  </header>
+  <div id="wrap">
+    <div id="stage"><svg id="svg"></svg></div>
+    <div id="panel">
+      <h2>SELECTED</h2>
+      <div id="props"><span class="hint">Click an element to select it.</span></div>
+      <h2 style="margin-top:14px">CONTROLS</h2>
+      <div class="hint">
+        • Click to select<br>
+        • Drag to move (snaps to cells)<br>
+        • Arrow keys: move 1 cell<br>
+        • Shift+Arrows: resize zones/stairs<br>
+        • Delete/Backspace: remove<br>
+        • Esc: deselect<br>
+        • + buttons add at centre, then drag<br>
+        • "Copy .js source" → paste into<br>&nbsp;&nbsp;<code>firstBreachBlueprint.js</code>
+      </div>
+      <div id="errors" class="hint" style="margin-top:10px;color:#ff9f9f;white-space:pre-wrap"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { FIRST_BREACH_BLUEPRINT as SRC } from "/src/mapbuilder/blueprints/firstBreachBlueprint.js";
+    import { validateBlueprint } from "/src/mapbuilder/blueprints/blueprintValidation.js";
+
+    const CELL = 18, PAD = 34;
+    const clone = (o) => JSON.parse(JSON.stringify(o));
+    let bp = clone(SRC);
+    const W = () => bp.grid.cols * CELL + PAD, H = () => bp.grid.rows * CELL + PAD;
+    const svg = document.getElementById("svg");
+    let sel = null;        // { type, id, pi? }
+    let drag = null;       // { dx, dy }  grab offset in cells
+    const bandColor = () => new Map(bp.elevationBands.map((b) => [b.id, b.color]));
+
+    const X = (c) => PAD + c * CELL, Y = (r) => PAD + r * CELL;
+    const clampC = (c) => Math.max(0, Math.min(bp.grid.cols - 1, c));
+    const clampR = (r) => Math.max(0, Math.min(bp.grid.rows - 1, r));
+
+    function cellFromEvent(ev) {
+      const r = svg.getBoundingClientRect();
+      const sx = (ev.clientX - r.left) * (W() / r.width);
+      const sy = (ev.clientY - r.top) * (H() / r.height);
+      return { col: Math.floor((sx - PAD) / CELL), row: Math.floor((sy - PAD) / CELL) };
+    }
+
+    // ---- element registry: how to get/set position for each type ----
+    function elem(s) {
+      if (!s) return null;
+      if (s.type === "zone") return bp.zones.find((z) => z.id === s.id);
+      if (s.type === "stair") return bp.stairs.find((z) => z.id === s.id);
+      if (s.type === "gate") return bp.gates.find((z) => z.id === s.id);
+      if (s.type === "choke") return bp.chokes.find((z) => z.id === s.id);
+      if (s.type === "ward") return bp.ward;
+      if (s.type === "hero") return bp.heroSpawn;
+      if (s.type === "routept") return bp.routes.find((z) => z.id === s.id);
+      return null;
+    }
+    const isRect = (t) => t === "zone" || t === "stair";
+    function getPos(s) { // top-left cell of the element
+      const e = elem(s); if (!e) return null;
+      if (isRect(s.type)) return { col: e.bounds.col, row: e.bounds.row };
+      if (s.type === "routept") return { col: e.points[s.pi].col, row: e.points[s.pi].row };
+      return { col: e.cell.col, row: e.cell.row };
+    }
+    function setPos(s, col, row) {
+      const e = elem(s); if (!e) return;
+      if (isRect(s.type)) { e.bounds.col = clampC(col); e.bounds.row = clampR(row); }
+      else if (s.type === "routept") { e.points[s.pi].col = clampC(col); e.points[s.pi].row = clampR(row); }
+      else { e.cell.col = clampC(col); e.cell.row = clampR(row); }
+    }
+    function resize(s, dw, dh) {
+      const e = elem(s); if (!e || !isRect(s.type)) return;
+      e.bounds.w = Math.max(1, Math.min(bp.grid.cols - e.bounds.col, e.bounds.w + dw));
+      e.bounds.h = Math.max(1, Math.min(bp.grid.rows - e.bounds.row, e.bounds.h + dh));
+    }
+
+    // ---- render (rebuild svg children from bp) ----
+    function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    function render() {
+      svg.setAttribute("viewBox", `0 0 ${W()} ${H()}`);
+      svg.setAttribute("width", W()); svg.setAttribute("height", H());
+      const bc = bandColor();
+      const o = [`<rect x="0" y="0" width="${W()}" height="${H()}" fill="#0a0c08"/>`];
+      for (let c = 0; c <= bp.grid.cols; c += 5) { o.push(`<line x1="${X(c)}" y1="${Y(0)}" x2="${X(c)}" y2="${Y(bp.grid.rows)}" stroke="#fff" stroke-opacity="0.06"/>`); o.push(`<text x="${X(c)}" y="${PAD-6}" fill="#7a8a7a" font-size="10" text-anchor="middle">${c}</text>`); }
+      for (let r = 0; r <= bp.grid.rows; r += 5) { o.push(`<line x1="${X(0)}" y1="${Y(r)}" x2="${X(bp.grid.cols)}" y2="${Y(r)}" stroke="#fff" stroke-opacity="0.06"/>`); o.push(`<text x="${PAD-8}" y="${Y(r)+4}" fill="#7a8a7a" font-size="10" text-anchor="end">${r}</text>`); }
+      // zones
+      for (const z of bp.zones) {
+        const pit = z.band === "pit";
+        o.push(`<rect data-type="zone" data-id="${z.id}" x="${X(z.bounds.col)}" y="${Y(z.bounds.row)}" width="${z.bounds.w*CELL}" height="${z.bounds.h*CELL}" fill="${bc.get(z.band)||'#444'}" fill-opacity="${z.kind==='spawn-room'?0.85:0.78}" stroke="${pit?'#e0883a':(z.kind==='platform'?'#9ea66e':'#000')}" stroke-opacity="0.5" stroke-width="${pit||z.kind==='platform'?1.5:0.5}" ${pit?'stroke-dasharray="5 4"':''} cursor="move"/>`);
+        o.push(`<text x="${X(z.bounds.col+z.bounds.w/2)}" y="${Y(z.bounds.row+z.bounds.h/2)+4}" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold" pointer-events="none">${esc(z.label||z.id)}</text>`);
+      }
+      // stairs
+      for (const s of bp.stairs) o.push(`<rect data-type="stair" data-id="${s.id}" x="${X(s.bounds.col)}" y="${Y(s.bounds.row)}" width="${s.bounds.w*CELL}" height="${s.bounds.h*CELL}" fill="#9a824e" fill-opacity="0.9" stroke="#c8a85e" stroke-width="1" cursor="move"/>`);
+      // routes (lines + point handles)
+      const pal = ["#ff9f43","#ff5d5d","#ffe14a","#4ad6ff","#c08bff","#7CFC00"];
+      bp.routes.forEach((rt,i)=>{ const pts=rt.points.map(p=>`${X(p.col+0.5)},${Y(p.row+0.5)}`).join(" "); o.push(`<polyline points="${pts}" fill="none" stroke="${pal[i%pal.length]}" stroke-width="2" stroke-opacity="0.8" stroke-dasharray="6 4" pointer-events="none"/>`);
+        rt.points.forEach((p,pi)=> o.push(`<circle data-type="routept" data-id="${rt.id}" data-pi="${pi}" cx="${X(p.col+0.5)}" cy="${Y(p.row+0.5)}" r="4.5" fill="${pal[i%pal.length]}" stroke="#000" stroke-width="0.5" cursor="move"/>`)); });
+      // chokes
+      for (const c of bp.chokes) o.push(`<circle data-type="choke" data-id="${c.id}" cx="${X(c.cell.col+0.5)}" cy="${Y(c.cell.row+0.5)}" r="7" fill="#1a120a" stroke="#e0883a" stroke-width="2.2" cursor="move"/>`);
+      // gates
+      for (const g of bp.gates) { const main=g.importance==="main"; const x=X(g.cell.col+0.5),y=Y(g.cell.row+0.5);
+        o.push(`<circle data-type="gate" data-id="${g.id}" cx="${x}" cy="${y}" r="11" fill="${main?'#e8c24a':'#070707'}" stroke="#e8c24a" stroke-width="${main?3:1.5}" cursor="move"/>`);
+        o.push(`<text x="${x}" y="${y+5}" fill="${main?'#1a1a1a':'#ffe14a'}" font-size="13" text-anchor="middle" font-weight="bold" pointer-events="none">${esc(g.label)}</text>`); }
+      // ward + hero
+      o.push(`<circle data-type="ward" data-id="ward" cx="${X(bp.ward.cell.col+0.5)}" cy="${Y(bp.ward.cell.row+0.5)}" r="8" fill="#5cff8f" cursor="move"/>`);
+      o.push(`<text x="${X(bp.ward.cell.col+0.5)}" y="${Y(bp.ward.cell.row+0.5)-12}" fill="#5cff8f" font-size="11" text-anchor="middle" font-weight="bold" pointer-events="none">WARD</text>`);
+      o.push(`<circle data-type="hero" data-id="hero" cx="${X(bp.heroSpawn.cell.col+0.5)}" cy="${Y(bp.heroSpawn.cell.row+0.5)}" r="5" fill="#37d6ff" cursor="move"/>`);
+      // selection box
+      if (sel) { const p=getPos(sel); if (p) { let bx=X(p.col),by=Y(p.row),bw=CELL,bh=CELL; const e=elem(sel); if(isRect(sel.type)){bw=e.bounds.w*CELL;bh=e.bounds.h*CELL;} else {bx-=4;by-=4;bw+=8;bh+=8;} o.push(`<rect class="selbox" x="${bx}" y="${by}" width="${bw}" height="${bh}"/>`); } }
+      svg.innerHTML = o.join("");
+      renderProps(); revalidate();
+    }
+
+    function revalidate() {
+      const v = validateBlueprint(bp);
+      const el = document.getElementById("valid");
+      el.textContent = v.ok ? "✓ valid" : `✗ ${v.errors.length} err`;
+      el.className = "pill " + (v.ok ? "ok" : "bad");
+      document.getElementById("errors").textContent = v.errors.map(e=>"• "+e).join("\n");
+    }
+
+    // ---- properties panel ----
+    function field(label, value, on, opts) {
+      const id = "f_" + label.replace(/\W/g,"");
+      let input;
+      if (opts) input = `<select id="${id}">${opts.map(o=>`<option ${o===value?'selected':''}>${o}</option>`).join("")}</select>`;
+      else input = `<input id="${id}" value="${value??''}"/>`;
+      setTimeout(()=>{ const el=document.getElementById(id); if(el) el.onchange=()=>on(el.value); },0);
+      return `<label>${label}</label>${input}`;
+    }
+    function numField(label, value, on) {
+      const id="n_"+label; setTimeout(()=>{const el=document.getElementById(id); if(el) el.oninput=()=>on(parseInt(el.value||"0",10));},0);
+      return `<div><label>${label}</label><input id="${id}" type="number" value="${value}"/></div>`;
+    }
+    function renderProps() {
+      const host = document.getElementById("props");
+      if (!sel) { host.innerHTML = '<span class="hint">Click an element to select it.</span>'; return; }
+      const e = elem(sel); if (!e) { host.innerHTML='<span class="hint">—</span>'; return; }
+      let h = `<div class="hint">${sel.type}${sel.type==="routept"?" #"+sel.pi:""} · <b>${e.id||e.label||sel.id}</b></div>`;
+      const bands = bp.elevationBands.map(b=>b.id);
+      if (sel.type==="zone") {
+        h += field("label", e.label, v=>{e.label=v;render();});
+        h += field("kind", e.kind, v=>{e.kind=v;render();}, ["floor","platform","ward","spawn-room","entry","pit"]);
+        h += field("band", e.band, v=>{e.band=v;render();}, bands);
+        h += `<div class="row2">${numField("col",e.bounds.col,v=>{e.bounds.col=v;render();})}${numField("row",e.bounds.row,v=>{e.bounds.row=v;render();})}</div>`;
+        h += `<div class="row2">${numField("w",e.bounds.w,v=>{e.bounds.w=Math.max(1,v);render();})}${numField("h",e.bounds.h,v=>{e.bounds.h=Math.max(1,v);render();})}</div>`;
+      } else if (sel.type==="gate") {
+        h += field("label", e.label, v=>{e.label=v;render();});
+        h += field("importance", e.importance, v=>{e.importance=v;render();}, ["normal","main"]);
+        h += field("wall", e.wall, v=>{e.wall=v;render();});
+        h += field("laneIds (csv)", (e.laneIds||[]).join(","), v=>{e.laneIds=v.split(",").map(x=>x.trim()).filter(Boolean);});
+        h += `<div class="row2">${numField("col",e.cell.col,v=>{e.cell.col=v;render();})}${numField("row",e.cell.row,v=>{e.cell.row=v;render();})}</div>`;
+      } else if (sel.type==="stair") {
+        h += field("label", e.label, v=>{e.label=v;render();});
+        h += field("from", e.from, v=>{e.from=v;render();}, bands);
+        h += field("to", e.to, v=>{e.to=v;render();}, bands);
+        h += `<div class="row2">${numField("col",e.bounds.col,v=>{e.bounds.col=v;render();})}${numField("row",e.bounds.row,v=>{e.bounds.row=v;render();})}</div>`;
+        h += `<div class="row2">${numField("w",e.bounds.w,v=>{e.bounds.w=Math.max(1,v);render();})}${numField("h",e.bounds.h,v=>{e.bounds.h=Math.max(1,v);render();})}</div>`;
+      } else if (sel.type==="choke") {
+        h += field("label", e.label, v=>{e.label=v;render();});
+        h += `<div class="row2">${numField("col",e.cell.col,v=>{e.cell.col=v;render();})}${numField("row",e.cell.row,v=>{e.cell.row=v;render();})}</div>`;
+      } else if (sel.type==="routept") {
+        h += `<div class="hint">route ${e.id} (${e.label||""})</div>`;
+        h += `<div class="row2">${numField("col",e.points[sel.pi].col,v=>{e.points[sel.pi].col=v;render();})}${numField("row",e.points[sel.pi].row,v=>{e.points[sel.pi].row=v;render();})}</div>`;
+      } else { // ward / hero
+        h += `<div class="row2">${numField("col",e.cell.col,v=>{e.cell.col=v;render();})}${numField("row",e.cell.row,v=>{e.cell.row=v;render();})}</div>`;
+      }
+      host.innerHTML = h;
+    }
+
+    // ---- pointer interaction ----
+    svg.addEventListener("pointerdown", (ev) => {
+      const t = ev.target.closest("[data-type]");
+      if (!t) { sel = null; render(); return; }
+      sel = { type: t.dataset.type, id: t.dataset.id, pi: t.dataset.pi !== undefined ? +t.dataset.pi : undefined };
+      const cell = cellFromEvent(ev); const pos = getPos(sel);
+      drag = { dx: cell.col - pos.col, dy: cell.row - pos.row };
+      svg.setPointerCapture(ev.pointerId); render();
+    });
+    svg.addEventListener("pointermove", (ev) => {
+      const cell = cellFromEvent(ev);
+      document.getElementById("coords").textContent = (cell.col>=0&&cell.row>=0&&cell.col<bp.grid.cols&&cell.row<bp.grid.rows) ? `${cell.col},${cell.row}` : "–,–";
+      if (drag && sel) { setPos(sel, cell.col - drag.dx, cell.row - drag.dy); render(); }
+    });
+    svg.addEventListener("pointerup", () => { drag = null; });
+
+    // ---- keyboard ----
+    window.addEventListener("keydown", (ev) => {
+      if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
+      if (!sel) return;
+      const d = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] }[ev.key];
+      if (d) {
+        ev.preventDefault();
+        if (ev.shiftKey && isRect(sel.type)) resize(sel, d[0], d[1]);
+        else { const p = getPos(sel); setPos(sel, p.col + d[0], p.row + d[1]); }
+        render();
+      } else if (ev.key === "Delete" || ev.key === "Backspace") { ev.preventDefault(); del(); }
+      else if (ev.key === "Escape") { sel = null; render(); }
+    });
+
+    // ---- add / delete ----
+    function uid(prefix) { let i=1, id; const all=new Set([...bp.zones,...bp.gates,...bp.chokes,...bp.stairs].map(x=>x.id)); do { id=prefix+"-"+i++; } while(all.has(id)); return id; }
+    function centerCell() { return { col: Math.floor(bp.grid.cols/2), row: Math.floor(bp.grid.rows/2) }; }
+    document.querySelectorAll("[data-add]").forEach(btn => btn.onclick = () => {
+      const c = centerCell();
+      if (btn.dataset.add === "zone") { const id=uid("zone"); bp.zones.push({id,kind:"floor",band:"mid",bounds:{col:c.col-3,row:c.row-3,w:6,h:6},label:"new zone"}); sel={type:"zone",id}; }
+      else if (btn.dataset.add === "gate") { const id=uid("gate"); const lbl=String.fromCharCode(65+bp.gates.length); bp.gates.push({id,label:lbl,laneIds:[],cell:{col:c.col,row:c.row},importance:"normal",wall:"north"}); sel={type:"gate",id}; }
+      else if (btn.dataset.add === "choke") { const id=uid("choke"); bp.chokes.push({id,label:"new choke",cell:{col:c.col,row:c.row}}); sel={type:"choke",id}; }
+      else if (btn.dataset.add === "stair") { const id=uid("stair"); bp.stairs.push({id,from:"mid",to:"top",bounds:{col:c.col-3,row:c.row-1,w:6,h:3},label:"new stair"}); sel={type:"stair",id}; }
+      else if (btn.dataset.add === "routept") { if (sel && sel.type==="routept") { const rt=elem(sel); const last=rt.points[rt.points.length-1]; rt.points.push({col:last.col,row:last.row+1}); sel={type:"routept",id:rt.id,pi:rt.points.length-1}; } else { alert("Select a route point first, then + Route pt adds another point to that route."); } }
+      render();
+    });
+    function del() {
+      if (!sel) return;
+      if (sel.type==="zone") bp.zones = bp.zones.filter(z=>z.id!==sel.id);
+      else if (sel.type==="gate") bp.gates = bp.gates.filter(z=>z.id!==sel.id);
+      else if (sel.type==="choke") bp.chokes = bp.chokes.filter(z=>z.id!==sel.id);
+      else if (sel.type==="stair") bp.stairs = bp.stairs.filter(z=>z.id!==sel.id);
+      else if (sel.type==="routept") { const rt=elem(sel); if (rt.points.length>2) rt.points.splice(sel.pi,1); }
+      sel = null; render();
+    }
+    document.getElementById("del").onclick = del;
+
+    // ---- export ----
+    document.getElementById("copyjs").onclick = async () => {
+      const js = `// First Breach blueprint (edited in the dev blueprint editor).\nexport const FIRST_BREACH_BLUEPRINT = ${JSON.stringify(bp, null, 2)};\n\nexport default FIRST_BREACH_BLUEPRINT;\n`;
+      try { await navigator.clipboard.writeText(js); document.getElementById("copyjs").textContent = "Copied ✓"; }
+      catch { document.getElementById("copyjs").textContent = "Copy failed"; }
+      setTimeout(()=>document.getElementById("copyjs").textContent="Copy .js source",1500);
+    };
+    document.getElementById("dljson").onclick = () => {
+      const blob = new Blob([JSON.stringify(bp,null,2)], {type:"application/json"});
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "firstBreachBlueprint.json"; a.click();
+    };
+
+    render();
+  </script>
+</body>
+</html>

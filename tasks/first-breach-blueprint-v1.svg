@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1348 1060" font-family="monospace" data-blueprint="first-breach-blueprint-v1">
+<rect width="1348" height="1060" fill="#0a0c08"/>
+<text x="674" y="18" fill="#cfe0cf" font-size="14" text-anchor="middle" font-weight="bold">First Breach — Deeper-Well crypt (Option A direction)  ·  grid 73x57 (N up, W left)</text>
+<line x1="34" y1="34" x2="34" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="34" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">0</text>
+<line x1="124" y1="34" x2="124" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="124" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">5</text>
+<line x1="214" y1="34" x2="214" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="214" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">10</text>
+<line x1="304" y1="34" x2="304" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="304" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">15</text>
+<line x1="394" y1="34" x2="394" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="394" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">20</text>
+<line x1="484" y1="34" x2="484" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="484" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">25</text>
+<line x1="574" y1="34" x2="574" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="574" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">30</text>
+<line x1="664" y1="34" x2="664" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="664" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">35</text>
+<line x1="754" y1="34" x2="754" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="754" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">40</text>
+<line x1="844" y1="34" x2="844" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="844" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">45</text>
+<line x1="934" y1="34" x2="934" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="934" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">50</text>
+<line x1="1024" y1="34" x2="1024" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="1024" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">55</text>
+<line x1="1114" y1="34" x2="1114" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="1114" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">60</text>
+<line x1="1204" y1="34" x2="1204" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="1204" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">65</text>
+<line x1="1294" y1="34" x2="1294" y2="1060" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="1294" y="28" fill="#7a8a7a" font-size="10" text-anchor="middle">70</text>
+<line x1="34" y1="34" x2="1348" y2="34" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="38" fill="#7a8a7a" font-size="10" text-anchor="end">0</text>
+<line x1="34" y1="124" x2="1348" y2="124" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="128" fill="#7a8a7a" font-size="10" text-anchor="end">5</text>
+<line x1="34" y1="214" x2="1348" y2="214" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="218" fill="#7a8a7a" font-size="10" text-anchor="end">10</text>
+<line x1="34" y1="304" x2="1348" y2="304" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="308" fill="#7a8a7a" font-size="10" text-anchor="end">15</text>
+<line x1="34" y1="394" x2="1348" y2="394" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="398" fill="#7a8a7a" font-size="10" text-anchor="end">20</text>
+<line x1="34" y1="484" x2="1348" y2="484" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="488" fill="#7a8a7a" font-size="10" text-anchor="end">25</text>
+<line x1="34" y1="574" x2="1348" y2="574" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="578" fill="#7a8a7a" font-size="10" text-anchor="end">30</text>
+<line x1="34" y1="664" x2="1348" y2="664" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="668" fill="#7a8a7a" font-size="10" text-anchor="end">35</text>
+<line x1="34" y1="754" x2="1348" y2="754" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="758" fill="#7a8a7a" font-size="10" text-anchor="end">40</text>
+<line x1="34" y1="844" x2="1348" y2="844" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="848" fill="#7a8a7a" font-size="10" text-anchor="end">45</text>
+<line x1="34" y1="934" x2="1348" y2="934" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="938" fill="#7a8a7a" font-size="10" text-anchor="end">50</text>
+<line x1="34" y1="1024" x2="1348" y2="1024" stroke="#ffffff" stroke-opacity="0.06"/>
+<text x="26" y="1028" fill="#7a8a7a" font-size="10" text-anchor="end">55</text>
+<rect x="142" y="178" width="1080.0" height="810.0" fill="#414d36" fill-opacity="0.8" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="682" y="587" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Combat floor</text>
+<rect x="556" y="430" width="342.0" height="198.0" fill="#737b53" fill-opacity="0.8" stroke="#9ea66e" stroke-width="1.6" data-zone="1"/>
+<text x="727" y="533" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Central high ground</text>
+<rect x="70" y="790" width="396.0" height="234.0" fill="#2f9f55" fill-opacity="0.8" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="268" y="911" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Ward shelf (SW)</text>
+<rect x="232" y="844" width="198.0" height="144.0" fill="#3fcf6b" fill-opacity="0.8" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="331" y="920" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Crystal dais</text>
+<rect x="34" y="34" width="1314.0" height="162.0" fill="#1e2016" fill-opacity="0.8" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="691" y="119" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">North entry</text>
+<rect x="1114" y="196" width="234.0" height="648.0" fill="#1e2016" fill-opacity="0.8" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="1231" y="524" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">East entry</text>
+<rect x="268" y="52" width="198.0" height="126.0" fill="#1e2016" fill-opacity="0.85" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="367" y="119" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Spawn room A (NW)</text>
+<rect x="628" y="52" width="198.0" height="126.0" fill="#1e2016" fill-opacity="0.85" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="727" y="119" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Spawn room B (N)</text>
+<rect x="1114" y="250" width="234.0" height="234.0" fill="#1e2016" fill-opacity="0.85" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="1231" y="371" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Spawn room C (NE / main)</text>
+<rect x="1132" y="484" width="216.0" height="144.0" fill="#1e2016" fill-opacity="0.85" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="1240" y="560" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Spawn room D (E-mid)</text>
+<rect x="1132" y="718" width="216.0" height="198.0" fill="#1e2016" fill-opacity="0.85" stroke="none" stroke-width="0" data-zone="1"/>
+<text x="1240" y="821" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">Spawn room E (SE)</text>
+<rect x="34" y="34" width="144.0" height="162.0" fill="#101006" fill-opacity="0.95" stroke="#e0883a" stroke-width="1.6" stroke-dasharray="5 4" data-zone="1"/>
+<text x="106" y="119" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">NW ruin (void)</text>
+<rect x="1222" y="34" width="126.0" height="126.0" fill="#101006" fill-opacity="0.95" stroke="#e0883a" stroke-width="1.6" stroke-dasharray="5 4" data-zone="1"/>
+<text x="1285" y="101" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">NE ruin (void)</text>
+<rect x="934" y="916" width="414.0" height="144.0" fill="#101006" fill-opacity="0.95" stroke="#e0883a" stroke-width="1.6" stroke-dasharray="5 4" data-zone="1"/>
+<text x="1141" y="992" fill="#0d0d08" font-size="10" text-anchor="middle" font-weight="bold">SE ruin (void)</text>
+<rect x="268" y="772" width="162.0" height="126.0" fill="#9a824e" fill-opacity="0.92" stroke="#c8a85e" stroke-width="1" data-zone="1"/>
+<rect x="628" y="610" width="198.0" height="54.0" fill="#9a824e" fill-opacity="0.92" stroke="#c8a85e" stroke-width="1" data-zone="1"/>
+<rect x="376" y="178" width="126.0" height="72.0" fill="#9a824e" fill-opacity="0.92" stroke="#c8a85e" stroke-width="1" data-zone="1"/>
+<rect x="700" y="178" width="126.0" height="72.0" fill="#9a824e" fill-opacity="0.92" stroke="#c8a85e" stroke-width="1" data-zone="1"/>
+<rect x="1024" y="340" width="108.0" height="126.0" fill="#9a824e" fill-opacity="0.92" stroke="#c8a85e" stroke-width="1" data-zone="1"/>
+<polyline points="439,169 439,763 331,763 331,925" fill="none" stroke="#ff9f43" stroke-width="2.2" stroke-opacity="0.85" stroke-dasharray="6 4"/>
+<polyline points="763,169 763,367 511,367 511,763 331,763 331,925" fill="none" stroke="#ff5d5d" stroke-width="2.2" stroke-opacity="0.85" stroke-dasharray="6 4"/>
+<polyline points="1231,367 1051,367 1051,727 331,727 331,925" fill="none" stroke="#ffe14a" stroke-width="2.2" stroke-opacity="0.85" stroke-dasharray="6 4"/>
+<polyline points="1231,583 1051,583 1051,763 331,763 331,925" fill="none" stroke="#4ad6ff" stroke-width="2.2" stroke-opacity="0.85" stroke-dasharray="6 4"/>
+<polyline points="1231,835 583,835 331,835 331,925" fill="none" stroke="#c08bff" stroke-width="2.2" stroke-opacity="0.85" stroke-dasharray="6 4"/>
+<circle cx="511" cy="583" r="6" fill="none" stroke="#e0883a" stroke-width="2.2"/>
+<circle cx="1051" cy="583" r="6" fill="none" stroke="#e0883a" stroke-width="2.2"/>
+<circle cx="583" cy="763" r="6" fill="none" stroke="#e0883a" stroke-width="2.2"/>
+<circle cx="367" cy="871" r="6" fill="none" stroke="#e0883a" stroke-width="2.2"/>
+<circle cx="439" cy="169" r="11" fill="#070707" fill-opacity="0.95" stroke="#e8c24a" stroke-width="1.5"/>
+<text x="439" y="174" fill="#ffe14a" font-size="13" text-anchor="middle" font-weight="bold">A</text>
+<text x="439" y="154" fill="#ffe14a" font-size="10" text-anchor="middle">north</text>
+<circle cx="763" cy="169" r="11" fill="#070707" fill-opacity="0.95" stroke="#e8c24a" stroke-width="1.5"/>
+<text x="763" y="174" fill="#ffe14a" font-size="13" text-anchor="middle" font-weight="bold">B</text>
+<text x="763" y="154" fill="#ffe14a" font-size="10" text-anchor="middle">north</text>
+<circle cx="1231" cy="367" r="11" fill="#e8c24a" fill-opacity="0.95" stroke="#e8c24a" stroke-width="3"/>
+<text x="1231" y="372" fill="#1a1a1a" font-size="13" text-anchor="middle" font-weight="bold">C</text>
+<text x="1231" y="352" fill="#ffe14a" font-size="10" text-anchor="middle">MAIN GATE ★</text>
+<circle cx="1231" cy="583" r="11" fill="#070707" fill-opacity="0.95" stroke="#e8c24a" stroke-width="1.5"/>
+<text x="1231" y="588" fill="#ffe14a" font-size="13" text-anchor="middle" font-weight="bold">D</text>
+<text x="1231" y="568" fill="#ffe14a" font-size="10" text-anchor="middle">east</text>
+<circle cx="1231" cy="835" r="11" fill="#070707" fill-opacity="0.95" stroke="#e8c24a" stroke-width="1.5"/>
+<text x="1231" y="840" fill="#ffe14a" font-size="13" text-anchor="middle" font-weight="bold">E</text>
+<text x="1231" y="820" fill="#ffe14a" font-size="10" text-anchor="middle">east</text>
+<circle cx="331" cy="925" r="7" fill="#5cff8f"/>
+<text x="331" y="913" fill="#5cff8f" font-size="11" text-anchor="middle" font-weight="bold">Ward Crystal</text>
+<circle cx="223" cy="979" r="5" fill="#37d6ff"/>
+<rect x="1106" y="940" width="240" height="120" fill="#000" fill-opacity="0.6" stroke="#333"/>
+<text x="1114" y="952" fill="#9fb89f" font-size="10" text-anchor="start">ELEVATION (low → high)</text>
+<rect x="1114" y="954" width="14" height="12" fill="#101006" stroke="#555" stroke-width="0.5"/>
+<text x="1136" y="964" fill="#cfe0cf" font-size="10" text-anchor="start">Pit / void (non-walkable) (0)</text>
+<rect x="1114" y="970" width="14" height="12" fill="#1e2016" stroke="#555" stroke-width="0.5"/>
+<text x="1136" y="980" fill="#cfe0cf" font-size="10" text-anchor="start">Low entry / door apron (0.15)</text>
+<rect x="1114" y="986" width="14" height="12" fill="#414d36" stroke="#555" stroke-width="0.5"/>
+<text x="1136" y="996" fill="#cfe0cf" font-size="10" text-anchor="start">Combat floor (1.4)</text>
+<rect x="1114" y="1002" width="14" height="12" fill="#737b53" stroke="#555" stroke-width="0.5"/>
+<text x="1136" y="1012" fill="#cfe0cf" font-size="10" text-anchor="start">Raised platform (high ground) (2.2)</text>
+<rect x="1114" y="1018" width="14" height="12" fill="#2f9f55" stroke="#555" stroke-width="0.5"/>
+<text x="1136" y="1028" fill="#cfe0cf" font-size="10" text-anchor="start">Ward shelf (2.8)</text>
+<rect x="1114" y="1034" width="14" height="12" fill="#3fcf6b" stroke="#555" stroke-width="0.5"/>
+<text x="1136" y="1044" fill="#cfe0cf" font-size="10" text-anchor="start">Ward crystal dais (3.1)</text>
+</svg>
