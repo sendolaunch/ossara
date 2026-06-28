@@ -1,166 +1,147 @@
-// First Breach: Deeper-Well Crypt.
+// First Breach: Deeper-Well Crypt (off-axis topology).
 //
-// Compact fallen-crypt layout: the Ward Crystal now sits on the player-side
-// bottom-middle shrine, while the five preserved gameplay lane ids emerge from
-// three shadowed crypt approach families and converge through readable chokes.
+// Translated from Dungeon Defenders 1's Deeper Well grammar: the Ward Crystal is
+// tucked on a SOUTHWEST player-side shelf (core {16,49}), five gates A-E line the
+// north/east perimeter, and the five preserved lane ids collapse through four
+// readable chokes (1-4) toward the Ward. Grid stays 73x57. Lane id -> gate map:
+//   north-gate=B (north early) · northwest-stairs=A (NW late) ·
+//   northeast-market=C (east-upper) · southwest-crypt=D (east-mid) ·
+//   southeast-garden=E (east-lower late). Names are internal keys; positions follow A-E.
 
 export const LANES = [
   {
-    id: "north-gate",
-    name: "Central Crypt",
+    id: "north-gate", // Gate B — early north door
+    name: "North Breach",
     silhouette: "stairs",
-    spawn: { col: 36, row: 2 },
+    spawn: { col: 37, row: 7 },
     spawnWidth: 3.4,
     spawnSpreadFade: 14,
     corridorWidth: 2.6,
     waypoints: [
-      { col: 36, row: 2 },
-      { col: 36, row: 14 },
-      { col: 36, row: 26 },
-      { col: 36, row: 39 },
-      { col: 36, row: 47 },
+      { col: 37, row: 7 },
+      { col: 37, row: 18 },
+      { col: 22, row: 18 },
+      { col: 22, row: 26 }, // choke 2
+      { col: 16, row: 26 },
+      { col: 16, row: 49 }, // Ward
     ],
-    choke: { col: 36, row: 26 },
-    fallbackChoke: { col: 36, row: 39 },
+    choke: { col: 22, row: 26 },
+    fallbackChoke: { col: 16, row: 38 },
     buildShoulders: [
-      { col: 34, row: 26 },
-      { col: 38, row: 26 },
-      { col: 34, row: 41 },
-      { col: 38, row: 41 },
+      { col: 24, row: 27 },
+      { col: 34, row: 34 },
+      { col: 26, row: 22 },
+      { col: 19, row: 30 },
     ],
     threatRating: 1,
-    telegraphs: [
-      { col: 36, row: 14, dir: "south" },
-      { col: 36, row: 32, dir: "south" },
-    ],
+    telegraphs: [{ col: 37, row: 14, dir: "south" }, { col: 22, row: 22, dir: "west" }],
   },
   {
-    id: "northwest-stairs",
-    name: "Left Broken Crypt",
+    id: "northwest-stairs", // Gate A — late north-west door
+    name: "North-West Breach",
     silhouette: "gate",
-    spawn: { col: 16, row: 5 },
+    spawn: { col: 18, row: 7 },
     spawnWidth: 3.2,
     spawnSpreadFade: 14,
     corridorWidth: 2.5,
     waypoints: [
-      { col: 16, row: 5 },
-      { col: 16, row: 14 },
-      { col: 26, row: 14 },
-      { col: 26, row: 26 },
-      { col: 32, row: 26 },
-      { col: 32, row: 39 },
-      { col: 36, row: 39 },
-      { col: 36, row: 47 },
+      { col: 18, row: 7 },
+      { col: 18, row: 16 }, // choke 1
+      { col: 22, row: 16 },
+      { col: 22, row: 26 }, // choke 2
+      { col: 16, row: 26 },
+      { col: 16, row: 49 }, // Ward
     ],
-    choke: { col: 32, row: 26 },
-    fallbackChoke: { col: 32, row: 39 },
+    choke: { col: 18, row: 16 },
+    fallbackChoke: { col: 22, row: 26 },
     buildShoulders: [
-      { col: 30, row: 28 },
-      { col: 34, row: 27 },
-      { col: 30, row: 38 },
-      { col: 34, row: 40 },
+      { col: 15, row: 19 },
+      { col: 21, row: 20 },
+      { col: 26, row: 24 },
+      { col: 19, row: 30 },
     ],
     threatRating: 2,
-    telegraphs: [
-      { col: 18, row: 14, dir: "east" },
-      { col: 32, row: 31, dir: "south" },
-    ],
+    telegraphs: [{ col: 18, row: 11, dir: "south" }, { col: 20, row: 22, dir: "south" }],
   },
   {
-    id: "northeast-market",
-    name: "Right Broken Crypt",
+    id: "northeast-market", // Gate C — early east-upper door
+    name: "East-Upper Breach",
     silhouette: "gate",
-    spawn: { col: 56, row: 5 },
+    spawn: { col: 64, row: 18 },
     spawnWidth: 3.2,
     spawnSpreadFade: 14,
     corridorWidth: 2.5,
     waypoints: [
-      { col: 56, row: 5 },
-      { col: 56, row: 14 },
-      { col: 46, row: 14 },
-      { col: 46, row: 26 },
-      { col: 40, row: 26 },
-      { col: 40, row: 39 },
-      { col: 36, row: 39 },
-      { col: 36, row: 47 },
+      { col: 64, row: 18 },
+      { col: 64, row: 30 },
+      { col: 39, row: 30 }, // choke 3 approach
+      { col: 39, row: 41 },
+      { col: 16, row: 41 },
+      { col: 16, row: 49 }, // Ward
     ],
-    choke: { col: 40, row: 26 },
-    fallbackChoke: { col: 40, row: 39 },
+    choke: { col: 39, row: 30 },
+    fallbackChoke: { col: 39, row: 41 },
     buildShoulders: [
-      { col: 42, row: 28 },
-      { col: 38, row: 27 },
-      { col: 42, row: 38 },
-      { col: 38, row: 40 },
-    ],
-    threatRating: 2,
-    telegraphs: [
-      { col: 54, row: 14, dir: "west" },
-      { col: 40, row: 31, dir: "south" },
-    ],
-  },
-  {
-    id: "southwest-crypt",
-    name: "Left Side Crypt",
-    silhouette: "crypt",
-    spawn: { col: 2, row: 24 },
-    spawnWidth: 3.1,
-    spawnSpreadFade: 12,
-    corridorWidth: 2.5,
-    waypoints: [
-      { col: 2, row: 24 },
-      { col: 14, row: 24 },
-      { col: 14, row: 30 },
-      { col: 26, row: 30 },
-      { col: 26, row: 39 },
-      { col: 32, row: 39 },
-      { col: 36, row: 39 },
-      { col: 36, row: 47 },
-    ],
-    choke: { col: 26, row: 30 },
-    fallbackChoke: { col: 32, row: 39 },
-    buildShoulders: [
-      { col: 22, row: 32 },
-      { col: 29, row: 30 },
+      { col: 44, row: 28 },
+      { col: 44, row: 33 },
+      { col: 34, row: 34 },
       { col: 30, row: 38 },
-      { col: 34, row: 40 },
     ],
     threatRating: 2,
-    telegraphs: [
-      { col: 14, row: 24, dir: "east" },
-      { col: 26, row: 34, dir: "south" },
-    ],
+    telegraphs: [{ col: 58, row: 30, dir: "west" }, { col: 39, row: 35, dir: "south" }],
   },
   {
-    id: "southeast-garden",
-    name: "Right Side Crypt",
+    id: "southwest-crypt", // Gate D — east-mid door
+    name: "East-Mid Breach",
     silhouette: "crypt",
-    spawn: { col: 70, row: 24 },
+    spawn: { col: 66, row: 28 },
     spawnWidth: 3.1,
     spawnSpreadFade: 12,
     corridorWidth: 2.5,
     waypoints: [
-      { col: 70, row: 24 },
-      { col: 58, row: 24 },
-      { col: 58, row: 30 },
-      { col: 46, row: 30 },
-      { col: 46, row: 39 },
-      { col: 40, row: 39 },
-      { col: 36, row: 39 },
-      { col: 36, row: 47 },
+      { col: 66, row: 28 },
+      { col: 66, row: 41 },
+      { col: 39, row: 41 }, // choke 3
+      { col: 16, row: 41 },
+      { col: 16, row: 49 }, // Ward
     ],
-    choke: { col: 46, row: 30 },
-    fallbackChoke: { col: 40, row: 39 },
+    choke: { col: 39, row: 41 },
+    fallbackChoke: { col: 24, row: 41 },
     buildShoulders: [
-      { col: 50, row: 32 },
-      { col: 43, row: 30 },
-      { col: 42, row: 38 },
-      { col: 38, row: 40 },
+      { col: 44, row: 39 },
+      { col: 44, row: 43 },
+      { col: 30, row: 38 },
+      { col: 22, row: 38 },
     ],
     threatRating: 2,
-    telegraphs: [
-      { col: 58, row: 24, dir: "west" },
-      { col: 46, row: 34, dir: "south" },
+    telegraphs: [{ col: 58, row: 41, dir: "west" }, { col: 30, row: 41, dir: "west" }],
+  },
+  {
+    id: "southeast-garden", // Gate E — late east-lower door
+    name: "East-Lower Breach",
+    silhouette: "crypt",
+    spawn: { col: 66, row: 42 },
+    spawnWidth: 3.1,
+    spawnSpreadFade: 12,
+    corridorWidth: 2.5,
+    waypoints: [
+      { col: 66, row: 42 },
+      { col: 58, row: 42 },
+      { col: 58, row: 44 }, // choke 4
+      { col: 39, row: 44 },
+      { col: 16, row: 44 },
+      { col: 16, row: 49 }, // Ward
     ],
+    choke: { col: 58, row: 44 },
+    fallbackChoke: { col: 39, row: 44 },
+    buildShoulders: [
+      { col: 54, row: 42 },
+      { col: 60, row: 46 },
+      { col: 44, row: 46 },
+      { col: 30, row: 46 },
+    ],
+    threatRating: 2,
+    telegraphs: [{ col: 58, row: 40, dir: "south" }, { col: 44, row: 44, dir: "west" }],
   },
 ];
 
@@ -209,46 +190,40 @@ export const LEVEL = {
   spawnSpreadFade: 14,
   corridorWidth: 2.5,
 
-  core: { col: 36, row: 47 },
-  heroSpawn: { col: 36, row: 52 },
+  core: { col: 16, row: 49 },
+  heroSpawn: { col: 10, row: 52 },
   lanes: LANES,
   spawns: LANES.map((lane) => ({ id: lane.id, name: lane.name, ...lane.spawn })),
   laneTelegraphs: buildLaneTelegraphs(LANES),
 
-  // Metadata for lane teaching/readability. With openBuildable enabled, these
-  // are hints and test anchors, not tiny build islands.
+  // Buildable hints/test anchors (openBuildable gates real placement). One per
+  // lane near its choke + the Ward apron.
   buildableZones: [
-    { id: "ward-shrine-apron", laneId: "core", col: 28, row: 40, w: 17, h: 8 },
-    { id: "fallback-left-shoulders", laneId: "core", col: 27, row: 36, w: 10, h: 7 },
-    { id: "fallback-right-shoulders", laneId: "core", col: 36, row: 36, w: 10, h: 7 },
-    { id: "central-main-choke", laneId: "north-gate", col: 30, row: 23, w: 13, h: 8 },
-    { id: "left-front-main-choke", laneId: "northwest-stairs", col: 22, row: 23, w: 14, h: 8 },
-    { id: "right-front-main-choke", laneId: "northeast-market", col: 37, row: 23, w: 14, h: 8 },
-    { id: "left-crypt-main-choke", laneId: "southwest-crypt", col: 20, row: 27, w: 15, h: 8 },
-    { id: "right-crypt-main-choke", laneId: "southeast-garden", col: 38, row: 27, w: 15, h: 8 },
+    { id: "ward-shrine-apron", laneId: "core", col: 10, row: 43, w: 16, h: 9 },
+    { id: "north-gate-choke", laneId: "north-gate", col: 18, row: 22, w: 10, h: 8 },
+    { id: "northwest-choke", laneId: "northwest-stairs", col: 13, row: 13, w: 10, h: 8 },
+    { id: "northeast-choke", laneId: "northeast-market", col: 34, row: 27, w: 12, h: 8 },
+    { id: "southwest-choke", laneId: "southwest-crypt", col: 34, row: 37, w: 12, h: 8 },
+    { id: "southeast-choke", laneId: "southeast-garden", col: 52, row: 40, w: 12, h: 8 },
   ],
 
   blockedZones: [
-    { id: "upper-left-shadow-wall", col: 20, row: 0, w: 12, h: 2 },
-    { id: "upper-right-shadow-wall", col: 41, row: 0, w: 12, h: 2 },
-    { id: "upper-left-crypt-edge", col: 5, row: 6, w: 6, h: 8 },
-    { id: "upper-right-crypt-edge", col: 62, row: 6, w: 6, h: 8 },
-    { id: "left-side-crypt-wall", col: 0, row: 16, w: 3, h: 7 },
-    { id: "right-side-crypt-wall", col: 70, row: 16, w: 3, h: 7 },
-    { id: "left-ward-platform-curb", col: 27, row: 44, w: 2, h: 6 },
-    { id: "right-ward-platform-curb", col: 44, row: 44, w: 2, h: 6 },
-    { id: "lower-left-player-ruin", col: 9, row: 51, w: 7, h: 4 },
-    { id: "lower-right-player-ruin", col: 57, row: 51, w: 7, h: 4 },
+    { id: "nw-corner-ruin", col: 0, row: 0, w: 6, h: 5 },
+    { id: "ne-corner-ruin", col: 67, row: 0, w: 6, h: 5 },
+    { id: "north-shadow-wall", col: 24, row: 0, w: 10, h: 2 },
+    { id: "east-shadow-wall", col: 71, row: 8, w: 2, h: 30 },
+    { id: "se-corner-ruin", col: 67, row: 52, w: 6, h: 5 },
+    { id: "ward-left-curb", col: 8, row: 41, w: 2, h: 2 },
   ],
 
   reservedZones: [
-    { id: "core-reserve", col: 33, row: 44, w: 7, h: 7 },
-    { id: "hero-spawn-reserve", col: 35, row: 51, w: 3, h: 3 },
-    { id: "central-crypt-reserve", laneId: "north-gate", col: 33, row: 0, w: 7, h: 5 },
-    { id: "left-upper-crypt-reserve", laneId: "northwest-stairs", col: 13, row: 2, w: 7, h: 7 },
-    { id: "right-upper-crypt-reserve", laneId: "northeast-market", col: 53, row: 2, w: 7, h: 7 },
-    { id: "left-side-crypt-reserve", laneId: "southwest-crypt", col: 0, row: 21, w: 6, h: 7 },
-    { id: "right-side-crypt-reserve", laneId: "southeast-garden", col: 67, row: 21, w: 6, h: 7 },
+    { id: "core-reserve", col: 13, row: 46, w: 7, h: 6 },
+    { id: "hero-spawn-reserve", col: 8, row: 50, w: 5, h: 5 },
+    { id: "north-gate-reserve", laneId: "north-gate", col: 35, row: 5, w: 5, h: 5 },
+    { id: "northwest-reserve", laneId: "northwest-stairs", col: 16, row: 5, w: 5, h: 5 },
+    { id: "northeast-reserve", laneId: "northeast-market", col: 62, row: 16, w: 5, h: 6 },
+    { id: "southwest-reserve", laneId: "southwest-crypt", col: 64, row: 26, w: 5, h: 6 },
+    { id: "southeast-reserve", laneId: "southeast-garden", col: 64, row: 40, w: 5, h: 6 },
   ],
 
   // Legacy aliases for older callers. The live renderer and sim read lanes.

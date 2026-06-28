@@ -56,7 +56,7 @@ const BACKGROUND_DRESSING = [
   { id: "player-left-pillar", name: "pillar_decorated", col: 25, row: 53, dx: 0, dz: 0, scale: 0.44, ry: 8 },
   { id: "player-right-pillar", name: "pillar_decorated", col: 47, row: 53, dx: 0, dz: 0, scale: 0.44, ry: -8 },
   { id: "crypt-left-candles", name: "shelf_small_candles", col: 8, row: 29, dx: -0.4, dz: 0.7, scale: 0.38, ry: 30 },
-  { id: "crypt-right-rocks", name: "rocks_small", col: 64, row: 29, dx: 0.8, dz: 0.7, scale: 0.42, ry: -28 },
+  { id: "crypt-right-rocks", name: "rocks_small", col: 52, row: 52, dx: 0, dz: 0, scale: 0.42, ry: -28 },
 ];
 
 export const MISSION_ART_ASSET_NAMES = Object.freeze([...new Set([

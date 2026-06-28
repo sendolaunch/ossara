@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S6 — 2026-06-21 — Spawn-map rebuild: modular keep + fixed cam + dead-kingdom horizon (new files; wiring pending CC) |
+| **Last session** | S7 — 2026-06-28 — First Breach Deeper Well rebuild: off-axis SW Ward, gates A–E, blockout+surface+ledges repositioned; full suite green, build green (commit pending CC) |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,17 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7 — 2026-06-28 — First Breach "Deeper Well" rebuild (off-axis SW Ward) [GATE GREEN; EYEBALL PENDING]
+- **Goal:** stop First Breach reading as a centered, mirror-symmetric three-band square; rebuild it on Dungeon Defenders' *Deeper Well* grammar — an irregular off-axis footprint with the Ward tucked on a **southwest player-side shelf**, five gates **A–E** strung along the north/east perimeter, and routes collapsing through four chokes toward the Ward. Primitive-only greybox (no art).
+- **Gameplay grid (`src/config/level.js`):** core `{36,47}→{16,49}`, hero `{36,52}→{10,52}`, grid kept 73×57 (avoids a world-coord shift). All 5 lanes re-spawned + re-routed (axis-aligned waypoints) to the SW core: north-gate=B, northwest-stairs=A, northeast-market=C, southwest-crypt=D, southeast-garden=E. New buildable/reserved/blocked zones around the SW Ward + perimeter gates. Enemy stats/counts/waves untouched (only lane refs).
+- **Blockout (`src/mapbuilder/firstBreachBlockout.js`):** repositioned every hardcoded floor for SW — central combat plateau, SW Ward dais + shelf, dominant **left-spine** wall (breaks the mirror), two asymmetric upper halls, hero apron at `{10,52}`, broad Ward stair (col 16, climbs mid 1.4 → top 2.8), three spawn ramps, dark riser faces. Ward/gates/choke-markers auto-follow `level.core`/`lane.spawn`. Surface plan + hero ledge blockers (145) recomputed for SW.
+- **Renderer/sim gates:** `World.js` (ledge blockers) + `pcRenderer.js` (`_surfacePlan`) First-Breach gate updated `core 36/47 → 16/49` so the walkable-elevation + surface-lift systems actually fire on the new map (load-bearing — without these the feature silently dies).
+- **Cleanup:** deleted dead `firstBreachMapPlan.js` + its 3 coupled tests (`mapBuilder`, `mapValidation`, `mapElevation`); trimmed `package.json` test list. Updated `missionArt.js` (crypt-rocks off the new lane) + its test; updated `sim.test`, `firstBreachBlockout.test`, `mapSurfaceHeights.test` anchors to SW.
+- **Verified (R5/R6):** `npm test` → **exit 0, all green** (sim 1354/1354, firstBreachBlockout 771/771, mapSurfaceHeights 44/44 incl. BFS no-trap: hero reaches Ward, both combat sides, halls, spawn). `npm run build` → **✓ 893 modules, built 25s** (sandbox needed the Linux rollup binary, installed `--no-save` so `package.json` is untouched; Windows has its own). `node --check` clean + NUL-free on all changed files.
+- **Unverified:** the in-engine **eyeball** (does it read as Deeper Well; stairs/ledges/clipping/camera) — the sandbox can't render PlayCanvas (R20/R26). Needs a human `npm run dev` walk + screenshots after push.
+- **Commit pending CC** (R12/R16): scoped add of 10 modified + 4 deleted files (NEVER `git add -A` — ~1000 CRLF/LFS phantom binaries). Note: the FUSE mount's git hides `World.js`/`pcRenderer.js` from `status` (stat-cache) though their blob hashes differ — close-prompt includes a staging-count guard so CC doesn't commit without them.
+- **In Friendly Words:** I rebuilt the first level so it feels like Dungeon Defenders' opening map instead of a flat, symmetric box — the crystal you defend now sits tucked in a back southwest corner on a raised shelf, with five doors spread along the top and right edges and enemy paths that funnel down toward you. All the automated checks pass and the game still builds cleanly, so the layout and enemy routing are proven correct. The one thing I can't check from here is how it *looks* in 3D — so the next step is for you to run it and send screenshots, then push it live.
 
 ### S6.9–6.12 — 2026-06-21 — Hub feel sprint (camera, mood, movement, ritual) [LIVE-VERIFIED]
 - Locked the hub design + economy specs first: `tasks/hub-feel-spec.md` (DD1-tavern target, stations incl. new Wardrobe/Bounty/Incinerator, build order) and `tasks/economy-spec.md` (two-currency, demand-not-burn, creator-fee-funded prizes/LP, 2% marketplace fee→treasury, level-gated breaches, no P2W/staking/token-grind). Both supersede conflicting design-doc bits.

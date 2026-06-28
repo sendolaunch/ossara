@@ -404,7 +404,7 @@ export class PCRenderer {
   buildStatic(world) {
     const level = world.level;
     this._surfaceLevel = level;
-    this._surfacePlan = (level && level.core && level.core.col === 36 && level.core.row === 47 && level.cols === 73)
+    this._surfacePlan = (level && level.core && level.core.col === 16 && level.core.row === 49 && level.cols === 73)
       ? firstBreachSurfacePlan(level)
       : null;
     const minWorld = gridToWorld(0, 0, level);

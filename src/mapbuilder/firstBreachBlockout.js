@@ -1,26 +1,18 @@
 // ============================================================================
-// FIRST BREACH — PRIMITIVE DD1 CRYPT BLOCKOUT (greybox) · WALKABLE 3 LEVELS v4
+// FIRST BREACH — PRIMITIVE DD1 DEEPER-WELL BLOCKOUT (greybox) · OFF-AXIS v5
 // ----------------------------------------------------------------------------
-// Still PRIMITIVE-ONLY (plain boxes, no GLB art). Three BOLD, walkable floors so
-// elevation reads clearly from the normal camera and actors stand on the floor:
-//
-//   TOP / WARD FLOOR  (lightest, ~2.8 / dais ~3.1) — raised Ward dais, two upper
-//       side halls, and the hero's front spawn apron (so the hero starts up by
-//       the Ward). Reached from the combat floor by the broad central stair.
-//   MIDDLE / COMBAT   (mid value, ~1.4)            — the main defense plateau, a
-//       chunky terrace whose tall box sides read as the riser up from the spawns.
-//   BOTTOM / SPAWN    (darkest, ~0.15)             — low dark floor wrapping the
-//       back + sides, three spread shadow spawn groups, ramps up to the combat.
-//
-// Heights here MATCH `firstBreachSurfacePlan()` so the renderer lifts actors onto
-// the visible floor; `firstBreachLedgeBlockers()` are hero-only movement blockers
-// (the low cells at the base of each riser, minus stair connectors) so you can't
-// walk off / through a terrace side except via the stairs. The sim stays a flat
-// 2D grid (no navmesh): pathing, build validity, waves, collision math unchanged.
-//
-// Gameplay anchors read from LEVEL, never changed: core/Ward {36,47}, hero
-// {36,52}, 5 lanes, 73x57. Lane routes/waypoints unchanged. Grid -> world:
-// x = col-36, z = row-28, tile 1. Box bottom rests at visualY=0 (scale.y = top).
+// PRIMITIVE-ONLY (plain boxes, no GLB art). Off-axis Deeper-Well topology: the
+// Ward sits on a SOUTHWEST player-side shelf (core {16,49}), five gates A-E line
+// the north/east perimeter, and routes collapse through chokes toward the Ward.
+// Three bold walkable floors:
+//   TOP / WARD SHELF (lightest ~2.8 / dais ~3.1) — SW shelf the hero defends, with
+//       the hero apron beside it; reached from the combat floor by broad steps.
+//   MIDDLE / COMBAT (mid ~1.4) — central plateau the lanes cross.
+//   BOTTOM / SPAWN (darkest ~0.15) — north + east perimeter with the gate recesses.
+// Heights MATCH firstBreachSurfacePlan() (renderer lifts actors); ledge blockers
+// (hero-only) wall the terrace sides except at stairs. Sim stays a flat 2D grid.
+// Ward + gates + choke markers follow LEVEL.core / lane.spawn automatically.
+// Grid -> world: x=col-36, z=row-28, tile 1; box bottom rests at visualY=0.
 // ============================================================================
 
 import { LEVEL } from "../config/level.js";
@@ -29,7 +21,6 @@ import { MAP_PIECES } from "../config/mapPieces.js";
 import { buildMapPlacements } from "./mapBuilder.js";
 import { computeLedgeBlockers } from "./mapSurfaceHeights.js";
 
-// BOLD visual floor TOP heights (also the surface-plan heights).
 const EL = { spawn: 0.15, mid: 1.4, top: 2.8, dais: 3.1 };
 export const SURFACE_HEIGHTS = Object.freeze({ ...EL });
 
@@ -61,128 +52,111 @@ const flr = (id, cell, w, d, topY, mat, role, band, tags = []) =>
   piece({ id, key: "gb-floor", type: "laneFloor", cell, scale: { x: w, y: topY, z: d }, materialToken: mat, role, band, tags: ["floor", ...tags] });
 const wal = (id, cell, scale, mat = "ruinedStoneDark", o = {}) =>
   piece({ id, key: "gb-wall", type: "wall", cell, scale, materialToken: mat, role: o.role || "room-shell", band: o.band, visualY: o.visualY, rotation: o.rotation, offset: o.offset, laneId: o.laneId, tags: o.tags || ["wall"] });
-// Dark vertical riser face on an exposed terrace edge (reads the level change).
 const riser = (id, cell, w, h, d, tags = []) =>
   piece({ id, key: "gb-edge", type: "edge", cell, scale: { x: w, y: h, z: d }, materialToken: "shadowEdgeRuin", role: "floor-riser", tags: ["riser", ...tags] });
 
-// ---------------------------------------------------------------------------
-// ROOM SHELL — tall back wall (now taller to frame the raised Ward), bayed side
-// walls with buttresses + a gap for the side gates, low front wall.
-// ---------------------------------------------------------------------------
+// ROOM SHELL — perimeter frame: north back wall (behind A/B), east wall (behind
+// C/D/E), west + south walls hugging the SW Ward shelf, buttresses, broken crenels.
 function roomShell(level) {
   const out = [];
-  for (const [i, c, w] of [["l", 8, 12], ["lc", 26, 12], ["rc", 46, 12], ["r", 64, 12]]) {
+  for (const [i, c, w] of [["l", 9, 14], ["lc", 28, 12], ["r", 50, 18]]) {
     out.push(wal(`shell-back-seg-${i}`, { col: c, row: 1 }, { x: w, y: 5.6, z: 1.4 }, "shadowEdgeRuin", { band: "backgroundHigh", tags: ["back"] }));
   }
-  for (const [i, c] of [13, 19, 33, 39, 53, 59].entries()) {
+  for (const [i, c] of [14, 22, 33, 41, 60].entries()) {
     out.push(wal(`shell-back-buttress-${i}`, { col: c, row: 2 }, { x: 2.0, y: 5.8, z: 2.0 }, "ruinedStoneDark", { tags: ["buttress"] }));
   }
-  for (const [i, c] of [10, 28, 48, 66].entries()) {
+  for (const [i, c] of [12, 30, 50, 64].entries()) {
     out.push(wal(`shell-back-crenel-${i}`, { col: c, row: 1 }, { x: 2.4, y: 0.9, z: 1.4 }, "ruinedStoneMid", { visualY: 5.6, tags: ["crenel"] }));
   }
-  for (const [side, c, sgn] of [["left", 7, -1], ["right", 65, 1]]) {
-    out.push(wal(`shell-${side}-wall-upper`, { col: c, row: 11 }, { x: 1.6, y: 4.6, z: 18 }, "ruinedStoneDark", { tags: ["side", side] }));
-    out.push(wal(`shell-${side}-wall-lower`, { col: c, row: 42 }, { x: 1.6, y: 4.2, z: 22 }, "ruinedStoneDark", { tags: ["side", side] }));
-    out.push(wal(`shell-${side}-buttress-a`, { col: c + sgn * 1.4, row: 14 }, { x: 1.8, y: 4.8, z: 1.8 }, "ruinedStoneDark", { tags: ["buttress"] }));
-    out.push(wal(`shell-${side}-buttress-b`, { col: c + sgn * 1.4, row: 49 }, { x: 1.8, y: 4.6, z: 1.8 }, "ruinedStoneDark", { tags: ["buttress"] }));
-  }
-  out.push(wal("shell-front-wall", { col: 36, row: 55 }, { x: 44, y: 2.0, z: 1.3 }, "ruinedStoneDark", { tags: ["front"] }));
+  // East wall (behind the C/D/E gates) with buttresses.
+  out.push(wal("shell-east-wall", { col: 71, row: 30 }, { x: 1.6, y: 4.6, z: 40 }, "ruinedStoneDark", { tags: ["side", "east"] }));
+  out.push(wal("shell-east-buttress-a", { col: 69, row: 18 }, { x: 1.8, y: 4.8, z: 1.8 }, "ruinedStoneDark", { tags: ["buttress"] }));
+  out.push(wal("shell-east-buttress-b", { col: 69, row: 42 }, { x: 1.8, y: 4.6, z: 1.8 }, "ruinedStoneDark", { tags: ["buttress"] }));
+  // West wall hugging the Ward shelf (dominant SW spine).
+  out.push(wal("shell-west-wall", { col: 1, row: 40 }, { x: 1.6, y: 4.8, z: 30 }, "ruinedStoneDark", { tags: ["side", "west", "spine"] }));
+  out.push(wal("shell-south-wall", { col: 22, row: 55 }, { x: 44, y: 2.0, z: 1.3 }, "ruinedStoneDark", { tags: ["front"] }));
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// BOTTOM / SPAWN FLOOR — low dark floor wrapping back + sides, three spread
-// shadow spawn groups.
-// ---------------------------------------------------------------------------
+// BOTTOM / SPAWN FLOOR — dark north strip + east strip (the perimeter the gates
+// breach from), with three spread shadow spawn-group recesses.
 function spawnFloor(level) {
   return [
-    flr("spawn-floor-back", { col: 36, row: 8 }, 60, 16, EL.spawn, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
-    flr("spawn-floor-left-pocket", { col: 8, row: 24 }, 16, 18, EL.spawn - 0.02, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
-    flr("spawn-floor-right-pocket", { col: 64, row: 24 }, 16, 18, EL.spawn - 0.02, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
-    flr("spawn-group-left", { col: 13, row: 13 }, 20, 16, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "left"]),
-    flr("spawn-group-center", { col: 36, row: 7 }, 16, 11, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "center"]),
-    flr("spawn-group-right", { col: 59, row: 13 }, 20, 16, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "right"]),
+    flr("spawn-floor-back", { col: 36, row: 8 }, 64, 16, EL.spawn, "floorRubbleDark", "macro-floor", "low", ["spawn-floor", "north"]),
+    flr("spawn-floor-east", { col: 63, row: 31, w: 0 }, 18, 40, EL.spawn - 0.02, "floorRubbleDark", "macro-floor", "low", ["spawn-floor", "east"]),
+    flr("spawn-group-left", { col: 16, row: 8 }, 16, 14, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "north-left"]),
+    flr("spawn-group-center", { col: 37, row: 9 }, 14, 12, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "north-right"]),
+    flr("spawn-group-right", { col: 62, row: 18 }, 14, 16, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "east"]),
   ];
 }
 
-// ---------------------------------------------------------------------------
-// MIDDLE / COMBAT FLOOR — chunky raised plateau (1.4 tall sides = bold riser),
-// dark riser faces on its exposed edges, three step ramps up from the spawns,
-// low lane-divider curbs on top.
-// ---------------------------------------------------------------------------
+// MIDDLE / COMBAT FLOOR — central raised plateau the lanes cross, dark riser faces
+// on exposed edges, three step ramps up from the perimeter spawns, lane dividers.
 function middleFloor(level) {
   const out = [];
-  out.push(flr("mid-combat-plateau", { col: 36, row: 28 }, 42, 24, EL.mid, "courtyardMidStone", "macro-floor", "mid", ["combat"]));
-  // Dark riser faces on the plateau's exposed rear + side edges.
-  out.push(riser("mid-riser-rear", { col: 36, row: 16 }, 44, EL.mid, 0.6, ["rear"]));
-  out.push(riser("mid-riser-left", { col: 15, row: 28 }, 0.6, EL.mid, 24, ["left"]));
-  out.push(riser("mid-riser-right", { col: 57, row: 28 }, 0.6, EL.mid, 24, ["right"]));
-  // Spawn -> middle step ramps (0.15 -> 1.4) where the lane groups climb up.
-  const ramp = (id, col, row) => ([
-    piece({ id: `${id}-r1`, key: "gb-step", type: "stair", cell: { col, row }, scale: { x: 7, y: 0.55, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "low", tags: ["ramp"] }),
-    piece({ id: `${id}-r2`, key: "gb-step", type: "stair", cell: { col, row: row + 1 }, scale: { x: 7, y: 1.0, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
-    piece({ id: `${id}-r3`, key: "gb-step", type: "stair", cell: { col, row: row + 2 }, scale: { x: 7, y: EL.mid - 0.02, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
+  out.push(flr("mid-combat-plateau", { col: 38, row: 32 }, 46, 26, EL.mid, "courtyardMidStone", "macro-floor", "mid", ["combat"]));
+  out.push(riser("mid-riser-rear", { col: 38, row: 20 }, 46, EL.mid, 0.6, ["rear"]));
+  out.push(riser("mid-riser-east", { col: 60, row: 32 }, 0.6, EL.mid, 26, ["east"]));
+  const ramp = (id, col, row, horizontal = false) => ([
+    piece({ id: `${id}-r1`, key: "gb-step", type: "stair", cell: { col, row }, scale: horizontal ? { x: 1.1, y: 0.55, z: 7 } : { x: 7, y: 0.55, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "low", tags: ["ramp"] }),
+    piece({ id: `${id}-r2`, key: "gb-step", type: "stair", cell: horizontal ? { col: col - 1, row } : { col, row: row + 1 }, scale: horizontal ? { x: 1.1, y: 1.0, z: 7 } : { x: 7, y: 1.0, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
+    piece({ id: `${id}-r3`, key: "gb-step", type: "stair", cell: horizontal ? { col: col - 2, row } : { col, row: row + 2 }, scale: horizontal ? { x: 1.1, y: EL.mid - 0.02, z: 7 } : { x: 7, y: EL.mid - 0.02, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
   ]);
-  out.push(...ramp("mid-ramp-center", 36, 14));
-  out.push(...ramp("mid-ramp-left", 19, 22));
-  out.push(...ramp("mid-ramp-right", 53, 22));
-  out.push(piece({ id: "lane-divider-left", key: "gb-edge", type: "edge", cell: { col: 25, row: 30 }, scale: { x: 1.0, y: 0.8, z: 14 }, materialToken: "ruinedStoneDark", role: "lane-divider", visualY: EL.mid, tags: ["divider", "left"] }));
-  out.push(piece({ id: "lane-divider-right", key: "gb-edge", type: "edge", cell: { col: 47, row: 30 }, scale: { x: 1.0, y: 0.8, z: 14 }, materialToken: "ruinedStoneDark", role: "lane-divider", visualY: EL.mid, tags: ["divider", "right"] }));
+  out.push(...ramp("mid-ramp-northleft", 20, 18));
+  out.push(...ramp("mid-ramp-north", 38, 18));
+  out.push(...ramp("mid-ramp-east", 59, 30, true));
+  out.push(piece({ id: "lane-divider-left", key: "gb-edge", type: "edge", cell: { col: 30, row: 32 }, scale: { x: 1.0, y: 0.8, z: 14 }, materialToken: "ruinedStoneDark", role: "lane-divider", visualY: EL.mid, tags: ["divider", "left"] }));
+  out.push(piece({ id: "lane-divider-right", key: "gb-edge", type: "edge", cell: { col: 48, row: 32 }, scale: { x: 1.0, y: 0.8, z: 14 }, materialToken: "ruinedStoneDark", role: "lane-divider", visualY: EL.mid, tags: ["divider", "right"] }));
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// TOP / WARD FLOOR — raised octagonal Ward dais + two angled upper side halls +
-// the hero's front spawn apron (all on the top floor), dark riser faces on the
-// exposed front/side edges, low hall rails.
-// ---------------------------------------------------------------------------
+// TOP / WARD SHELF — octagonal Ward dais (follows core) + a SW shelf, two flanking
+// upper-hall shelves near the Ward, the hero apron, and dark riser faces.
 function topFloor(level) {
-  const core = level.core; // {36,47}
+  const core = level.core; // {16,49}
   const out = [];
   out.push(piece({ id: "ward-rim-square", key: "gb-platform", type: "platform", cell: core, scale: { x: 12, y: EL.top, z: 11 }, materialToken: "landingHighStone", role: "ward-shrine", band: "high", tags: ["ward", "rim"] }));
   out.push(piece({ id: "ward-rim-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 8.4, y: EL.top - 0.10, z: 8.4 }, materialToken: "landingHighStone", role: "ward-shrine", band: "high", tags: ["ward", "rim"] }));
   out.push(piece({ id: "ward-platform-square", key: "gb-platform", type: "platform", cell: core, scale: { x: 9, y: EL.dais, z: 8.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
   out.push(piece({ id: "ward-platform-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 6.4, y: EL.dais - 0.04, z: 6.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
-  out.push(piece({ id: "left-upper-hall", key: "gb-platform", type: "platform", cell: { col: 25, row: 42 }, rotation: 16, scale: { x: 11, y: EL.top - 0.02, z: 19 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "left", "spine"] }));
-  out.push(piece({ id: "left-spine-wall", key: "gb-wall", type: "wall", cell: { col: 18, row: 40 }, rotation: 14, scale: { x: 1.4, y: 3.6, z: 22 }, materialToken: "ruinedStoneDark", role: "room-shell", tags: ["spine", "left"] }));
-  out.push(piece({ id: "right-upper-hall", key: "gb-platform", type: "platform", cell: { col: 48, row: 47 }, rotation: -8, scale: { x: 6.5, y: EL.top - 0.04, z: 9 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "right", "broken"] }));
-  out.push(piece({ id: "left-hall-rail", key: "gb-edge", type: "edge", cell: { col: 21, row: 44 }, rotation: 12, scale: { x: 0.9, y: 1.0, z: 12 }, materialToken: "ruinedStoneDark", role: "hall-rail", visualY: EL.top, tags: ["hall", "rail"] }));
-  out.push(piece({ id: "right-hall-rail", key: "gb-edge", type: "edge", cell: { col: 51, row: 44 }, rotation: -12, scale: { x: 0.9, y: 1.0, z: 12 }, materialToken: "ruinedStoneDark", role: "hall-rail", visualY: EL.top, tags: ["hall", "rail"] }));
-  // Front apron: hero spawns up here on the top floor, beside the Ward.
-  out.push(flr("front-apron", { col: 36, row: 52 }, 16, 6, EL.top - 0.06, "landingHighStone", "apron", "high", ["apron"]));
-  // Dark riser face on the top floor's exposed front edge (the big drop read).
-  out.push(riser("top-riser-front", { col: 36, row: 56 }, 18, EL.top, 0.6, ["front"]));
+  // Upper-hall shelves flanking the SW Ward (dominant left/back + broken right).
+  out.push(piece({ id: "left-upper-hall", key: "gb-platform", type: "platform", cell: { col: 10, row: 44 }, scale: { x: 12, y: EL.top - 0.02, z: 14 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "left", "spine"] }));
+  out.push(piece({ id: "right-upper-hall", key: "gb-platform", type: "platform", cell: { col: 25, row: 47 }, rotation: -10, scale: { x: 7, y: EL.top - 0.04, z: 9 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "right", "broken"] }));
+  out.push(piece({ id: "left-hall-rail", key: "gb-edge", type: "edge", cell: { col: 4, row: 46 }, scale: { x: 0.9, y: 1.0, z: 14 }, materialToken: "ruinedStoneDark", role: "hall-rail", visualY: EL.top, tags: ["hall", "rail"] }));
+  // Dominant left spine wall — the asymmetric backbone that breaks the mirror.
+  out.push(wal("left-spine-wall", { col: 3, row: 47 }, { x: 1.6, y: 5.2, z: 20 }, "ruinedStoneDark", { role: "spine-wall", tags: ["spine", "left"] }));
+  // Hero apron: the hero spawns up here on the Ward shelf, just SW of the Ward.
+  out.push(flr("front-apron", { col: 10, row: 52 }, 14, 6, EL.top - 0.06, "landingHighStone", "apron", "high", ["apron"]));
+  // Dark riser faces on the shelf's exposed north + east edges (the drop to mid).
+  out.push(riser("top-riser-north", { col: 14, row: 41 }, 26, EL.top, 0.6, ["north"]));
+  out.push(riser("top-riser-east", { col: 28, row: 50 }, 0.6, EL.top, 14, ["east"]));
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// MAIN STAIR — broad broken steps connecting the middle floor (1.4) up to the
-// Ward/top floor (2.8): bottom landing on mid, four tapering treads climbing up,
-// top landing on the Ward floor, low broken cheeks. No sawtooth / bridge.
-// ---------------------------------------------------------------------------
+// MAIN STAIR — broad broken steps up the Ward approach (col ~16), connecting the
+// combat floor (1.4) to the SW Ward shelf (2.8). Treads match the climb interp.
 function mainStair(level) {
   return [
-    piece({ id: "ward-stair-bottom-landing", key: "gb-landing", type: "landing", cell: { col: 36, row: 38 }, scale: { x: 13, y: EL.mid - 0.04, z: 2.2 }, materialToken: "landingHighStone", role: "stair-landing", laneId: "north-gate", band: "high", tags: ["stair", "bottom-landing"] }),
-    piece({ id: "ward-broad-step-1-lower", key: "gb-step", type: "stair", cell: { col: 36, row: 40 }, scale: { x: 11, y: 1.87, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
-    piece({ id: "ward-broad-step-2-mid-low", key: "gb-step", type: "stair", cell: { col: 36, row: 41 }, scale: { x: 10.4, y: 2.1, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
-    piece({ id: "ward-broad-step-3-mid-high", key: "gb-step", type: "stair", cell: { col: 36, row: 42 }, scale: { x: 9.8, y: 2.33, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
-    piece({ id: "ward-broad-step-4-upper", key: "gb-step", type: "stair", cell: { col: 36, row: 43 }, scale: { x: 9.2, y: 2.57, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "shrine", tags: ["stair", "step"] }),
-    piece({ id: "ward-stair-top-landing", key: "gb-landing", type: "landing", cell: { col: 36, row: 44 }, scale: { x: 9, y: EL.top - 0.03, z: 1.4 }, materialToken: "shrinePlatformStone", role: "stair-landing", laneId: "north-gate", band: "shrine", tags: ["stair", "top-landing"] }),
-    piece({ id: "ward-stair-left-cheek-a", key: "gb-edge", type: "edge", cell: { col: 30, row: 40 }, scale: { x: 1.0, y: 0.7, z: 2.6 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 0.4, tags: ["stair", "cheek"] }),
-    piece({ id: "ward-stair-left-cheek-b", key: "gb-edge", type: "edge", cell: { col: 31, row: 43 }, scale: { x: 1.0, y: 0.8, z: 2.4 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 1.0, tags: ["stair", "cheek"] }),
-    piece({ id: "ward-stair-right-cheek-a", key: "gb-edge", type: "edge", cell: { col: 42, row: 40 }, scale: { x: 1.0, y: 0.7, z: 2.6 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 0.4, tags: ["stair", "cheek"] }),
-    piece({ id: "ward-stair-right-cheek-b", key: "gb-edge", type: "edge", cell: { col: 41, row: 43 }, scale: { x: 1.0, y: 0.8, z: 2.4 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 1.0, tags: ["stair", "cheek"] }),
+    piece({ id: "ward-stair-bottom-landing", key: "gb-landing", type: "landing", cell: { col: 16, row: 39 }, scale: { x: 11, y: EL.mid - 0.04, z: 2.0 }, materialToken: "landingHighStone", role: "stair-landing", laneId: "north-gate", band: "high", tags: ["stair", "bottom-landing"] }),
+    piece({ id: "ward-broad-step-1-lower", key: "gb-step", type: "stair", cell: { col: 16, row: 41 }, scale: { x: 10, y: 1.75, z: 1.1 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
+    piece({ id: "ward-broad-step-2-mid-low", key: "gb-step", type: "stair", cell: { col: 16, row: 42 }, scale: { x: 9.6, y: 2.05, z: 1.1 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
+    piece({ id: "ward-broad-step-3-mid-high", key: "gb-step", type: "stair", cell: { col: 16, row: 43 }, scale: { x: 9.2, y: 2.35, z: 1.1 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
+    piece({ id: "ward-broad-step-4-upper", key: "gb-step", type: "stair", cell: { col: 16, row: 44 }, scale: { x: 8.8, y: 2.6, z: 1.1 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "shrine", tags: ["stair", "step"] }),
+    piece({ id: "ward-stair-top-landing", key: "gb-landing", type: "landing", cell: { col: 16, row: 45 }, scale: { x: 8.5, y: EL.top - 0.06, z: 1.3 }, materialToken: "shrinePlatformStone", role: "stair-landing", laneId: "north-gate", band: "shrine", tags: ["stair", "top-landing"] }),
+    piece({ id: "ward-stair-left-cheek-a", key: "gb-edge", type: "edge", cell: { col: 11, row: 41 }, scale: { x: 1.0, y: 0.7, z: 2.4 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 0.4, tags: ["stair", "cheek"] }),
+    piece({ id: "ward-stair-left-cheek-b", key: "gb-edge", type: "edge", cell: { col: 12, row: 44 }, scale: { x: 1.0, y: 0.8, z: 2.2 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 1.0, tags: ["stair", "cheek"] }),
+    piece({ id: "ward-stair-right-cheek-a", key: "gb-edge", type: "edge", cell: { col: 21, row: 41 }, scale: { x: 1.0, y: 0.7, z: 2.4 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 0.4, tags: ["stair", "cheek"] }),
+    piece({ id: "ward-stair-right-cheek-b", key: "gb-edge", type: "edge", cell: { col: 20, row: 44 }, scale: { x: 1.0, y: 0.8, z: 2.2 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 1.0, tags: ["stair", "cheek"] }),
   ];
 }
 
-// ---------------------------------------------------------------------------
-// SHADOW GATES — per lane: deep dark recess + black backing + thick jambs +
-// stepped arch. Grouped left / center / right. On the bottom spawn floor.
-// ---------------------------------------------------------------------------
+// SHADOW GATES — per lane: dark recess + black backing + thick jambs + stepped
+// arch. Auto-placed at each lane spawn (A-E perimeter). North gates face +z; side
+// gates face inward.
 function shadowGate(level, lane) {
   const spawn = lane.spawn;
-  const back = spawn.row < 8;
-  const left = spawn.col < 8;
+  const back = spawn.row < 10;
+  const left = spawn.col < 12;
   const id = lane.id;
   const out = [];
   if (back) {
@@ -211,10 +185,8 @@ function chokeMarkers(level, lane) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// VISUAL SURFACE PLAN — heights match the slabs (renderer lifts actors here).
-// Front apron is on the TOP floor so the hero spawns up beside the Ward.
-// ---------------------------------------------------------------------------
+// VISUAL SURFACE PLAN — heights match the slabs. Ward shelf (top) is SW; combat is
+// central; spawn is the north + east perimeter. Stairs are the only level changes.
 export function firstBreachSurfacePlan(level = LEVEL) {
   const core = level.core;
   return {
@@ -222,32 +194,25 @@ export function firstBreachSurfacePlan(level = LEVEL) {
     defaultHeight: EL.spawn,
     zones: [
       { id: "ward-dais", height: EL.dais, bounds: { col: core.col - 5, row: core.row - 4, w: 11, h: 8 } },
-      { id: "left-upper-hall", height: EL.top, bounds: { col: 17, row: 36, w: 17, h: 15 } },
-      { id: "right-upper-hall", height: EL.top, bounds: { col: 42, row: 42, w: 11, h: 10 } },
-      { id: "front-apron", height: EL.top, bounds: { col: 28, row: 51, w: 16, h: 5 } },
-      { id: "mid-combat", height: EL.mid, bounds: { col: 14, row: 16, w: 44, h: 23 } },
-      { id: "spawn-back", height: EL.spawn, bounds: { col: 0, row: 0, w: level.cols, h: 16 } },
-      { id: "spawn-left-pocket", height: EL.spawn, bounds: { col: 0, row: 16, w: 16, h: 18 } },
-      { id: "spawn-right-pocket", height: EL.spawn, bounds: { col: level.cols - 16, row: 16, w: 16, h: 18 } },
+      { id: "ward-shelf", height: EL.top, bounds: { col: 2, row: 42, w: 28, h: 14 } },
+      { id: "mid-combat", height: EL.mid, bounds: { col: 14, row: 20, w: 46, h: 22 } },
+      { id: "spawn-north", height: EL.spawn, bounds: { col: 0, row: 0, w: level.cols, h: 20 } },
+      { id: "spawn-east", height: EL.spawn, bounds: { col: 54, row: 12, w: level.cols - 54, h: 36 } },
     ],
     stairs: [
-      { id: "central-stair", bounds: { col: 30, row: 38, w: 13, h: 7 }, fromRow: 38, toRow: 44, fromHeight: EL.mid, toHeight: EL.top },
-      { id: "ramp-center", bounds: { col: 32, row: 14, w: 8, h: 4 }, fromRow: 14, toRow: 17, fromHeight: EL.spawn, toHeight: EL.mid },
-      { id: "ramp-left", bounds: { col: 15, row: 22, w: 9, h: 4 }, fromRow: 22, toRow: 25, fromHeight: EL.spawn, toHeight: EL.mid },
-      { id: "ramp-right", bounds: { col: 49, row: 22, w: 9, h: 4 }, fromRow: 22, toRow: 25, fromHeight: EL.spawn, toHeight: EL.mid },
+      { id: "ward-stair", bounds: { col: 10, row: 39, w: 13, h: 7 }, fromRow: 39, toRow: 45, fromHeight: EL.mid, toHeight: EL.top },
+      { id: "ramp-north", bounds: { col: 33, row: 16, w: 12, h: 5 }, fromRow: 20, toRow: 16, fromHeight: EL.mid, toHeight: EL.spawn },
+      { id: "ramp-northleft", bounds: { col: 15, row: 16, w: 10, h: 5 }, fromRow: 20, toRow: 16, fromHeight: EL.mid, toHeight: EL.spawn },
+      { id: "ramp-east", bounds: { col: 54, row: 27, w: 7, h: 9 }, fromRow: 20, toRow: 16, fromHeight: EL.mid, toHeight: EL.spawn },
     ],
   };
 }
 
-// Hero-only movement blockers at raised-floor edges (low cells at riser bases,
-// minus stair connectors). Built into the World's ledgeBlockedSet (opt-in).
+// Hero-only ledge blockers (low cells at riser bases, minus connectors).
 export function firstBreachLedgeBlockers(level = LEVEL) {
   return computeLedgeBlockers(firstBreachSurfacePlan(level), level, { riseThreshold: 0.5, stairPad: 1 });
 }
 
-// ---------------------------------------------------------------------------
-// Elevation plan (visual-only metadata) — three-band climb + central stair.
-// ---------------------------------------------------------------------------
 export function firstBreachBlockoutElevationPlan(level = LEVEL) {
   const core = level.core;
   return {
@@ -255,29 +220,26 @@ export function firstBreachBlockoutElevationPlan(level = LEVEL) {
     mapId: "first-breach",
     visualOnly: true,
     zones: [
-      { id: "enemy-low", band: "low", role: "enemy-approach", bounds: { col: 6, row: 1, w: 61, h: 22 } },
-      { id: "mid-combat", band: "mid", role: "combat-floor", bounds: { col: 13, row: 22, w: 46, h: 16 } },
-      { id: "ward-approach", band: "high", role: "ward-approach", bounds: { col: 26, row: 36, w: 20, h: 8 } },
+      { id: "enemy-low", band: "low", role: "enemy-approach", bounds: { col: 4, row: 1, w: 64, h: 18 } },
+      { id: "mid-combat", band: "mid", role: "combat-floor", bounds: { col: 14, row: 20, w: 46, h: 22 } },
+      { id: "ward-approach", band: "high", role: "ward-approach", bounds: { col: 8, row: 42, w: 22, h: 8 } },
       { id: "ward-shrine", band: "shrine", role: "ward-objective", bounds: { col: core.col - 5, row: core.row - 4, w: 11, h: 9 } },
       { id: "rear-shadow-wall", band: "backgroundHigh", role: "rear-silhouette", bounds: { col: 4, row: 0, w: 64, h: 2 } },
     ],
     connectors: [
-      { id: "central-ward-stair", type: "stair", fromZone: "mid-combat", toZone: "ward-shrine", laneId: "north-gate", entryCell: { col: 36, row: 38 }, exitCell: { col: 36, row: 44 }, landingCells: { bottom: { col: 36, row: 38 }, top: { col: 36, row: 44 } }, width: 11, stepCount: 4, visualOnly: true },
-      { id: "spawn-to-combat-terrace", type: "terrace", fromZone: "enemy-low", toZone: "mid-combat", entryCell: { col: 36, row: 16 }, exitCell: { col: 36, row: 17 }, width: 16, visualOnly: true },
+      { id: "central-ward-stair", type: "stair", fromZone: "mid-combat", toZone: "ward-shrine", laneId: "north-gate", entryCell: { col: 16, row: 41 }, exitCell: { col: 16, row: 47 }, landingCells: { bottom: { col: 16, row: 41 }, top: { col: 16, row: 47 } }, width: 10, stepCount: 4, visualOnly: true },
+      { id: "spawn-to-combat-terrace", type: "terrace", fromZone: "enemy-low", toZone: "mid-combat", entryCell: { col: 38, row: 20 }, exitCell: { col: 38, row: 21 }, width: 16, visualOnly: true },
     ],
   };
 }
 
-// ---------------------------------------------------------------------------
-// Assemble the full primitive plan.
-// ---------------------------------------------------------------------------
 export function firstBreachBlockoutPlan(level = LEVEL) {
   return {
     id: "first-breach-dd1-crypt-greybox-v3",
     mapId: "first-breach",
     theme: ACTIVE_MAP_THEME_ID,
     elevationPlan: firstBreachBlockoutElevationPlan(level),
-    intent: "Primitive-only DD1 walkable three-level crypt greybox: low dark spawn floor (three spread shadow groups), a chunky raised mid combat plateau, and a high Ward/top floor (dais + upper side halls + hero apron) connected by broad steps. Bold heights + dark riser faces + hero-only ledge blockers. No decorative art until human blockout approval.",
+    intent: "Primitive-only DD1 Deeper-Well greybox: off-axis SW Ward shelf, five A-E perimeter gates, central combat plateau, broad steps up to the Ward. No decorative art until human blockout approval.",
     pieces: [
       ...roomShell(level),
       ...spawnFloor(level),

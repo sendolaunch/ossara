@@ -72,7 +72,7 @@ ok(wardSpecs.length === 4, "Ward Crystal receives minimal ritual art support");
 ok(wardSpecs.every((spec) => spec.anchorCol === LEVEL.core.col && spec.anchorRow === LEVEL.core.row), "Ward dressing anchors to the configured core");
 
 ok(LEVEL.lanes.length === 5, "art pass does not alter First Breach lane count");
-ok(LEVEL.core.col === 36 && LEVEL.core.row === 47, "showcase art follows the bottom-middle Ward shrine layout");
+ok(LEVEL.core.col === 16 && LEVEL.core.row === 49, "showcase art follows the southwest Ward shrine layout");
 ok(LEVEL.coreHp === 24, "Ward Crystal visual work does not change core health");
 ok(WARD_CRYSTAL_MODEL_URL === "models/resource/Gem_Large.gltf", "Ward Crystal uses the imported Gem_Large runtime URL");
 ok(existsSync(WARD_CRYSTAL_MODEL_PATH), "Ward Crystal Gem_Large asset exists in an already-imported runtime folder");

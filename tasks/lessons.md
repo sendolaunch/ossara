@@ -52,6 +52,16 @@ Newest entries first within each section. Sections stay even when empty — they
 
 ## Cowork sandbox limits
 
+**Mount git hides content-changed files from `status` / `add` (stat-cache).**
+- **Symptom:** edited `World.js` + `pcRenderer.js`; `git status`, `git diff`, and even an explicit `git add <file>` in the sandbox all reported them unchanged/unstaged — yet their content genuinely differed from HEAD (the gate edit `core 36→16` was on disk).
+- **Root cause:** the OneDrive FUSE mount's stat metadata doesn't update in a way the sandbox git's racy-clean stat cache distrusts, so git skips the content compare and calls the file clean. `git hash-object <f>` ≠ `git rev-parse HEAD:<f>` proves the blobs actually differ.
+- **Rule:** never trust sandbox `git status` for the change set — confirm with `git hash-object` vs the HEAD blob. Do all git on Windows CC (native FS, no quirk), and **guard the commit**: after the scoped `git add`, assert the staged-file count equals the expected count (e.g. `git diff --cached --name-only | wc -l`) before committing, so a silently-dropped file can't ship. (R7, R12, R16)
+
+**Large Write/Edit to the mount appends NUL bytes and/or truncates the tail.**
+- **Symptom:** a freshly-written `.js` failed `node --check` with "Invalid or unexpected token" — the file had ~3000 trailing `\x00` bytes; after stripping them, a later edit left the final function / `console.log` line cut off mid-statement.
+- **Root cause:** writing a sizable file through the OneDrive mount isn't atomic — the synced copy can gain a NUL pad or lose its tail.
+- **Rule:** after any Write/Edit of a non-trivial file on the mount, scan for NULs (`b'\x00' in open(...,'rb').read()`) **and** verify the tail + syntax (`node --check`). Repair tails via a **single-quoted** bash heredoc to python (so backticks/`${}` aren't eaten by the shell), then re-check. (R5, R6)
+
 **OneDrive ↔ sandbox sync lag blocks live verification.**
 - **Symptom:** files just written by Cowork's tools read as **truncated/stale** in the Linux sandbox, so `node --check`, `vite build`, and the sim test fail on code that's actually correct.
 - **Root cause:** OneDrive hasn't materialized the tool-written file down to the local disk the sandbox mounts; the sandbox serves a partial copy.

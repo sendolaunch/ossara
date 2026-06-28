@@ -116,8 +116,8 @@ ok(byId.has("left-spine-wall"), "a dominant left spine breaks the symmetric foot
 ok(countRole("upper-hall") >= 2, "upper halls form defendable top-floor extensions");
 const nearWard = placements.filter((p) => Math.abs(p.anchorCol - core.col) <= 3 && Math.abs(p.anchorRow - core.row) <= 3);
 ok(nearWard.every((p) => ["ward-shrine", "stair-landing"].includes(p.readabilityRole)), "no decorative clutter sits on the Ward dais");
-ok(core.col === 36 && core.row === 47, "Ward core stays bottom-middle {36,47}");
-ok(Math.abs(LEVEL.heroSpawn.col - core.col) <= 1 && LEVEL.heroSpawn.row > core.row, "hero spawns near/in front of the Ward");
+ok(core.col === 16 && core.row === 49, "Ward core sits on the SW player-side shelf {16,49}");
+ok(Math.abs(LEVEL.heroSpawn.col - core.col) <= 8 && LEVEL.heroSpawn.row >= core.row, "hero spawns on the SW apron beside the Ward shelf");
 
 // --- STAIR: broad steps connecting middle -> top, no sawtooth ---------------
 const steps = placements.filter((p) => p.readabilityRole === "broad-stair-step");

@@ -77,7 +77,7 @@ section("pathing");
   ok(Array.isArray(LEVEL.lanes) && LEVEL.lanes.length === 5, "first breach defines five enemy lanes");
   const expectedLaneIds = ["north-gate", "northwest-stairs", "northeast-market", "southwest-crypt", "southeast-garden"];
   ok(LEVEL.cols === 73 && LEVEL.rows === 57, "first breach uses the compact Deeper-Well-inspired footprint");
-  ok(LEVEL.core.col === 36 && LEVEL.core.row === 47, "Ward Crystal sits on the bottom-middle crypt shrine coordinate");
+  ok(LEVEL.core.col === 16 && LEVEL.core.row === 49, "Ward Crystal sits on the southwest crypt shrine coordinate");
   ok(expectedLaneIds.every((id) => LEVEL.lanes.some((lane) => lane.id === id)), "all five required lane ids exist");
   for (const lane of LEVEL.lanes) {
     ok(!!lane.id, `${lane.name || "lane"} has an id`);
@@ -660,7 +660,7 @@ section("multi-lane spawning");
   const lane = spreadWorld.lanePaths["north-gate"];
   const movingOffsets = spreadWorld.enemies.map((e) => dist(e.x, e.z, pointAtDistance(lane, e.dist).x, pointAtDistance(lane, e.dist).z));
   ok(movingOffsets.filter((d) => d > 0.05).length >= 3, "same-lane enemies keep visible formation spread while moving");
-  run(spreadWorld, 120, 0.25);
+  run(spreadWorld, 300, 0.25);
   ok(spreadWorld.stats.leaked > 0, "spread enemies still converge and can reach the crystal");
 
   const laneIds = new Set(LEVEL.lanes.map((lane) => lane.id));

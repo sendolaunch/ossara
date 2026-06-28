@@ -100,7 +100,7 @@ export class World {
     this.reservedSet = placementSets.reservedSet;
     // Hero-only walkable-elevation ledge blockers (opt-in; First Breach only).
     this.ledgeBlockedSet = new Set();
-    if (opts.walkableElevation && level && level.core && level.core.col === 36 && level.core.row === 47 && level.cols === 73) {
+    if (opts.walkableElevation && level && level.core && level.core.col === 16 && level.core.row === 49 && level.cols === 73) {
       for (const c of firstBreachLedgeBlockers(level)) this.ledgeBlockedSet.add(cellKey(c.col, c.row));
     }
     const _B = this.bonuses;
