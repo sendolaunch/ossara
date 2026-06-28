@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.4 — 2026-06-28 — First Breach BUILT from the painted grid (blueprint tool + grid painter → first-breach-grid.json → level/blockout/surface derived); full suite + /tmp build green (commit pending CC) |
+| **Last session** | S7.6 — 2026-06-28 — First Breach FINAL: Hudson-edited mob routes baked into the lanes (+ diagonal-safe path walker); full suite + build green, ready to push |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,20 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.6 — 2026-06-28 — First Breach FINAL — Hudson-edited mob routes baked (READY TO PUSH) [GATE GREEN]
+- Added a Route mode to the 3D editor (pick lane A-E, click to add waypoints, drag to move, gate/Ward ends fixed). Hudson re-drew the 5 mob paths and exported first-breach-grid (3).json ("this is the final one push it").
+- His routes contain intentional DIAGONAL segments. Fix: `src/sim/pathing.js` cell-walker now steps one axis at a time (4-connected L for diagonals) — diagonal-safe + backward-identical for axis-aligned lanes. Enemy MOVEMENT still follows the true diagonal waypoint polyline (pointAtDistance); only the cell expansion (telegraphs/build hints) is the orthogonal approximation.
+- Baked his exact routes into `level.js` lanes (start=gate, end=Ward, chokes = longest-segment midpoint, off-lane build shoulders). Heights/cells/markers unchanged from S7.5 (entry+floor 1.3, platform+ward 2.6, dais 3, stair 1.6, border walls 7.2 / inner 2.6). Moved 2 missionArt dressing pieces (west-low-barrier, crypt-left-candles) off the new route cells.
+- Verified: `npm test` exit 0 (sim 1399/1399, firstBreachBlockout 691/691, mapSurfaceHeights 25/25, missionArt 189/189, full suite); clean `/tmp` vite build ✓ 894 modules. Could NOT push from the sandbox (no git creds + OneDrive-corrupt index) — handed the commit+push to CC.
+- **In Friendly Words:** you drew the monster paths in the 3D editor and said ship it — I baked those exact paths into the level (with a tiny engine fix so the diagonal paths work), and everything passes and builds. The two-commit block in chat saves and pushes it from your machine.
+
+### S7.5 — 2026-06-28 — First Breach final grid + per-wall heights (APPROVED) [GATE GREEN; EYEBALL DONE BY HUDSON]
+- Built a standalone 3D editor (Three.js, blueprint-3d.html) — orbit, paint, floor-height sliders, gate-sink, and a "Wall height" click-tool (click any wall -> its own slider). Hudson tuned it and approved the result ("i like this one").
+- Made the grid module HEIGHT-AWARE: `firstBreachGrid.js` now bakes `FB_CELL_HEIGHTS` (per-cell) and merges terrain rects by (terrain, height); the blockout renders each rect at its own height + the surface plan resolves per-cell heights. So outer-border walls (classified by flood-from-edge) render at 7.2 and inner walls at 2.6; entry+floor flat at 1.3, platform+ward 2.6, dais 3, stair 1.6 (one stair cell 1.9).
+- Cells + gates + lanes unchanged from S7.4 (only heights). Relaxed two test asserts: bands ramp is now non-strict (`<=`, since Hudson flattened some bands equal), and the blockout height check accepts per-piece grid heights (per-cell overrides).
+- Verified: `npm test` exit 0 (sim 1391, firstBreachBlockout 691, mapSurfaceHeights 25, full suite); clean `/tmp` vite build ✓ 894 modules. `tasks/first-breach-grid.json` is OneDrive-locked in the sandbox — heights are authoritative in `firstBreachGrid.js`; re-save the grid on Windows if you want the editable source in sync.
+- **In Friendly Words:** you painted and tuned the crypt in the new 3D editor, set the outer walls tall and inner walls short, and approved it — I baked exactly those heights into the real map. Everything passes and builds; paste the commit block to ship it.
 
 ### S7.4 — 2026-06-28 — First Breach BUILT from the painted grid + blueprint tools [GATE GREEN; EYEBALL PENDING]
 - Pivot from guessing: built a dev-only blueprint authoring system, then a grid PAINTER (paint floor/platform/wall/void/ward/stairs — no overlap, walls + platforms as brushes). Hudson painted the layout and saved `tasks/first-breach-grid.json`; it validated (all 5 gates + hero reach the Ward).

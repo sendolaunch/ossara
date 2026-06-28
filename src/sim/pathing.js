@@ -42,8 +42,8 @@ export function expandWaypoints(waypoints) {
     let r = a.row;
     push(c, r);
     while (c !== b.col || r !== b.row) {
-      c += dc;
-      r += dr;
+      if (c !== b.col) c += dc;
+      else if (r !== b.row) r += dr;
       push(c, r);
     }
   }

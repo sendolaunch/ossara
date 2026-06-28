@@ -42,7 +42,7 @@ function piece({ id, key, type, cell, scale, materialToken, role, laneId, band, 
 function terrainPieces(level) {
   const out = [];
   FB_TERRAIN_RECTS.forEach((rc, i) => {
-    const t = rc.terrain, h = FB_HEIGHT[t];
+    const t = rc.terrain, h = rc.height;
     const keyFor = t === 6 ? "gb-wall" : (TYPE[t] === "platform" ? "gb-platform" : (TYPE[t] === "stair" ? "gb-step" : "gb-floor"));
     out.push(piece({
       id: `terrain-${FB_TERRAIN[t].key}-${i}`, key: keyFor, type: TYPE[t],
@@ -74,7 +74,7 @@ export function firstBreachSurfacePlan(level = LEVEL) {
   return {
     id: "first-breach-grid-surface-v1",
     defaultHeight: 0,
-    zones: FB_TERRAIN_RECTS.filter((rc) => FB_WALKABLE.has(rc.terrain)).map((rc, i) => ({ id: `s-${i}`, height: FB_HEIGHT[rc.terrain], bounds: { col: rc.col, row: rc.row, w: rc.w, h: rc.h } })),
+    zones: FB_TERRAIN_RECTS.filter((rc) => FB_WALKABLE.has(rc.terrain)).map((rc, i) => ({ id: `s-${i}`, height: rc.height, bounds: { col: rc.col, row: rc.row, w: rc.w, h: rc.h } })),
     stairs: [],
   };
 }

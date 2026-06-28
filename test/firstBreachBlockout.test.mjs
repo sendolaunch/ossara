@@ -37,14 +37,15 @@ for (const p of P) {
 }
 
 // renders the painted terrains at their grid heights
-const heightByRole = { "entry-floor": FB_HEIGHT[1], "combat-floor": FB_HEIGHT[2], "high-ground": FB_HEIGHT[3], "ward-shelf": FB_HEIGHT[4], "ward-shrine": FB_HEIGHT[5], "stair-floor": FB_HEIGHT[7] };
-for (const [role, h] of Object.entries(heightByRole)) {
+const roleTerrain = { "entry-floor": 1, "combat-floor": 2, "high-ground": 3, "ward-shelf": 4, "ward-shrine": 5, "stair-floor": 7 };
+for (const [role, t] of Object.entries(roleTerrain)) {
+  const valid = new Set(FB_TERRAIN_RECTS.filter((rc) => rc.terrain === t).map((rc) => rc.height));
   const ps = byRole(role);
-  if (ps.length) ok(ps.every((p) => Math.abs(p.scaleY - h) < 1e-6), `${role} boxes sit at the painted grid height ${h}`);
+  if (ps.length) ok(ps.every((p) => [...valid].some((h) => Math.abs(p.scaleY - h) < 1e-6)), `${role} boxes sit at painted grid heights`);
 }
 ok(byRole("combat-floor").length >= 1 && byRole("high-ground").length >= 1 && byRole("wall").length >= 1, "floor + platform + wall terrains are all rendered");
 ok(byRole("ward-shrine").length >= 1 && byRole("ward-shrine").every((p) => Math.abs(p.anchorCol - core.col) <= 6 && Math.abs(p.anchorRow - core.row) <= 6), "ward dais is rendered at the core");
-ok(SURFACE_HEIGHTS.spawn < SURFACE_HEIGHTS.mid && SURFACE_HEIGHTS.mid < SURFACE_HEIGHTS.platform && SURFACE_HEIGHTS.platform < SURFACE_HEIGHTS.top && SURFACE_HEIGHTS.top <= SURFACE_HEIGHTS.dais, "heights ramp low -> high");
+ok(SURFACE_HEIGHTS.spawn <= SURFACE_HEIGHTS.mid && SURFACE_HEIGHTS.mid <= SURFACE_HEIGHTS.platform && SURFACE_HEIGHTS.platform <= SURFACE_HEIGHTS.top && SURFACE_HEIGHTS.top <= SURFACE_HEIGHTS.dais, "heights ramp low -> high");
 
 // shadow gates: five, at the painted gate cells, exactly one main
 const gates = byRole("spawn-gate");

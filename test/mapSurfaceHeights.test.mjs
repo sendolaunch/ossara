@@ -12,7 +12,7 @@ const plan = firstBreachSurfacePlan(LEVEL);
 const at = (c, r) => getSurfaceHeightAtCell(c, r, plan);
 
 ok(validateSurfacePlan(plan, LEVEL).ok, `surface plan validates: ${validateSurfacePlan(plan, LEVEL).errors.join("; ")}`);
-ok(SURFACE_HEIGHTS.spawn < SURFACE_HEIGHTS.mid && SURFACE_HEIGHTS.mid < SURFACE_HEIGHTS.platform && SURFACE_HEIGHTS.platform < SURFACE_HEIGHTS.top && SURFACE_HEIGHTS.top <= SURFACE_HEIGHTS.dais, "bands ramp low -> high");
+ok(SURFACE_HEIGHTS.spawn <= SURFACE_HEIGHTS.mid && SURFACE_HEIGHTS.mid <= SURFACE_HEIGHTS.platform && SURFACE_HEIGHTS.platform <= SURFACE_HEIGHTS.top && SURFACE_HEIGHTS.top <= SURFACE_HEIGHTS.dais, "bands ramp low -> high");
 
 // resolver returns each painted terrain's height
 function findCell(t) { for (let r = 0; r < LEVEL.rows; r++) for (let c = 0; c < LEVEL.cols; c++) if (terrainAt(c, r) === t) return [c, r]; return null; }
