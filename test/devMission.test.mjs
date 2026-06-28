@@ -5,6 +5,7 @@ import {
   devLootEnabled,
   devMissionIdFromLocation,
   isLocalDevHost,
+  showcaseMissionIdFromLocation,
 } from "../src/dev/missionSmoke.js";
 
 let pass = 0;
@@ -37,6 +38,26 @@ ok(
   "missing dev mission query does not trigger route",
 );
 ok(
+  showcaseMissionIdFromLocation({ hostname: "ossara-nine.vercel.app", search: "?showcase=first-breach" }) === "first-breach",
+  "production-safe showcase route accepts First Breach",
+);
+ok(
+  showcaseMissionIdFromLocation({ hostname: "localhost", search: "?showcase=first-breach" }) === "first-breach",
+  "showcase route also works locally",
+);
+ok(
+  showcaseMissionIdFromLocation({ hostname: "ossara-nine.vercel.app", search: "?showcase=bad-id" }) === null,
+  "unknown showcase mission id is ignored",
+);
+ok(
+  showcaseMissionIdFromLocation({ hostname: "ossara-nine.vercel.app", search: "?showcase=first-breach&devLoot=1" }) === "first-breach",
+  "showcase route does not depend on devLoot",
+);
+ok(
+  devMissionIdFromLocation({ hostname: "localhost", search: "?showcase=first-breach&devMission=first-breach" }, { DEV: true }) === null,
+  "showcase route suppresses the dev mission route",
+);
+ok(
   devEnemyGalleryEnabled({ hostname: "localhost", search: "?devEnemyGallery=1" }, { DEV: true }),
   "local dev enemy gallery route is enabled",
 );
@@ -53,6 +74,10 @@ ok(
   "missing enemy gallery query does not trigger route",
 );
 ok(
+  !devEnemyGalleryEnabled({ hostname: "localhost", search: "?showcase=first-breach&devEnemyGallery=1" }, { DEV: true }),
+  "showcase route suppresses enemy gallery dev helpers",
+);
+ok(
   devHeroAttackClassFromLocation({ hostname: "localhost", search: "?devHeroAttack=warden" }, { DEV: true }) === "warden",
   "local dev hero attack lab resolves class id",
 );
@@ -65,6 +90,10 @@ ok(
   "non-local host ignores hero attack lab route",
 );
 ok(
+  devHeroAttackClassFromLocation({ hostname: "localhost", search: "?showcase=first-breach&devHeroAttack=warden" }, { DEV: true }) === null,
+  "showcase route suppresses hero attack lab",
+);
+ok(
   devLootEnabled({ hostname: "localhost", search: "?devLoot=1" }, { DEV: true }),
   "local dev loot viewer route is enabled",
 );
@@ -75,6 +104,10 @@ ok(
 ok(
   !devLootEnabled({ hostname: "ossara.vercel.app", search: "?devLoot=1" }, { DEV: true }),
   "non-local host ignores loot viewer route",
+);
+ok(
+  !devLootEnabled({ hostname: "localhost", search: "?showcase=first-breach&devLoot=1" }, { DEV: true }),
+  "showcase route suppresses dev loot controls",
 );
 
 console.log(`devMission: ${pass}/${pass + fail} checks passed`);

@@ -34,7 +34,7 @@ import { HeroAttackLab } from "./ui/heroAttackLab.js";
 import { loadRemoteProfile, saveRemoteProfile } from "./web3/supa.js";
 import { adoptRemote } from "./sim/account.js";
 import { getDifficulty, getMission } from "./config/missions.js";
-import { devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devLootEnabled, devMissionIdFromLocation } from "./dev/missionSmoke.js";
+import { devEnemyGalleryEnabled, devHeroAttackClassFromLocation, devLootEnabled, devMissionIdFromLocation, showcaseMissionIdFromLocation } from "./dev/missionSmoke.js";
 
 const app = document.getElementById("app");
 const ui = document.getElementById("ui");
@@ -57,6 +57,7 @@ let mapSelect = null;
 let heroSelect = null;
 let username = "The Warded";
 const devMissionId = devMissionIdFromLocation(window.location, import.meta.env);
+const showcaseMissionId = showcaseMissionIdFromLocation(window.location);
 const devEnemyGallery = devEnemyGalleryEnabled(window.location, import.meta.env);
 const devHeroAttackClass = devHeroAttackClassFromLocation(window.location, import.meta.env);
 const devLoot = devLootEnabled(window.location, import.meta.env);
@@ -348,6 +349,8 @@ if (devHeroAttackClass) {
 } else if (devMissionId) {
   seedDevMissionProfile();
   startMission(devMissionId);
+} else if (showcaseMissionId) {
+  startMission(showcaseMissionId);
 } else {
   flow.showLogin();
 }

@@ -22,16 +22,18 @@ For social, keep the edit mission-focused: shrine, build, wave start, Warden act
 
 ### Primary Route
 
-1. Open `?devMission=first-breach`.
-2. Hold on the opening view for `2-3s`, showing the Ward Crystal shrine, central stair route, and side breach silhouettes.
-3. Press `1` and place `Warden Barricade` at the central stair/main choke.
-4. Press `2` and place `Spike-gate` nearby so the high-health wall and damaging blockade read as different choices.
-5. Briefly show the softened build/choke markers and Ward-green lane language.
-6. Press `Enter` or click `Start Wave`.
-7. Let Rotlings enter the central lane so the spawn gate, stairs, landing, and lane strip are visible in one shot.
-8. Use left-click for the Warden basic sword attack.
-9. Use `Q` for Ward Slam on a small cluster.
-10. Use `Space` to Dash/reposition.
+1. Public/live capture: open `?showcase=first-breach`.
+2. Local dev capture: open `?devMission=first-breach`.
+3. Check the bottom-right version badge before recording so the clip can be tied to the deployed commit.
+4. Hold on the opening view for `2-3s`, showing the Ward Crystal shrine, central stair route, and side breach silhouettes.
+5. Press `1` and place `Warden Barricade` at the central stair/main choke.
+6. Press `2` and place `Spike-gate` nearby so the high-health wall and damaging blockade read as different choices.
+7. Briefly show the softened build/choke markers and Ward-green lane language.
+8. Press `Enter` or click `Start Wave`.
+9. Let Rotlings enter the central lane so the spawn gate, stairs, landing, and lane strip are visible in one shot.
+10. Use left-click for the Warden basic sword attack.
+11. Use `Q` for Ward Slam on a small cluster.
+12. Use `Space` to Dash/reposition.
 
 ### Optional Loot Route
 
@@ -100,6 +102,8 @@ After recording, review the clip with these questions:
 ## Capture Notes
 
 - Use `tasks/first-breach-capture-route.md` as the baseline route.
+- Use `?showcase=first-breach` for live Vercel capture and `?devMission=first-breach` for local-only smoke.
+- Do not use `?devLoot=1` for public capture; it remains a dev-only/internal review helper.
 - Keep the camera in normal mission gameplay view.
 - Normal enemy physical loot drops remain disabled by design.
 - Moving while attacking can still create a small glide; keep action shots short and focused on the approved attack pose.
