@@ -1,6 +1,6 @@
-// Protects the First Breach PRIMITIVE greybox blockout (firstBreachBlockout.js) — THREE-LEVEL v3.
-// Primitive-only (plain fallback boxes, no GLB), and locks the three readable floors:
-// low/dark spawn floor (3 spread shadow groups) < raised mid combat floor < higher Ward/top
+// Protects the First Breach PRIMITIVE greybox blockout (firstBreachBlockout.js) — THREE-LEVEL.
+// Primitive-only (plain fallback boxes, no GLB), with bold readable floor heights that match
+// the visual surface plan: low/dark spawn floor < raised mid combat floor < higher Ward/top
 // floor (Ward dais + two connected upper side halls), broad axis-aligned steps connecting them.
 // Gameplay anchors (lanes, core, hero, zones, waves) are read from LEVEL and stay untouched.
 import { LEVEL } from "../src/config/level.js";
@@ -11,11 +11,14 @@ import {
   firstBreachBlockoutPlan,
   buildFirstBreachBlockout,
   firstBreachBlockoutElevationPlan,
+  firstBreachSurfacePlan,
+  SURFACE_HEIGHTS,
   GREYBOX_PIECES,
 } from "../src/mapbuilder/firstBreachBlockout.js";
 import { levelGameplaySnapshot, stableGameplaySnapshotKey } from "../src/mapbuilder/mapCoordinates.js";
 import { validateMapPlanAgainstLevel, validateMapPlacements, protectedGameplayCellSet } from "../src/mapbuilder/mapValidation.js";
 import { validateElevationPlan } from "../src/mapbuilder/mapElevation.js";
+import { validateSurfacePlan } from "../src/mapbuilder/mapSurfaceHeights.js";
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => (cond ? pass++ : (fail++, console.error("  FAIL:", msg)));
@@ -34,15 +37,13 @@ const countRole = (r) => placements.filter((p) => p.readabilityRole === r).lengt
 // --- identity + determinism -------------------------------------------------
 ok(FIRST_BREACH_BLOCKOUT_PLAN.id === "first-breach-dd1-crypt-greybox-v3", "blockout exposes the v3 three-level plan id");
 ok(built.planId === FIRST_BREACH_BLOCKOUT_PLAN.id, "build carries the plan id");
-ok(built.gameplaySnapshotUnchanged, "build reports unchanged gameplay snapshot");
-ok(before === after, "build does not mutate level gameplay data");
+ok(built.gameplaySnapshotUnchanged && before === after, "build does not mutate level gameplay data");
 ok(JSON.stringify(built.placements) === JSON.stringify(builtAgain.placements), "Map Builder output is deterministic");
 ok(placements.length >= 90 && placements.length <= 170, "blockout is a bounded primitive set");
 ok(new Set(placements.map((p) => p.id)).size === placements.length, "every placement has a unique id");
 
 // --- everything is a clean PRIMITIVE ---------------------------------------
-ok(built.audit.missingAssets.length === 0, "no missing registry entries");
-ok(built.audit.disallowedPacks.length === 0, "no disallowed asset packs");
+ok(built.audit.missingAssets.length === 0 && built.audit.disallowedPacks.length === 0, "no missing registry entries / disallowed packs");
 ok(built.audit.fallbackPlacements.length === placements.length, "EVERY piece renders as a primitive fallback");
 ok(built.assetNames.length === 0, "no GLB art assets are referenced");
 for (const p of placements) {
@@ -58,19 +59,27 @@ const artKeys = Object.keys(MAP_PIECES).filter((k) => k !== "primitive-readabili
 ok(placements.every((p) => !artKeys.includes(p.assetKey)), "no decorative MAP_PIECES art keys are used");
 ok(placements.every((p) => p.materialToken !== "wardGreenEmissive" && p.materialToken !== "torchWarm"), "no glowing candle/gem/torch props");
 
-// --- THREE READABLE ELEVATION LEVELS ----------------------------------------
+// --- THREE READABLE ELEVATION LEVELS (bold heights) -------------------------
 const spawnY = byId.get("spawn-floor-back")?.scaleY;
 const midY = byId.get("mid-combat-plateau")?.scaleY;
-const topY = byId.get("ward-platform-square")?.scaleY;
-ok(Number.isFinite(spawnY) && Number.isFinite(midY) && Number.isFinite(topY), "bottom / middle / top floors all exist");
-ok(topY > midY + 0.12, "top Ward floor is visibly higher than the middle floor");
-ok(midY > spawnY + 0.12, "middle combat floor is visibly higher than the bottom spawn floor");
-ok(byId.get("mid-riser-rear") && byId.get("mid-riser-rear").scaleY >= midY - 0.01, "a visible riser face steps the combat floor up from the spawns");
+const topFloorY = byId.get("left-upper-hall")?.scaleY;
+const daisY = byId.get("ward-platform-square")?.scaleY;
+ok([spawnY, midY, topFloorY, daisY].every(Number.isFinite), "bottom / middle / top / dais floors all exist");
+ok(midY - spawnY >= 0.4, "middle combat floor is BOLDLY higher than the bottom spawn floor");
+ok(topFloorY - midY >= 0.4, "top Ward floor is BOLDLY higher than the middle floor");
+ok(daisY >= topFloorY, "the Ward dais is the highest surface (slightly above the top floor)");
+ok(byId.get("mid-riser-rear")?.scaleY >= midY - 0.01, "a visible riser face steps the combat floor up from the spawns");
 ok(countRole("level-connector") >= 6, "step ramps connect the spawn floor up to the combat floor");
-// material value contrast (dark spawn -> mid -> light top)
 ok(byId.get("spawn-floor-back")?.materialToken === "floorRubbleDark", "bottom spawn floor uses the darkest material");
 ok(byId.get("mid-combat-plateau")?.materialToken === "courtyardMidStone", "middle combat floor uses the mid material");
 ok(byId.get("ward-platform-square")?.materialToken === "shrinePlatformStone", "top Ward floor uses the lightest shrine material");
+
+// --- heights MATCH the visual surface plan (so actors stand on the floor) ----
+ok(validateSurfacePlan(firstBreachSurfacePlan(LEVEL), LEVEL).ok, "the exported surface plan validates");
+ok(SURFACE_HEIGHTS.spawn === spawnY, "surface spawn height matches the spawn slab top");
+ok(SURFACE_HEIGHTS.mid === midY, "surface mid height matches the combat plateau top");
+ok(SURFACE_HEIGHTS.top === topFloorY, "surface top height matches the upper-hall top");
+ok(SURFACE_HEIGHTS.dais === daisY, "surface dais height matches the Ward platform top");
 
 // --- BOTTOM: three spread shadow spawn groups + dark recessed gates ----------
 const groups = placements.filter((p) => p.readabilityRole === "spawn-group");
@@ -83,24 +92,22 @@ for (const lane of LEVEL.lanes) {
   ok(!!gate && gate.anchorCol === lane.spawn.col && gate.anchorRow === lane.spawn.row, `${lane.id} gate anchors to its spawn`);
   ok(gate.materialToken === "shadowEdgeRuin", `${lane.id} gate void is a dark (near-black) breach mouth`);
   const frame = placements.filter((p) => p.laneId === lane.id && p.readabilityRole === "spawn-gate-frame");
-  ok(frame.some((p) => p.tags.includes("backing")), `${lane.id} gate has a dark backing so you can't see behind`);
-  ok(frame.some((p) => p.tags.includes("arch")), `${lane.id} gate has a stepped arch`);
+  ok(frame.some((p) => p.tags.includes("backing")) && frame.some((p) => p.tags.includes("arch")), `${lane.id} gate has a dark backing + stepped arch`);
 }
 ok(placements.filter((p) => p.type === "gate" && p.readabilityRole === "spawn-gate").length === 5, "all five lanes get a shadow gate");
 
 // --- TOP: Ward dais + two connected upper side halls -------------------------
 const ward = placements.filter((p) => p.readabilityRole === "ward-shrine");
 ok(ward.length >= 2 && ward.every((p) => p.anchorCol === core.col && p.anchorRow === core.row), "Ward dais is centered on the bottom-middle core (top floor)");
-ok(byId.has("ward-rim-diamond") && byId.get("ward-rim-diamond").ry === 45, "Ward dais is octagonal-ish (square + 45deg diamond)");
+ok(byId.get("ward-rim-diamond")?.ry === 45, "Ward dais is octagonal-ish (square + 45deg diamond)");
 ok(byId.has("left-upper-hall") && byId.has("right-upper-hall"), "left and right upper side halls exist");
 for (const id of ["left-upper-hall", "right-upper-hall"]) {
   const h = byId.get(id);
-  ok(h.scaleY === topY, `${id} sits on the top/Ward floor height`);
-  ok(h.anchorRow >= 40 && Math.abs(h.anchorCol - core.col) <= 12, `${id} is near the Ward / back wall, not floating in a far corner`);
+  ok(h.scaleY === topFloorY, `${id} sits on the top/Ward floor height`);
+  ok(h.anchorRow >= 40 && Math.abs(h.anchorCol - core.col) <= 12, `${id} is near the Ward / back wall, not a far corner`);
 }
 ok(byId.has("left-hall-connector") && byId.has("right-hall-connector"), "upper halls are connected to the Ward dais");
 ok(countRole("upper-hall") >= 4, "upper halls + connectors form defendable top-floor extensions");
-// no decorative clutter on the Ward dais
 const nearWard = placements.filter((p) => Math.abs(p.anchorCol - core.col) <= 3 && Math.abs(p.anchorRow - core.row) <= 3);
 ok(nearWard.every((p) => ["ward-shrine", "stair-landing"].includes(p.readabilityRole)), "no decorative clutter sits on the Ward dais");
 ok(core.col === 36 && core.row === 47, "Ward core stays bottom-middle {36,47}");
@@ -109,18 +116,16 @@ ok(Math.abs(LEVEL.heroSpawn.col - core.col) <= 1 && LEVEL.heroSpawn.row > core.r
 // --- STAIR: broad steps connecting middle -> top, no sawtooth ---------------
 const steps = placements.filter((p) => p.readabilityRole === "broad-stair-step");
 ok(steps.length === 4, "central approach is exactly four broad step bands (3-6 allowed)");
-ok(steps.every((p) => p.laneId === "north-gate"), "stair belongs to the central lane");
-ok(steps.every((p) => p.ry === 0), "steps are flat broad bands, not diagonal sawtooth fins");
+ok(steps.every((p) => p.laneId === "north-gate" && p.ry === 0), "steps belong to the central lane and are flat (no sawtooth fins)");
 ok([...steps].sort((a, b) => a.anchorRow - b.anchorRow).every((p, i, a) => i === 0 || p.scaleY > a[i - 1].scaleY), "steps climb in height toward the Ward");
-ok(byId.get("ward-broad-step-4-upper")?.scaleY === topY, "the top step reaches the Ward/top floor height");
-const landings = placements.filter((p) => p.readabilityRole === "stair-landing");
-ok(landings.length === 2 && byId.get("ward-stair-bottom-landing")?.scaleY <= midY + 0.01 && byId.get("ward-stair-top-landing")?.scaleY === topY, "bottom landing is on the middle floor, top landing on the Ward floor");
+ok(byId.get("ward-broad-step-4-upper")?.scaleY === topFloorY, "the top step reaches the top-floor height");
+ok(byId.get("ward-stair-bottom-landing")?.scaleY <= midY + 0.01, "bottom landing is on the middle floor");
+ok(byId.get("ward-stair-top-landing")?.scaleY === topFloorY, "top landing is on the Ward/top floor");
 ok(countRole("stair-retaining-edge") >= 2, "stair has low broken retaining cheeks");
 
 // --- validation + gameplay invariants ---------------------------------------
 const validation = validateMapPlanAgainstLevel(plan, placements, LEVEL);
-ok(validation.ok, `blockout validates: ${validation.errors.join("; ")}`);
-ok(validation.warnings.length === 0, `no validation warnings: ${validation.warnings.join("; ")}`);
+ok(validation.ok && validation.warnings.length === 0, `blockout validates with no warnings: ${validation.errors.join("; ")}`);
 ok(validateMapPlacements(placements, LEVEL, { requiredLaneIds: LEVEL.lanes.map((l) => l.id) }).ok, "direct placement validation passes for all required lanes");
 const elev = validateElevationPlan(firstBreachBlockoutElevationPlan(LEVEL), LEVEL);
 ok(elev.ok && elev.plan.visualOnly, `elevation plan validates + stays visual-only: ${elev.errors.join("; ")}`);

@@ -14,7 +14,8 @@ import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharact
 import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
-import { buildFirstBreachBlockout as buildFirstBreachMapBuilder } from "../mapbuilder/firstBreachBlockout.js";
+import { buildFirstBreachBlockout as buildFirstBreachMapBuilder, firstBreachSurfacePlan } from "../mapbuilder/firstBreachBlockout.js";
+import { getSurfaceHeightAtWorld } from "../mapbuilder/mapSurfaceHeights.js";
 import { getMapTheme, mapMaterialTokenForPlacement, mapThemeMaterialToken } from "../config/mapThemes.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
@@ -316,6 +317,8 @@ export class PCRenderer {
     this.coreEntity = null;
     this.coreGemEntity = null;
     this.coreFallbackEntity = null;
+    this._surfacePlan = null;
+    this._surfaceLevel = null;
     this._wardCrystalToken = null;
     this.spawnIndicatorEntities = [];
     this.laneTelegraphEntities = [];
@@ -384,9 +387,26 @@ export class PCRenderer {
     return this.mapTheme?.lighting?.[key] || fallback;
   }
 
+  // Visual-only surface height for First Breach actors (0 when no plan / other scenes).
+  _surfaceY(x, z) {
+    if (!this._surfacePlan || !this._surfaceLevel) return 0;
+    return getSurfaceHeightAtWorld(x, z, this._surfacePlan, this._surfaceLevel);
+  }
+  // Smoothly lerp an entity toward its surface Y so actors read as climbing, not popping.
+  _smoothSurfaceY(ent, x, z, k = 0.25) {
+    const target = this._surfaceY(x, z);
+    const prev = Number.isFinite(ent._ossaraSurfY) ? ent._ossaraSurfY : target;
+    ent._ossaraSurfY = prev + (target - prev) * k;
+    return ent._ossaraSurfY;
+  }
+
   // ---- static scene --------------------------------------------------------
   buildStatic(world) {
     const level = world.level;
+    this._surfaceLevel = level;
+    this._surfacePlan = (level && level.core && level.core.col === 36 && level.core.row === 47 && level.cols === 73)
+      ? firstBreachSurfacePlan(level)
+      : null;
     const minWorld = gridToWorld(0, 0, level);
     const maxWorld = gridToWorld(level.cols - 1, level.rows - 1, level);
     this._cameraBounds = {
@@ -629,6 +649,7 @@ export class PCRenderer {
 
     // THE WARD — the failing seal you defend: rune dais + ring + crystal
     const cw = gridToWorld(level.core.col, level.core.row, level);
+    const wardY = this._surfaceY(cw.x, cw.z);
     const wardVisual = wardCoreReadabilitySpec(level);
     const wardApproach = prim("torus", this._themeMaterial("wardApproachGold", "gold"));
     wardApproach.name = "ward-approach-ring";
@@ -636,7 +657,7 @@ export class PCRenderer {
     wardApproach.render.receiveShadows = false;
     wardApproach.setLocalEulerAngles(90, 0, 0);
     wardApproach.setLocalScale(wardVisual.approachRingRadius, wardVisual.approachRingRadius, wardVisual.approachRingRadius);
-    wardApproach.setPosition(wardVisual.x, 0.09, wardVisual.z);
+    wardApproach.setPosition(wardVisual.x, 0.09 + wardY, wardVisual.z);
     this.app.root.addChild(wardApproach);
     const wardHalo = prim("torus", this._themeMaterial("wardHaloGreen", "plague"));
     wardHalo.name = "ward-protection-ring";
@@ -644,7 +665,7 @@ export class PCRenderer {
     wardHalo.render.receiveShadows = false;
     wardHalo.setLocalEulerAngles(90, 0, 0);
     wardHalo.setLocalScale(wardVisual.wardRingRadius, wardVisual.wardRingRadius, wardVisual.wardRingRadius);
-    wardHalo.setPosition(wardVisual.x, 0.13, wardVisual.z);
+    wardHalo.setPosition(wardVisual.x, 0.13 + wardY, wardVisual.z);
     this.app.root.addChild(wardHalo);
     const beaconMat = this._themeMaterial("ruinedStoneMid", "ash");
     const beaconGlowMat = this._themeMaterial("wardGreenEmissive", "plague");
@@ -653,26 +674,26 @@ export class PCRenderer {
       const bz = wardVisual.z + dz * wardVisual.wardRingRadius * 0.72;
       const post = prim("cylinder", beaconMat);
       post.setLocalScale(0.18, 0.36, 0.18);
-      post.setPosition(bx, 0.26, bz);
+      post.setPosition(bx, 0.26 + wardY, bz);
       this.app.root.addChild(post);
       const flame = prim("cone", beaconGlowMat);
       flame.render.castShadows = false;
       flame.setLocalScale(0.18, 0.42, 0.18);
-      flame.setPosition(bx, 0.72, bz);
+      flame.setPosition(bx, 0.72 + wardY, bz);
       this.app.root.addChild(flame);
     }
     const dais = prim("cylinder", this._themeMaterial("ruinedStoneMid", "ash"));
     dais.setLocalScale(2.4, 0.3, 2.4);
-    dais.setPosition(cw.x, 0.15, cw.z);
+    dais.setPosition(cw.x, 0.15 + wardY, cw.z);
     this.app.root.addChild(dais);
     const ring = prim("torus", this._themeMaterial("wardGreenEmissive", "plague"));
     ring.setLocalScale(2.0, 2.0, 2.0);
-    ring.setPosition(cw.x, 0.35, cw.z);
+    ring.setPosition(cw.x, 0.35 + wardY, cw.z);
     this.app.root.addChild(ring);
     this.coreEntity = prim("sphere", this._themeMaterial("wardGreenEmissive", "plague"));
     this.coreEntity.name = WARD_CRYSTAL_FALLBACK_NAME;
     this.coreEntity.setLocalScale(1.0, 1.5, 1.0);
-    this.coreEntity.setPosition(cw.x, 1.2, cw.z);
+    this.coreEntity.setPosition(cw.x, 1.2 + wardY, cw.z);
     this.app.root.addChild(this.coreEntity);
     this.coreFallbackEntity = this.coreEntity;
     this._loadWardCrystalGem(cw);
@@ -684,7 +705,7 @@ export class PCRenderer {
       intensity: coreLightSpec.intensity ?? 2.15,
       range: coreLightSpec.range ?? 15,
     });
-    coreLight.setPosition(cw.x, 2.2, cw.z);
+    coreLight.setPosition(cw.x, 2.2 + wardY, cw.z);
     this.app.root.addChild(coreLight);
 
     if (false) { // GREYBOX: cathedral walls + gothic pillars + blocked-cell chunks + showcase props disabled until art-dressing pass
@@ -933,7 +954,7 @@ export class PCRenderer {
       .then((gem) => {
         if (this._wardCrystalToken !== token || !gem || !fallback) return;
         const root = new pc.Entity(WARD_CRYSTAL_GEM_NAME);
-        root.setPosition(cw.x, 0.25, cw.z);
+        root.setPosition(cw.x, 0.25 + this._surfaceY(cw.x, cw.z), cw.z);
         root.setLocalEulerAngles(0, 35, 0);
         const gemMat = this._themeMaterial("wardGreenEmissive", "plague");
         applyRenderMaterial(gem, gemMat, { castShadow: true, receiveShadow: true });
@@ -1687,18 +1708,19 @@ export class PCRenderer {
       return;
     }
     const w = gridToWorld(col2, row, level);
+    const surfY = this._surfaceY(w.x, w.z);
     const okc = state === "ok";
     const tint = col(okc ? BUILD_PREVIEW_BLUE : PALETTE.blood);
     const tower = opts.towerId ? TOWERS[opts.towerId] : null;
     const range = opts.range || tower?.range || 1;
     this.hover.enabled = false;
-    this.hover.setPosition(w.x, 0.06, w.z);
+    this.hover.setPosition(w.x, 0.06 + surfY, w.z);
     this.hoverMat.diffuse = tint;
     this.hoverMat.opacity = okc ? 0.4 : 0.28;
     this.hoverMat.update();
     if (this.ghost) {
       this.ghost.enabled = true;
-      this.ghost.setPosition(w.x, 0.8, w.z);
+      this.ghost.setPosition(w.x, 0.8 + surfY, w.z);
       this.ghost.setLocalEulerAngles(0, opts.rotation || 0, 0);
       this.ghostMat.diffuse = tint;
       this.ghostMat.emissive = tint;
@@ -1706,7 +1728,7 @@ export class PCRenderer {
     }
     if (this.rangeRing) {
       this.rangeRing.enabled = true;
-      this.rangeRing.setPosition(w.x, 0.08, w.z);
+      this.rangeRing.setPosition(w.x, 0.08 + surfY, w.z);
       this.rangeRing.setLocalScale(range, range, range);
       this.rangeMat.diffuse = tint;
       this.rangeMat.emissive = tint;
@@ -1812,7 +1834,7 @@ export class PCRenderer {
         this.worldDropEntities.set(drop.dropId, ent);
       }
       const pos = drop.position || { x: 0, y: 0, z: 0 };
-      ent.setPosition(pos.x, pos.y || 0, pos.z);
+      ent.setPosition(pos.x, (pos.y || 0) + this._surfaceY(pos.x, pos.z), pos.z);
       ent._ossaraDropAge = (ent._ossaraDropAge || 0) + dt;
       const bob = Math.sin(time * 3.2 + ent._ossaraDropAge) * 0.08;
       if (ent._ossaraLootItem) {
@@ -2321,7 +2343,7 @@ export class PCRenderer {
         if (animState?.failed && moving) this._useEnemyPrimitiveFallback(ent, "static-animation");
       }
       ent._ossaraPrevPos = { x: e.x, z: e.z, dist: e.dist || 0 };
-      ent.setPosition(e.x, e.radius, e.z);
+      ent.setPosition(e.x, e.radius + this._smoothSurfaceY(ent, e.x, e.z), e.z);
       const flash = Math.max(0, e.hitFlash || 0);
       const showHp = e.alive && (e.elite || e.hp < e.maxHp || (e.hpBarTimer || 0) > 0 || flash > 0);
       if (ent._ossaraHpGroup) {
@@ -2410,7 +2432,7 @@ export class PCRenderer {
         this.app.root.addChild(ent);
         this.projEntities.set(p.id, ent);
       }
-      ent.setPosition(p.x, p.sourceKind === "enemy" ? 0.78 : 0.6, p.z);
+      ent.setPosition(p.x, (p.sourceKind === "enemy" ? 0.78 : 0.6) + this._surfaceY(p.x, p.z), p.z);
       if (p.shape === "bolt") {
         const yaw = (Math.atan2(p.vx || 0, p.vz || 1) * 180) / Math.PI;
         ent.setEulerAngles(0, yaw, 0);
@@ -2525,7 +2547,7 @@ export class PCRenderer {
           head.name = "head";
           ent.addChild(head);
         }
-        ent.setPosition(t.x, 0, t.z);
+        ent.setPosition(t.x, this._surfaceY(t.x, t.z), t.z);
         this.app.root.addChild(ent);
         this.towerEntities.set(t.id, ent);
       }
@@ -2548,7 +2570,7 @@ export class PCRenderer {
     const h = world.hero;
     if (!this.heroEntity) return;
     this.heroEntity.enabled = h.alive;
-    this.heroEntity.setPosition(h.x, this._heroFoot || 0, h.z);
+    this.heroEntity.setPosition(h.x, (this._heroFoot || 0) + this._smoothSurfaceY(this.heroEntity, h.x, h.z), h.z);
     const baseYawDeg = (h.facing * 180) / Math.PI;
     this.heroEntity.setLocalEulerAngles(0, baseYawDeg, 0);
     if (this.heroCtl) {
