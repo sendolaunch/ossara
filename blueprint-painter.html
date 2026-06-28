@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OSSARA — First Breach Grid Painter (standalone)</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#0a0c08; color:#cfe0cf; font-family:ui-monospace,monospace; }
+  header { display:flex; gap:6px; align-items:center; padding:7px 10px; border-bottom:1px solid #222; flex-wrap:wrap; }
+  header h1 { font-size:13px; margin:0 6px 0 0; color:#9fb89f; }
+  button { font:inherit; font-size:12px; padding:4px 8px; background:#1c241a; color:#cfe0cf; border:1px solid #3a4a3a; border-radius:6px; cursor:pointer; }
+  button:hover { background:#28361f; }
+  button.on { background:#3a5a28; border-color:#6a9a4a; color:#eaffea; }
+  .pill { font-size:12px; padding:3px 7px; border:1px solid #2a3a2a; border-radius:6px; background:#12160f; }
+  #coords { color:#ffe14a; min-width:70px; }
+  #wrap { display:flex; height:calc(100vh - 44px); }
+  #side { width:230px; border-right:1px solid #222; padding:8px; overflow:auto; }
+  #side h2 { font-size:11px; color:#9fb89f; margin:10px 0 5px; letter-spacing:.5px; }
+  .sw { display:flex; align-items:center; gap:7px; padding:4px 6px; border:1px solid #222; border-radius:6px; margin:3px 0; cursor:pointer; }
+  .sw:hover { background:#141811; }
+  .sw.on { border-color:#6a9a4a; background:#1a2414; }
+  .chip { width:16px; height:16px; border:1px solid #555; border-radius:3px; flex:none; }
+  .sw small { color:#8a9a8a; display:block; font-size:10px; }
+  #stage { flex:1; overflow:auto; padding:8px; }
+  canvas { background:#0a0c08; image-rendering:pixelated; touch-action:none; cursor:crosshair; }
+  .hint { color:#7a8a7a; font-size:11px; line-height:1.5; }
+  .grp { display:flex; flex-wrap:wrap; gap:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>GRID PAINTER</h1>
+  <button id="t-paint" class="on">Paint</button>
+  <button id="t-rect">Rect fill</button>
+  <button id="t-erase">Erase</button>
+  <span class="pill">size <span id="bsLbl">1</span></span>
+  <button id="bsDn">–</button><button id="bsUp">+</button>
+  <span class="pill" id="coords">–,–</span>
+  <button id="undo">Undo</button>
+  <button id="save">Save to file</button>
+  <button id="copy">Copy JSON</button>
+  <button id="load">Load</button>
+  <input id="file" type="file" accept=".json" style="display:none"/>
+  <span class="pill">dev-only · standalone</span>
+</header>
+<div id="wrap">
+  <div id="side">
+    <h2>TERRAIN BRUSH (paint cells)</h2>
+    <div id="terr"></div>
+    <h2>MARKERS (click to place / move)</h2>
+    <div id="marks"></div>
+    <label class="hint" style="display:block;margin-top:4px"><input type="checkbox" id="mainChk"/> next gate placed = MAIN</label>
+    <h2>HOW</h2>
+    <div class="hint">
+      • Pick a brush, then click-drag to paint<br>
+      • Rect fill: drag a rectangle<br>
+      • Erase = paint Void<br>
+      • Markers: pick one, click a cell<br>
+      • Right-click a choke to remove it<br>
+      • Ctrl+Z = undo · grid 73×57
+    </div>
+    <h2>SAVE → so I can see it</h2>
+    <div class="hint">"Save to file" into the <b>Ossara</b> folder (e.g. <code>first-breach-grid.json</code>) or "Copy JSON" and paste it to me.</div>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+</div>
+<script>
+const SRC = {"id":"first-breach-blueprint-v1","title":"First Breach — Deeper-Well crypt (Option A direction)","grid":{"cols":73,"rows":57},"elevationBands":[{"id":"pit","order":0,"height":0,"color":"#101006","label":"Pit / void (non-walkable)"},{"id":"low","order":1,"height":0.15,"color":"#1e2016","label":"Low entry / door apron"},{"id":"mid","order":2,"height":1.4,"color":"#414d36","label":"Combat floor"},{"id":"platform","order":3,"height":2.2,"color":"#737b53","label":"Raised platform (high ground)"},{"id":"top","order":4,"height":2.8,"color":"#2f9f55","label":"Ward shelf"},{"id":"dais","order":5,"height":3.1,"color":"#3fcf6b","label":"Ward crystal dais"}],"zones":[{"id":"combat-floor","kind":"floor","band":"mid","bounds":{"col":6,"row":8,"w":60,"h":45},"label":"Combat floor"},{"id":"central-platform","kind":"platform","band":"platform","bounds":{"col":29,"row":22,"w":19,"h":11},"label":"Central high ground","buildable":true},{"id":"ward-shelf","kind":"ward","band":"top","bounds":{"col":2,"row":42,"w":22,"h":13},"label":"Ward shelf (SW)"},{"id":"ward-dais","kind":"ward","band":"dais","bounds":{"col":11,"row":45,"w":11,"h":8},"label":"Crystal dais"},{"id":"entry-north","kind":"entry","band":"low","bounds":{"col":0,"row":0,"w":73,"h":9},"label":"North entry"},{"id":"entry-east","kind":"entry","band":"low","bounds":{"col":60,"row":9,"w":13,"h":36},"label":"East entry"},{"id":"room-A","kind":"spawn-room","band":"low","bounds":{"col":13,"row":1,"w":11,"h":7},"label":"Spawn room A (NW)"},{"id":"room-B","kind":"spawn-room","band":"low","bounds":{"col":33,"row":1,"w":11,"h":7},"label":"Spawn room B (N)"},{"id":"room-C","kind":"spawn-room","band":"low","bounds":{"col":60,"row":12,"w":13,"h":13},"label":"Spawn room C (NE / main)"},{"id":"room-D","kind":"spawn-room","band":"low","bounds":{"col":61,"row":25,"w":12,"h":8},"label":"Spawn room D (E-mid)"},{"id":"room-E","kind":"spawn-room","band":"low","bounds":{"col":61,"row":38,"w":12,"h":11},"label":"Spawn room E (SE)"},{"id":"void-nw","kind":"pit","band":"pit","bounds":{"col":0,"row":0,"w":8,"h":9},"label":"NW ruin (void)"},{"id":"void-ne","kind":"pit","band":"pit","bounds":{"col":66,"row":0,"w":7,"h":7},"label":"NE ruin (void)"},{"id":"void-se","kind":"pit","band":"pit","bounds":{"col":50,"row":49,"w":23,"h":8},"label":"SE ruin (void)"}],"gates":[{"id":"gate-A","label":"A","laneIds":["northwest-stairs"],"cell":{"col":22,"row":7},"importance":"normal","wall":"north"},{"id":"gate-B","label":"B","laneIds":["north-gate"],"cell":{"col":40,"row":7},"importance":"normal","wall":"north"},{"id":"gate-C","label":"C","laneIds":["northeast-market"],"cell":{"col":66,"row":18},"importance":"main","wall":"east"},{"id":"gate-D","label":"D","laneIds":["southwest-crypt"],"cell":{"col":66,"row":30},"importance":"normal","wall":"east"},{"id":"gate-E","label":"E","laneIds":["southeast-garden"],"cell":{"col":66,"row":44},"importance":"normal","wall":"east"}],"chokes":[{"id":"choke-left-gap","label":"Left gap","cell":{"col":26,"row":30}},{"id":"choke-right-gap","label":"Right gap","cell":{"col":56,"row":30}},{"id":"choke-reknot","label":"Re-knot","cell":{"col":30,"row":40}},{"id":"choke-ward-stair","label":"Ward-stair base","cell":{"col":18,"row":46}}],"stairs":[{"id":"ward-grand-stair","from":"mid","to":"top","bounds":{"col":13,"row":41,"w":9,"h":7},"label":"Grand stair (-> Ward)"},{"id":"central-stair","from":"mid","to":"platform","bounds":{"col":33,"row":32,"w":11,"h":3},"label":"Platform stair"},{"id":"ramp-A","from":"low","to":"mid","bounds":{"col":19,"row":8,"w":7,"h":4},"label":"Door ramp A"},{"id":"ramp-B","from":"low","to":"mid","bounds":{"col":37,"row":8,"w":7,"h":4},"label":"Door ramp B"},{"id":"ramp-E","from":"low","to":"mid","bounds":{"col":55,"row":17,"w":6,"h":7},"label":"Door ramp (east)"}],"routes":[{"id":"route-A","gate":"gate-A","via":[],"label":"A — west flank","points":[{"col":22,"row":7},{"col":22,"row":40},{"col":16,"row":40},{"col":16,"row":49}]},{"id":"route-B","gate":"gate-B","via":["choke-left-gap","choke-reknot"],"label":"B — left gap","points":[{"col":40,"row":7},{"col":40,"row":18},{"col":26,"row":18},{"col":26,"row":40},{"col":16,"row":40},{"col":16,"row":49}]},{"id":"route-C","gate":"gate-C","via":["choke-right-gap"],"label":"C — main, right gap","points":[{"col":66,"row":18},{"col":56,"row":18},{"col":56,"row":38},{"col":16,"row":38},{"col":16,"row":49}]},{"id":"route-D","gate":"gate-D","via":["choke-right-gap","choke-reknot"],"label":"D — right gap (lower)","points":[{"col":66,"row":30},{"col":56,"row":30},{"col":56,"row":40},{"col":16,"row":40},{"col":16,"row":49}]},{"id":"route-E","gate":"gate-E","via":[],"label":"E — south flank","points":[{"col":66,"row":44},{"col":30,"row":44},{"col":16,"row":44},{"col":16,"row":49}]}],"ward":{"cell":{"col":16,"row":49},"label":"Ward Crystal"},"heroSpawn":{"cell":{"col":10,"row":52},"label":"Hero spawn"},"notes":["Ward tucked on the SW player-side shelf behind an L-wall; reached by ONE grand stair.","Chunky raised central platform (high ground, buildable) splits the horde left/right.","Five shadow doors in the north + east walls; C (NE) is the larger MAIN gate.","Routes are implied by room shape (no corridors). Pit/void corners are non-walkable.","Edit coordinates here, re-open the preview, then approve before rebuilding the blockout."]};
+const COLS = 73, ROWS = 57, CELL = 13, PAD = 26;
+const TERRAINS = [
+  { id:0, key:"void",     label:"Void / pit",        sub:"non-walkable", color:"#14150c" },
+  { id:1, key:"entry",    label:"Entry / spawn",     sub:"low floor",    color:"#23271b" },
+  { id:2, key:"floor",    label:"Combat floor",      sub:"mid",          color:"#3c4a32" },
+  { id:3, key:"platform", label:"Platform",          sub:"high ground",  color:"#6f7a4a" },
+  { id:4, key:"ward",     label:"Ward shelf",        sub:"player side",  color:"#2f8f4f" },
+  { id:5, key:"dais",     label:"Ward dais",         sub:"crystal area", color:"#46e08a" },
+  { id:6, key:"wall",     label:"Wall",              sub:"blocker",      color:"#9a9a9a" },
+  { id:7, key:"stair",    label:"Stair / ramp",      sub:"connector",    color:"#b89a5a" },
+];
+const TC = Object.fromEntries(TERRAINS.map(t => [t.id, t.color]));
+
+let cells = Array.from({ length: ROWS }, () => new Uint8Array(COLS)); // terrain id per cell
+let gates = [], ward = null, hero = null, chokes = [];
+let brush = 2, tool = "paint", brushSize = 1, marker = null, painting = false, rectStart = null, hover = null;
+const undoStack = [];
+
+// ---------- seed from the existing blueprint zones + markers ----------
+function fillRect(b, id) {
+  for (let r = b.row; r < b.row + b.h; r++) for (let c = b.col; c < b.col + b.w; c++)
+    if (r >= 0 && c >= 0 && r < ROWS && c < COLS) cells[r][c] = id;
+}
+function kindToTerrain(z) {
+  if (z.band === "pit" || z.kind === "pit") return 0;
+  if (z.kind === "platform") return 3;
+  if (z.kind === "ward") return z.band === "dais" ? 5 : 4;
+  if (z.kind === "spawn-room" || z.kind === "entry" || z.band === "low") return 1;
+  return 2; // floor / mid
+}
+function seed() {
+  for (const z of SRC.zones || []) fillRect(z.bounds, kindToTerrain(z));
+  for (const s of SRC.stairs || []) fillRect(s.bounds, 7);
+  // a starting wall ring around the room body (you can repaint freely)
+  const x0 = 5, x1 = 66, y0 = 6, y1 = 53;
+  for (let c = x0; c <= x1; c++) { if (cells[y0][c] !== 0) cells[y0][c] = 6; if (cells[y1][c] !== 0) cells[y1][c] = 6; }
+  for (let r = y0; r <= y1; r++) { if (cells[r][x0] !== 0) cells[r][x0] = 6; if (cells[r][x1] !== 0) cells[r][x1] = 6; }
+  gates = (SRC.gates || []).map(g => ({ label: g.label, col: g.cell.col, row: g.cell.row, main: g.importance === "main" }));
+  ward = SRC.ward ? { col: SRC.ward.cell.col, row: SRC.ward.cell.row } : { col: 16, row: 49 };
+  hero = SRC.heroSpawn ? { col: SRC.heroSpawn.cell.col, row: SRC.heroSpawn.cell.row } : { col: 10, row: 52 };
+  chokes = (SRC.chokes || []).map(c => ({ col: c.cell.col, row: c.cell.row }));
+}
+
+// ---------- canvas ----------
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+cv.width = COLS * CELL + PAD + 4; cv.height = ROWS * CELL + PAD + 4;
+const X = c => PAD + c * CELL, Y = r => PAD + r * CELL;
+
+function render() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = "#0a0c08"; ctx.fillRect(0, 0, cv.width, cv.height);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { ctx.fillStyle = TC[cells[r][c]]; ctx.fillRect(X(c), Y(r), CELL, CELL); }
+  // grid
+  ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1; ctx.beginPath();
+  for (let c = 0; c <= COLS; c++) { ctx.moveTo(X(c), Y(0)); ctx.lineTo(X(c), Y(ROWS)); }
+  for (let r = 0; r <= ROWS; r++) { ctx.moveTo(X(0), Y(r)); ctx.lineTo(X(COLS), Y(r)); }
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.beginPath();
+  for (let c = 0; c <= COLS; c += 5) { ctx.moveTo(X(c), Y(0)); ctx.lineTo(X(c), Y(ROWS)); }
+  for (let r = 0; r <= ROWS; r += 5) { ctx.moveTo(X(0), Y(r)); ctx.lineTo(X(COLS), Y(r)); }
+  ctx.stroke();
+  ctx.fillStyle = "#7a8a7a"; ctx.font = "9px monospace"; ctx.textAlign = "center";
+  for (let c = 0; c <= COLS; c += 5) ctx.fillText(c, X(c), PAD - 8);
+  ctx.textAlign = "end";
+  for (let r = 0; r <= ROWS; r += 5) ctx.fillText(r, PAD - 6, Y(r) + 3);
+  // markers
+  const mk = (col, row, fill, txt, ring) => {
+    const cx = X(col) + CELL / 2, cy = Y(row) + CELL / 2;
+    ctx.beginPath(); ctx.arc(cx, cy, ring ? 7 : 8, 0, 7); ctx.fillStyle = ring ? "transparent" : fill;
+    if (!ring) ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = fill; ctx.stroke();
+    if (txt) { ctx.fillStyle = "#101006"; ctx.font = "bold 11px monospace"; ctx.textAlign = "center"; ctx.fillText(txt, cx, cy + 4); }
+  };
+  for (const c of chokes) mk(c.col, c.row, "#e0883a", "", true);
+  for (const g of gates) mk(g.col, g.row, g.main ? "#ffe14a" : "#e8c24a", g.label);
+  if (ward) mk(ward.col, ward.row, "#5cff8f", "W");
+  if (hero) mk(hero.col, hero.row, "#37d6ff", "h");
+  // hover
+  if (hover) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.strokeRect(X(hover.col) + 0.5, Y(hover.row) + 0.5, CELL - 1, CELL - 1); }
+  // rect preview
+  if (tool === "rect" && rectStart && hover) {
+    const a = rectStart, b = hover, c0 = Math.min(a.col, b.col), r0 = Math.min(a.row, b.row), w = Math.abs(a.col - b.col) + 1, h = Math.abs(a.row - b.row) + 1;
+    ctx.strokeStyle = "#fff"; ctx.setLineDash([4, 3]); ctx.strokeRect(X(c0), Y(r0), w * CELL, h * CELL); ctx.setLineDash([]);
+  }
+}
+
+function cellAt(ev) {
+  const r = cv.getBoundingClientRect();
+  const col = Math.floor((ev.clientX - r.left - PAD) / CELL), row = Math.floor((ev.clientY - r.top - PAD) / CELL);
+  return (col >= 0 && row >= 0 && col < COLS && row < ROWS) ? { col, row } : null;
+}
+function pushUndo() { undoStack.push({ cells: cells.map(r => Uint8Array.from(r)), gates: JSON.parse(JSON.stringify(gates)), ward: { ...ward }, hero: { ...hero }, chokes: JSON.parse(JSON.stringify(chokes)) }); if (undoStack.length > 40) undoStack.shift(); }
+function paintAt(c, r, id) { const n = brushSize - 1; for (let dr = -n; dr <= n; dr++) for (let dc = -n; dc <= n; dc++) { const cc = c + dc, rr = r + dr; if (cc >= 0 && rr >= 0 && cc < COLS && rr < ROWS) cells[rr][cc] = id; } }
+
+// ---------- interaction ----------
+cv.addEventListener("contextmenu", e => e.preventDefault());
+cv.addEventListener("pointerdown", (ev) => {
+  const cell = cellAt(ev); if (!cell) return;
+  if (ev.button === 2) { // right-click removes a nearby choke
+    const i = chokes.findIndex(c => c.col === cell.col && c.row === cell.row);
+    if (i >= 0) { pushUndo(); chokes.splice(i, 1); render(); } return;
+  }
+  if (marker) { pushUndo(); placeMarker(cell); render(); return; }
+  pushUndo();
+  if (tool === "rect") { rectStart = cell; }
+  else { painting = true; cv.setPointerCapture(ev.pointerId); paintAt(cell.col, cell.row, tool === "erase" ? 0 : brush); render(); }
+});
+cv.addEventListener("pointermove", (ev) => {
+  const cell = cellAt(ev); hover = cell;
+  document.getElementById("coords").textContent = cell ? `${cell.col},${cell.row}` : "–,–";
+  if (painting && cell) paintAt(cell.col, cell.row, tool === "erase" ? 0 : brush);
+  render();
+});
+cv.addEventListener("pointerup", (ev) => {
+  const cell = cellAt(ev);
+  if (tool === "rect" && rectStart && cell) {
+    const c0 = Math.min(rectStart.col, cell.col), r0 = Math.min(rectStart.row, cell.row), w = Math.abs(rectStart.col - cell.col) + 1, h = Math.abs(rectStart.row - cell.row) + 1;
+    fillRect({ col: c0, row: r0, w, h }, brush);
+  }
+  painting = false; rectStart = null; render();
+});
+function placeMarker(cell) {
+  if (marker === "ward") ward = { col: cell.col, row: cell.row };
+  else if (marker === "hero") hero = { col: cell.col, row: cell.row };
+  else if (marker === "choke") chokes.push({ col: cell.col, row: cell.row });
+  else if (marker.startsWith("gate:")) { const lbl = marker.split(":")[1]; const g = gates.find(x => x.label === lbl); const main = document.getElementById("mainChk").checked; if (main) gates.forEach(x => x.main = false); if (g) { g.col = cell.col; g.row = cell.row; if (main) g.main = true; } else gates.push({ label: lbl, col: cell.col, row: cell.row, main }); }
+}
+
+window.addEventListener("keydown", (ev) => {
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); const s = undoStack.pop(); if (s) { cells = s.cells; gates = s.gates; ward = s.ward; hero = s.hero; chokes = s.chokes; render(); } }
+});
+
+// ---------- palette UI ----------
+const terr = document.getElementById("terr");
+TERRAINS.forEach(t => {
+  const el = document.createElement("div"); el.className = "sw" + (t.id === brush ? " on" : ""); el.dataset.id = t.id;
+  el.innerHTML = `<span class="chip" style="background:${t.color}"></span><div>${t.label}<small>${t.sub}</small></div>`;
+  el.onclick = () => { brush = t.id; tool = "paint"; marker = null; syncUI(); };
+  terr.appendChild(el);
+});
+const marks = document.getElementById("marks");
+[["gate:A","Gate A"],["gate:B","Gate B"],["gate:C","Gate C"],["gate:D","Gate D"],["gate:E","Gate E"],["ward","Ward"],["hero","Hero"],["choke","+ Choke"]].forEach(([m, lbl]) => {
+  const b = document.createElement("button"); b.textContent = lbl; b.dataset.m = m; b.style.margin = "2px"; b.onclick = () => { marker = m; syncUI(); }; marks.appendChild(b);
+});
+function syncUI() {
+  document.querySelectorAll("#terr .sw").forEach(e => e.classList.toggle("on", !marker && +e.dataset.id === brush));
+  document.querySelectorAll("#marks button").forEach(e => e.classList.toggle("on", e.dataset.m === marker));
+  for (const [id, t] of [["t-paint","paint"],["t-rect","rect"],["t-erase","erase"]]) document.getElementById(id).classList.toggle("on", !marker && tool === t);
+  document.getElementById("bsLbl").textContent = brushSize;
+}
+for (const [id, t] of [["t-paint","paint"],["t-rect","rect"],["t-erase","erase"]]) document.getElementById(id).onclick = () => { tool = t; marker = null; syncUI(); };
+document.getElementById("bsUp").onclick = () => { brushSize = Math.min(4, brushSize + 1); syncUI(); };
+document.getElementById("bsDn").onclick = () => { brushSize = Math.max(1, brushSize - 1); syncUI(); };
+document.getElementById("undo").onclick = () => { const s = undoStack.pop(); if (s) { cells = s.cells; gates = s.gates; ward = s.ward; hero = s.hero; chokes = s.chokes; render(); } };
+
+// ---------- save / load / copy ----------
+function toJSON() {
+  return JSON.stringify({
+    format: "ossara-grid-blueprint-v1", grid: { cols: COLS, rows: ROWS },
+    terrains: TERRAINS.map(t => ({ id: t.id, key: t.key, label: t.label, color: t.color })),
+    cells: cells.map(row => Array.from(row).join("")),
+    gates, ward, hero, chokes,
+  }, null, 2);
+}
+function loadJSON(o) {
+  if (!o.cells) throw new Error("not a grid blueprint");
+  cells = o.cells.map(s => Uint8Array.from(String(s).split("").map(n => +n)));
+  gates = o.gates || []; ward = o.ward || null; hero = o.hero || null; chokes = o.chokes || [];
+  render();
+}
+function flash(id, msg) { const b = document.getElementById(id); const t = b.textContent; b.textContent = msg; setTimeout(() => b.textContent = t, 1500); }
+document.getElementById("save").onclick = async () => {
+  const text = toJSON();
+  if (window.showSaveFilePicker) { try { const h = await window.showSaveFilePicker({ suggestedName: "first-breach-grid.json", types: [{ description: "Grid blueprint", accept: { "application/json": [".json"] } }] }); const w = await h.createWritable(); await w.write(text); await w.close(); flash("save", "Saved ✓"); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+  const blob = new Blob([text], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "first-breach-grid.json"; a.click(); flash("save", "Downloaded ✓");
+};
+document.getElementById("copy").onclick = async () => { try { await navigator.clipboard.writeText(toJSON()); flash("copy", "Copied ✓"); } catch { flash("copy", "fail"); } };
+document.getElementById("load").onclick = () => document.getElementById("file").click();
+document.getElementById("file").onchange = (ev) => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { loadJSON(JSON.parse(r.result)); flash("load", "Loaded ✓"); } catch (e) { alert("Bad file: " + e.message); } }; r.readAsText(f); };
+
+seed(); syncUI(); render();
+</script>
+</body>
+</html>

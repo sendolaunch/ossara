@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OSSARA — First Breach Blueprint Editor (dev)</title>
+  <title>OSSARA — First Breach Blueprint Editor (standalone)</title>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -41,7 +41,10 @@
     <span class="pill" id="coords">–,–</span>
     <button id="copyjs">Copy .js source</button>
     <button id="dljson">Download JSON</button>
-    <span class="pill">dev-only</span>
+    <button id="savefile">Save to file</button>
+    <button id="loadfile">Load JSON</button>
+    <input id="fileinput" type="file" accept=".json" style="display:none"/>
+    <span class="pill">dev-only · standalone</span>
   </header>
   <div id="wrap">
     <div id="stage"><svg id="svg"></svg></div>
@@ -65,9 +68,650 @@
     </div>
   </div>
 
-  <script type="module">
-    import { FIRST_BREACH_BLUEPRINT as SRC } from "/src/mapbuilder/blueprints/firstBreachBlueprint.js";
-    import { validateBlueprint } from "/src/mapbuilder/blueprints/blueprintValidation.js";
+  <script>
+    // ---- inlined blueprint data (edit visually, then Save / Copy .js source) ----
+    const SRC = {
+  "id": "first-breach-blueprint-v1",
+  "title": "First Breach — Deeper-Well crypt (Option A direction)",
+  "grid": {
+    "cols": 73,
+    "rows": 57
+  },
+  "elevationBands": [
+    {
+      "id": "pit",
+      "order": 0,
+      "height": 0,
+      "color": "#101006",
+      "label": "Pit / void (non-walkable)"
+    },
+    {
+      "id": "low",
+      "order": 1,
+      "height": 0.15,
+      "color": "#1e2016",
+      "label": "Low entry / door apron"
+    },
+    {
+      "id": "mid",
+      "order": 2,
+      "height": 1.4,
+      "color": "#414d36",
+      "label": "Combat floor"
+    },
+    {
+      "id": "platform",
+      "order": 3,
+      "height": 2.2,
+      "color": "#737b53",
+      "label": "Raised platform (high ground)"
+    },
+    {
+      "id": "top",
+      "order": 4,
+      "height": 2.8,
+      "color": "#2f9f55",
+      "label": "Ward shelf"
+    },
+    {
+      "id": "dais",
+      "order": 5,
+      "height": 3.1,
+      "color": "#3fcf6b",
+      "label": "Ward crystal dais"
+    }
+  ],
+  "zones": [
+    {
+      "id": "combat-floor",
+      "kind": "floor",
+      "band": "mid",
+      "bounds": {
+        "col": 6,
+        "row": 8,
+        "w": 60,
+        "h": 45
+      },
+      "label": "Combat floor"
+    },
+    {
+      "id": "central-platform",
+      "kind": "platform",
+      "band": "platform",
+      "bounds": {
+        "col": 29,
+        "row": 22,
+        "w": 19,
+        "h": 11
+      },
+      "label": "Central high ground",
+      "buildable": true
+    },
+    {
+      "id": "ward-shelf",
+      "kind": "ward",
+      "band": "top",
+      "bounds": {
+        "col": 2,
+        "row": 42,
+        "w": 22,
+        "h": 13
+      },
+      "label": "Ward shelf (SW)"
+    },
+    {
+      "id": "ward-dais",
+      "kind": "ward",
+      "band": "dais",
+      "bounds": {
+        "col": 11,
+        "row": 45,
+        "w": 11,
+        "h": 8
+      },
+      "label": "Crystal dais"
+    },
+    {
+      "id": "entry-north",
+      "kind": "entry",
+      "band": "low",
+      "bounds": {
+        "col": 0,
+        "row": 0,
+        "w": 73,
+        "h": 9
+      },
+      "label": "North entry"
+    },
+    {
+      "id": "entry-east",
+      "kind": "entry",
+      "band": "low",
+      "bounds": {
+        "col": 60,
+        "row": 9,
+        "w": 13,
+        "h": 36
+      },
+      "label": "East entry"
+    },
+    {
+      "id": "room-A",
+      "kind": "spawn-room",
+      "band": "low",
+      "bounds": {
+        "col": 13,
+        "row": 1,
+        "w": 11,
+        "h": 7
+      },
+      "label": "Spawn room A (NW)"
+    },
+    {
+      "id": "room-B",
+      "kind": "spawn-room",
+      "band": "low",
+      "bounds": {
+        "col": 33,
+        "row": 1,
+        "w": 11,
+        "h": 7
+      },
+      "label": "Spawn room B (N)"
+    },
+    {
+      "id": "room-C",
+      "kind": "spawn-room",
+      "band": "low",
+      "bounds": {
+        "col": 60,
+        "row": 12,
+        "w": 13,
+        "h": 13
+      },
+      "label": "Spawn room C (NE / main)"
+    },
+    {
+      "id": "room-D",
+      "kind": "spawn-room",
+      "band": "low",
+      "bounds": {
+        "col": 61,
+        "row": 25,
+        "w": 12,
+        "h": 8
+      },
+      "label": "Spawn room D (E-mid)"
+    },
+    {
+      "id": "room-E",
+      "kind": "spawn-room",
+      "band": "low",
+      "bounds": {
+        "col": 61,
+        "row": 38,
+        "w": 12,
+        "h": 11
+      },
+      "label": "Spawn room E (SE)"
+    },
+    {
+      "id": "void-nw",
+      "kind": "pit",
+      "band": "pit",
+      "bounds": {
+        "col": 0,
+        "row": 0,
+        "w": 8,
+        "h": 9
+      },
+      "label": "NW ruin (void)"
+    },
+    {
+      "id": "void-ne",
+      "kind": "pit",
+      "band": "pit",
+      "bounds": {
+        "col": 66,
+        "row": 0,
+        "w": 7,
+        "h": 7
+      },
+      "label": "NE ruin (void)"
+    },
+    {
+      "id": "void-se",
+      "kind": "pit",
+      "band": "pit",
+      "bounds": {
+        "col": 50,
+        "row": 49,
+        "w": 23,
+        "h": 8
+      },
+      "label": "SE ruin (void)"
+    }
+  ],
+  "gates": [
+    {
+      "id": "gate-A",
+      "label": "A",
+      "laneIds": [
+        "northwest-stairs"
+      ],
+      "cell": {
+        "col": 22,
+        "row": 7
+      },
+      "importance": "normal",
+      "wall": "north"
+    },
+    {
+      "id": "gate-B",
+      "label": "B",
+      "laneIds": [
+        "north-gate"
+      ],
+      "cell": {
+        "col": 40,
+        "row": 7
+      },
+      "importance": "normal",
+      "wall": "north"
+    },
+    {
+      "id": "gate-C",
+      "label": "C",
+      "laneIds": [
+        "northeast-market"
+      ],
+      "cell": {
+        "col": 66,
+        "row": 18
+      },
+      "importance": "main",
+      "wall": "east"
+    },
+    {
+      "id": "gate-D",
+      "label": "D",
+      "laneIds": [
+        "southwest-crypt"
+      ],
+      "cell": {
+        "col": 66,
+        "row": 30
+      },
+      "importance": "normal",
+      "wall": "east"
+    },
+    {
+      "id": "gate-E",
+      "label": "E",
+      "laneIds": [
+        "southeast-garden"
+      ],
+      "cell": {
+        "col": 66,
+        "row": 44
+      },
+      "importance": "normal",
+      "wall": "east"
+    }
+  ],
+  "chokes": [
+    {
+      "id": "choke-left-gap",
+      "label": "Left gap",
+      "cell": {
+        "col": 26,
+        "row": 30
+      }
+    },
+    {
+      "id": "choke-right-gap",
+      "label": "Right gap",
+      "cell": {
+        "col": 56,
+        "row": 30
+      }
+    },
+    {
+      "id": "choke-reknot",
+      "label": "Re-knot",
+      "cell": {
+        "col": 30,
+        "row": 40
+      }
+    },
+    {
+      "id": "choke-ward-stair",
+      "label": "Ward-stair base",
+      "cell": {
+        "col": 18,
+        "row": 46
+      }
+    }
+  ],
+  "stairs": [
+    {
+      "id": "ward-grand-stair",
+      "from": "mid",
+      "to": "top",
+      "bounds": {
+        "col": 13,
+        "row": 41,
+        "w": 9,
+        "h": 7
+      },
+      "label": "Grand stair (-> Ward)"
+    },
+    {
+      "id": "central-stair",
+      "from": "mid",
+      "to": "platform",
+      "bounds": {
+        "col": 33,
+        "row": 32,
+        "w": 11,
+        "h": 3
+      },
+      "label": "Platform stair"
+    },
+    {
+      "id": "ramp-A",
+      "from": "low",
+      "to": "mid",
+      "bounds": {
+        "col": 19,
+        "row": 8,
+        "w": 7,
+        "h": 4
+      },
+      "label": "Door ramp A"
+    },
+    {
+      "id": "ramp-B",
+      "from": "low",
+      "to": "mid",
+      "bounds": {
+        "col": 37,
+        "row": 8,
+        "w": 7,
+        "h": 4
+      },
+      "label": "Door ramp B"
+    },
+    {
+      "id": "ramp-E",
+      "from": "low",
+      "to": "mid",
+      "bounds": {
+        "col": 55,
+        "row": 17,
+        "w": 6,
+        "h": 7
+      },
+      "label": "Door ramp (east)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "route-A",
+      "gate": "gate-A",
+      "via": [],
+      "label": "A — west flank",
+      "points": [
+        {
+          "col": 22,
+          "row": 7
+        },
+        {
+          "col": 22,
+          "row": 40
+        },
+        {
+          "col": 16,
+          "row": 40
+        },
+        {
+          "col": 16,
+          "row": 49
+        }
+      ]
+    },
+    {
+      "id": "route-B",
+      "gate": "gate-B",
+      "via": [
+        "choke-left-gap",
+        "choke-reknot"
+      ],
+      "label": "B — left gap",
+      "points": [
+        {
+          "col": 40,
+          "row": 7
+        },
+        {
+          "col": 40,
+          "row": 18
+        },
+        {
+          "col": 26,
+          "row": 18
+        },
+        {
+          "col": 26,
+          "row": 40
+        },
+        {
+          "col": 16,
+          "row": 40
+        },
+        {
+          "col": 16,
+          "row": 49
+        }
+      ]
+    },
+    {
+      "id": "route-C",
+      "gate": "gate-C",
+      "via": [
+        "choke-right-gap"
+      ],
+      "label": "C — main, right gap",
+      "points": [
+        {
+          "col": 66,
+          "row": 18
+        },
+        {
+          "col": 56,
+          "row": 18
+        },
+        {
+          "col": 56,
+          "row": 38
+        },
+        {
+          "col": 16,
+          "row": 38
+        },
+        {
+          "col": 16,
+          "row": 49
+        }
+      ]
+    },
+    {
+      "id": "route-D",
+      "gate": "gate-D",
+      "via": [
+        "choke-right-gap",
+        "choke-reknot"
+      ],
+      "label": "D — right gap (lower)",
+      "points": [
+        {
+          "col": 66,
+          "row": 30
+        },
+        {
+          "col": 56,
+          "row": 30
+        },
+        {
+          "col": 56,
+          "row": 40
+        },
+        {
+          "col": 16,
+          "row": 40
+        },
+        {
+          "col": 16,
+          "row": 49
+        }
+      ]
+    },
+    {
+      "id": "route-E",
+      "gate": "gate-E",
+      "via": [],
+      "label": "E — south flank",
+      "points": [
+        {
+          "col": 66,
+          "row": 44
+        },
+        {
+          "col": 30,
+          "row": 44
+        },
+        {
+          "col": 16,
+          "row": 44
+        },
+        {
+          "col": 16,
+          "row": 49
+        }
+      ]
+    }
+  ],
+  "ward": {
+    "cell": {
+      "col": 16,
+      "row": 49
+    },
+    "label": "Ward Crystal"
+  },
+  "heroSpawn": {
+    "cell": {
+      "col": 10,
+      "row": 52
+    },
+    "label": "Hero spawn"
+  },
+  "notes": [
+    "Ward tucked on the SW player-side shelf behind an L-wall; reached by ONE grand stair.",
+    "Chunky raised central platform (high ground, buildable) splits the horde left/right.",
+    "Five shadow doors in the north + east walls; C (NE) is the larger MAIN gate.",
+    "Routes are implied by room shape (no corridors). Pit/void corners are non-walkable.",
+    "Edit coordinates here, re-open the preview, then approve before rebuilding the blockout."
+  ]
+};
+
+    // ---- inlined validation ----
+// Dev-only validation for a First Breach blueprint object. Pure (no side effects).
+// Returns { ok, errors, warnings }. Used by the test + the preview page.
+
+function validateBlueprint(bp) {
+  const errors = [];
+  const warnings = [];
+  const E = (m) => errors.push(m);
+  const W = (m) => warnings.push(m);
+
+  if (!bp || typeof bp !== "object") return { ok: false, errors: ["blueprint is not an object"], warnings };
+
+  const cols = bp.grid?.cols, rows = bp.grid?.rows;
+  if (cols !== 73 || rows !== 57) E(`grid must be 73x57 (got ${cols}x${rows})`);
+
+  // Unique ids across every collection.
+  const ids = [];
+  for (const key of ["zones", "gates", "chokes", "stairs", "routes", "elevationBands"]) {
+    for (const item of bp[key] || []) if (item && item.id) ids.push(item.id);
+  }
+  const seen = new Set();
+  for (const id of ids) {
+    if (seen.has(id)) E(`duplicate id: ${id}`);
+    seen.add(id);
+  }
+
+  const inBoundsCell = (c) => c && Number.isFinite(c.col) && Number.isFinite(c.row) && c.col >= 0 && c.row >= 0 && c.col < cols && c.row < rows;
+  const inBoundsRect = (b) => b && b.col >= 0 && b.row >= 0 && (b.col + b.w) <= cols && (b.row + b.h) <= rows && b.w > 0 && b.h > 0;
+
+  // Zones.
+  for (const z of bp.zones || []) {
+    if (!z.id) E("a zone is missing an id");
+    if (!z.label) W(`zone ${z.id} has no label`);
+    if (!inBoundsRect(z.bounds)) E(`zone ${z.id} bounds out of the 73x57 grid: ${JSON.stringify(z.bounds)}`);
+    if (z.band && !(bp.elevationBands || []).some((b) => b.id === z.band)) E(`zone ${z.id} references unknown band ${z.band}`);
+  }
+  if (!(bp.zones || []).some((z) => z.kind === "ward")) E("no Ward zone (kind:'ward') exists");
+
+  // Gates.
+  for (const g of bp.gates || []) {
+    if (!g.id) E("a gate is missing an id");
+    if (!g.label) E(`gate ${g.id} has no label`);
+    if (!inBoundsCell(g.cell)) E(`gate ${g.id} cell out of bounds: ${JSON.stringify(g.cell)}`);
+    if (!Array.isArray(g.laneIds) || g.laneIds.length === 0) W(`gate ${g.id} has no laneIds`);
+  }
+  const mainGates = (bp.gates || []).filter((g) => g.importance === "main");
+  if (mainGates.length !== 1) E(`exactly one main gate required (found ${mainGates.length})`);
+
+  // Chokes.
+  for (const c of bp.chokes || []) {
+    if (!c.id) E("a choke is missing an id");
+    if (!inBoundsCell(c.cell)) E(`choke ${c.id} cell out of bounds: ${JSON.stringify(c.cell)}`);
+  }
+
+  // Stairs reference ordered bands (from lower order -> higher order).
+  const bandOrder = new Map((bp.elevationBands || []).map((b) => [b.id, b.order]));
+  for (const s of bp.stairs || []) {
+    if (!s.id) E("a stair is missing an id");
+    if (!inBoundsRect(s.bounds)) E(`stair ${s.id} bounds out of bounds`);
+    if (!bandOrder.has(s.from)) E(`stair ${s.id} unknown from-band ${s.from}`);
+    if (!bandOrder.has(s.to)) E(`stair ${s.id} unknown to-band ${s.to}`);
+    if (bandOrder.has(s.from) && bandOrder.has(s.to) && bandOrder.get(s.from) >= bandOrder.get(s.to))
+      E(`stair ${s.id} must go from a lower band to a higher band (${s.from} -> ${s.to})`);
+  }
+
+  // Elevation bands strictly ordered + heights non-decreasing.
+  const bands = bp.elevationBands || [];
+  for (let i = 1; i < bands.length; i++) {
+    if (!(bands[i].order > bands[i - 1].order)) E(`elevation bands out of order at ${bands[i].id}`);
+    if (bands[i].height < bands[i - 1].height) E(`elevation band heights must not decrease at ${bands[i].id}`);
+  }
+
+  // Routes reference valid gates + chokes.
+  const gateIds = new Set((bp.gates || []).map((g) => g.id));
+  const chokeIds = new Set((bp.chokes || []).map((c) => c.id));
+  for (const r of bp.routes || []) {
+    if (!r.id) E("a route is missing an id");
+    if (!gateIds.has(r.gate)) E(`route ${r.id} references unknown gate ${r.gate}`);
+    for (const v of r.via || []) if (!chokeIds.has(v)) E(`route ${r.id} references unknown choke ${v}`);
+    if (!Array.isArray(r.points) || r.points.length < 2) E(`route ${r.id} needs >= 2 points`);
+    for (const p of r.points || []) if (!inBoundsCell(p)) E(`route ${r.id} has an out-of-bounds point ${JSON.stringify(p)}`);
+  }
+
+  if (!inBoundsCell(bp.ward?.cell)) E("ward cell missing or out of bounds");
+
+  return { ok: errors.length === 0, errors, warnings };
+}
+
 
     const CELL = 18, PAD = 34;
     const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -296,6 +940,17 @@
       const blob = new Blob([JSON.stringify(bp,null,2)], {type:"application/json"});
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "firstBreachBlueprint.json"; a.click();
     };
+
+    function flash(id, msg, restore) { const b=document.getElementById(id); b.textContent=msg; setTimeout(()=>b.textContent=restore,1500); }
+    document.getElementById("savefile").onclick = async () => {
+      const text = JSON.stringify(bp, null, 2);
+      if (window.showSaveFilePicker) {
+        try { const h = await window.showSaveFilePicker({ suggestedName: "firstBreachBlueprint.edited.json", types: [{ description: "Blueprint JSON", accept: { "application/json": [".json"] } }] }); const w = await h.createWritable(); await w.write(text); await w.close(); flash("savefile","Saved \u2713","Save to file"); return; } catch (e) { if (e && e.name === "AbortError") return; }
+      }
+      const blob = new Blob([text], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "firstBreachBlueprint.edited.json"; a.click(); flash("savefile","Downloaded \u2713","Save to file");
+    };
+    document.getElementById("loadfile").onclick = () => document.getElementById("fileinput").click();
+    document.getElementById("fileinput").onchange = (ev) => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { bp = JSON.parse(r.result); sel = null; render(); flash("loadfile","Loaded \u2713","Load JSON"); } catch (e) { alert("Could not parse JSON: " + e.message); } }; r.readAsText(f); };
 
     render();
   </script>
