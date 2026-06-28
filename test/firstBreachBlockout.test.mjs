@@ -12,6 +12,7 @@ import {
   buildFirstBreachBlockout,
   firstBreachBlockoutElevationPlan,
   firstBreachSurfacePlan,
+  firstBreachLedgeBlockers,
   SURFACE_HEIGHTS,
   GREYBOX_PIECES,
 } from "../src/mapbuilder/firstBreachBlockout.js";
@@ -80,6 +81,9 @@ ok(SURFACE_HEIGHTS.spawn === spawnY, "surface spawn height matches the spawn sla
 ok(SURFACE_HEIGHTS.mid === midY, "surface mid height matches the combat plateau top");
 ok(SURFACE_HEIGHTS.top === topFloorY, "surface top height matches the upper-hall top");
 ok(SURFACE_HEIGHTS.dais === daisY, "surface dais height matches the Ward platform top");
+ok(placements.filter((p) => p.readabilityRole === "floor-riser").length >= 3, "dark riser faces mark the exposed terrace edges");
+ok(byId.get("front-apron")?.scaleY === byId.get("left-upper-hall")?.scaleY, "the hero front apron is raised onto the top floor (spawns by the Ward)");
+ok(firstBreachLedgeBlockers(LEVEL).length >= 50, "hero-only ledge blockers exist around the raised-floor edges");
 
 // --- BOTTOM: three spread shadow spawn groups + dark recessed gates ----------
 const groups = placements.filter((p) => p.readabilityRole === "spawn-group");

@@ -7,6 +7,7 @@ import { ENEMIES } from "../config/enemies.js";
 import { TOWERS } from "../config/towers.js";
 import { WAVES } from "../config/waves.js";
 import { HERO } from "../config/hero.js";
+import { firstBreachLedgeBlockers } from "../mapbuilder/firstBreachBlockout.js";
 import { CLASS_KITS } from "../config/kits.js";
 import { buildLanePath, buildLanePaths, pointAtDistance, gridToWorld, worldToGrid, cellKey } from "./pathing.js";
 import {
@@ -97,6 +98,11 @@ export class World {
     this.buildableSet = placementSets.buildableSet;
     this.blockedSet = placementSets.blockedSet;
     this.reservedSet = placementSets.reservedSet;
+    // Hero-only walkable-elevation ledge blockers (opt-in; First Breach only).
+    this.ledgeBlockedSet = new Set();
+    if (opts.walkableElevation && level && level.core && level.core.col === 36 && level.core.row === 47 && level.cols === 73) {
+      for (const c of firstBreachLedgeBlockers(level)) this.ledgeBlockedSet.add(cellKey(c.col, c.row));
+    }
     const _B = this.bonuses;
     this.hero.ability = { ...this.hero.ability };
     this.hero.attackDamage *= 1 + (_B.heroDamagePct || 0) / 100;
@@ -173,7 +179,8 @@ export class World {
 
   _blockedAt(x, z) {
     const g = worldToGrid(x, z, this.level);
-    return this.blockedSet.has(cellKey(g.col, g.row));
+    const k = cellKey(g.col, g.row);
+    return this.blockedSet.has(k) || this.ledgeBlockedSet.has(k);
   }
 
   tryPlaceTower(typeId, col, row, opts = {}) {

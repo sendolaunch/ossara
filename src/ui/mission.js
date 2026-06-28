@@ -168,7 +168,7 @@ export class Mission {
     this._rewardSummaryPayload = null;
     this.worldDrops = clearWorldDrops();
     this.chests = createMissionChests(this.level);
-    this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
+    this.world = new World(this.level, this.waves, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats, walkableElevation: true });
     this.world.chests = this.chests;
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;
@@ -196,7 +196,7 @@ export class Mission {
     this._rewardSummaryPayload = null;
     this.worldDrops = clearWorldDrops();
     this.chests = createMissionChests(this.level || LEVEL);
-    this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats });
+    this.world = new World(this.level || LEVEL, this.waves || WAVES, { hero: kit.hero, towers: kit.towers, bonuses: this._bonuses, equipmentStats: this._equipmentStats, walkableElevation: true });
     this.world.chests = this.chests;
     await this.renderer.setHeroClass(this.classId);
     if (token !== this._startToken) return;

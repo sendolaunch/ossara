@@ -1,13 +1,13 @@
 // ============================================================================
 // VISUAL SURFACE HEIGHTS — a small reusable resolver that answers:
 //   "what visual Y should an actor/object stand on at this cell / world X,Z?"
+//   plus a derivation of hero-only "ledge blockers" so you can't walk off / through
+//   the side of a raised floor except via the stair/ramp connectors.
 //
-// This is VISUAL ONLY. It does NOT touch simulation, pathing, collision, build
-// validity, or waves — the sim stays a flat 2D grid. The renderer uses it to lift
-// hero / enemies / defenses / build previews onto the visible floor of a terraced
-// blockout (e.g. First Breach's bottom spawn / middle combat / top Ward floors),
-// and to interpolate height while crossing a stair connector so actors read as
-// climbing instead of sliding flat.
+// This is a 2.5D pass, NOT a navmesh: the sim stays a flat 2D grid for pathing,
+// build validity, collision math and waves. The renderer uses the heights to lift
+// actors onto the visible floor and interpolate while climbing a stair; the World
+// optionally uses the ledge blockers to stop the HERO from walking off a terrace.
 //
 // A "surface plan" is plain data:
 //   {
@@ -16,8 +16,8 @@
 //     stairs: [ { id, bounds:{col,row,w,h}, fromRow, toRow, fromHeight, toHeight }, ... ],
 //   }
 // Stairs are checked before zones and interpolate linearly by row. Zones are
-// checked in array order (author them raised/most-specific first). Output is a
-// pure function of the plan + position (deterministic).
+// checked in array order (author them raised/most-specific first). Pure +
+// deterministic.
 // ============================================================================
 
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
@@ -58,8 +58,37 @@ export function getSurfaceHeightAtWorld(x, z, plan, level) {
   return surfaceHeightAt(plan, col, row);
 }
 
-// Validation helper (used by tests/tooling): bounds inside the level, known
-// numeric heights, stairs connect two heights. Returns { ok, errors }.
+function inAnyStair(plan, c, r, pad) {
+  return (plan.stairs || []).some((s) => {
+    const b = s.bounds;
+    return c >= b.col - pad && c < b.col + b.w + pad && r >= b.row - pad && r < b.row + b.h + pad;
+  });
+}
+
+// Derive hero-only ledge blockers: the LOW cell at the base of a tall riser (a
+// 4-neighbour is at least `riseThreshold` higher), excluding stair/ramp connector
+// cells (+ a small pad). Walking into such a cell would mean walking off / through
+// a raised floor edge, so the World blocks the hero there; stairs stay walkable.
+// Pure + deterministic. Returns [{col,row}, ...].
+export function computeLedgeBlockers(plan, level, { riseThreshold = 0.5, stairPad = 1 } = {}) {
+  if (!plan || !level) return [];
+  const out = [];
+  for (let r = 0; r < level.rows; r++) {
+    for (let c = 0; c < level.cols; c++) {
+      if (inAnyStair(plan, c, r, stairPad)) continue;
+      const h = surfaceHeightAt(plan, c, r);
+      let ledge = false;
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (inAnyStair(plan, c + dc, r + dr, stairPad)) continue;
+        if (surfaceHeightAt(plan, c + dc, r + dr) - h >= riseThreshold) { ledge = true; break; }
+      }
+      if (ledge) out.push({ col: c, row: r });
+    }
+  }
+  return out;
+}
+
+// Validation helper (used by tests/tooling).
 export function validateSurfacePlan(plan = {}, level = null) {
   const errors = [];
   if (!plan.id) errors.push("surface plan missing id");
