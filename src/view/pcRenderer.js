@@ -279,6 +279,8 @@ export class PCRenderer {
     this.camMinDist = MISSION_CAMERA.minDist;
     this.camMaxDist = MISSION_CAMERA.maxDist;
     this.camTarget = new pc.Vec3(0, MISSION_CAMERA.targetY, 0);
+    this.freeCam = false;
+    this.freeCamMaxDist = 60;
     this._cameraPrimed = false;
     this._cameraBounds = null;
 
@@ -1576,20 +1578,49 @@ export class PCRenderer {
     this.camYaw += d;
   }
   resetCamera() {
+    this.freeCam = false;
     this.camYaw = MISSION_CAMERA.yaw;
     this.camPitch = MISSION_CAMERA.pitch;
     this.camDist = MISSION_CAMERA.dist;
     this._cameraPrimed = false;
   }
   pitchBy(d) {
-    this.camPitch = clamp(this.camPitch + d, MISSION_CAMERA.minPitch, MISSION_CAMERA.maxPitch);
+    const minP = this.freeCam ? 0.2 : MISSION_CAMERA.minPitch;
+    const maxP = this.freeCam ? 1.5 : MISSION_CAMERA.maxPitch;
+    this.camPitch = clamp(this.camPitch + d, minP, maxP);
   }
   zoomBy(d) {
-    this.camDist = Math.max(this.camMinDist, Math.min(this.camMaxDist, this.camDist + d));
+    const maxDist = this.freeCam ? this.freeCamMaxDist : this.camMaxDist;
+    this.camDist = Math.max(this.camMinDist, Math.min(maxDist, this.camDist + d));
   }
   getBasis() {
     const y = this.camYaw;
     return { fwd: { x: -Math.sin(y), z: -Math.cos(y) }, right: { x: Math.cos(y), z: -Math.sin(y) } };
+  }
+
+  toggleFreeCam() {
+    return this.setFreeCam(!this.freeCam);
+  }
+  setFreeCam(on) {
+    this.freeCam = !!on;
+    if (this.freeCam) {
+      // Detach from the hero and frame the whole crypt for inspection.
+      this.camTarget.set(0, MISSION_CAMERA.targetY, 2);
+      this.camDist = Math.min(this.freeCamMaxDist, 36);
+      this.camPitch = 1.25;
+      this._cameraPrimed = true;
+    } else {
+      // Snap back to the normal hero-follow view with default clamps.
+      this.camDist = Math.max(this.camMinDist, Math.min(this.camMaxDist, this.camDist));
+      this.camPitch = clamp(this.camPitch, MISSION_CAMERA.minPitch, MISSION_CAMERA.maxPitch);
+      this._cameraPrimed = false;
+    }
+    return this.freeCam;
+  }
+  panCamera(rightAmt, fwdAmt) {
+    const b = this.getBasis();
+    this.camTarget.x += b.right.x * rightAmt + b.fwd.x * fwdAmt;
+    this.camTarget.z += b.right.z * rightAmt + b.fwd.z * fwdAmt;
   }
 
   _desiredCameraTarget(hero) {
@@ -1603,15 +1634,17 @@ export class PCRenderer {
   }
 
   _followCamera(hero, dt) {
-    const want = this._desiredCameraTarget(hero);
-    if (!this._cameraPrimed) {
-      this.camTarget.set(want.x, want.y, want.z);
-      this._cameraPrimed = true;
+    if (!this.freeCam) {
+      const want = this._desiredCameraTarget(hero);
+      if (!this._cameraPrimed) {
+        this.camTarget.set(want.x, want.y, want.z);
+        this._cameraPrimed = true;
+      }
+      const k = 1 - Math.pow(MISSION_CAMERA.followSharpness, Math.min(dt, 0.05));
+      this.camTarget.x += (want.x - this.camTarget.x) * k;
+      this.camTarget.y += (want.y - this.camTarget.y) * k;
+      this.camTarget.z += (want.z - this.camTarget.z) * k;
     }
-    const k = 1 - Math.pow(MISSION_CAMERA.followSharpness, Math.min(dt, 0.05));
-    this.camTarget.x += (want.x - this.camTarget.x) * k;
-    this.camTarget.y += (want.y - this.camTarget.y) * k;
-    this.camTarget.z += (want.z - this.camTarget.z) * k;
     const cp = Math.cos(this.camPitch);
     const sp = Math.sin(this.camPitch);
     this.cameraEntity.setPosition(

@@ -471,6 +471,15 @@ export class Input {
   }
 
   updateCamera(dt) {
+    // Free cam: arrow keys pan across the map (orbit stays on mouse drag, zoom on wheel).
+    if (this.renderer.freeCam && typeof this.renderer.panCamera === "function") {
+      const pan = (this.renderer.camDist || 20) * 0.9 * dt;
+      if (this.keys.has("arrowleft")) this.renderer.panCamera(-pan, 0);
+      if (this.keys.has("arrowright")) this.renderer.panCamera(pan, 0);
+      if (this.keys.has("arrowup")) this.renderer.panCamera(0, pan);
+      if (this.keys.has("arrowdown")) this.renderer.panCamera(0, -pan);
+      return;
+    }
     if (this.keys.has("arrowleft")) this.renderer.orbit(ROTATE_RATE * dt);
     if (this.keys.has("arrowright")) this.renderer.orbit(-ROTATE_RATE * dt);
     if (this.keys.has("arrowup")) this.renderer.zoomBy(-ZOOM_RATE * dt);

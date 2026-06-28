@@ -109,6 +109,26 @@ export class Mission {
     this.exitBtn.onclick = () => this._exit();
     this.hudRoot.appendChild(this.exitBtn);
 
+    // Free-cam toggle: detach the camera so you can fly around and inspect the map.
+    this.freeCamBtn = document.createElement("button");
+    this.freeCamBtn.className = "oss-btn ghost";
+    this.freeCamBtn.textContent = "Free Cam: Off";
+    Object.assign(this.freeCamBtn.style, {
+      position: "absolute",
+      right: "12px",
+      bottom: "52px",
+      zIndex: "3",
+      padding: "9px 14px",
+      fontSize: "12px",
+      pointerEvents: "auto",
+    });
+    this.freeCamBtn.onclick = () => {
+      const on = typeof this.renderer.toggleFreeCam === "function" ? this.renderer.toggleFreeCam() : false;
+      this.freeCamBtn.textContent = on ? "Free Cam: On" : "Free Cam: Off";
+      this.hud.toast?.(on ? "Free cam: drag to orbit, scroll to zoom, arrow keys to pan. C resets." : "Free cam off.", CSS.gold);
+    };
+    this.hudRoot.appendChild(this.freeCamBtn);
+
     this.STEP = 1 / 60;
     this.acc = 0;
     this.last = 0;
