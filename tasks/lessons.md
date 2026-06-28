@@ -92,3 +92,16 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Symptom:** reporting success from reasoning because the sandbox couldn't run the check.
 - **Root cause:** sync lag makes probing annoying, so it gets skipped.
 - **Rule:** probe, or say **"unverified"** in plain words and hand the check to CC. Recaps quote evidence. (R5, R6, R11)
+
+
+## First Breach greybox reset — primitive blockout (bug classes)
+
+- **Symptom:** First Breach "whitebox" passed every test but human review said it still looked like random art chunks with a sawtooth stair.
+  **Root cause:** it was a *whitebox in name only* — the plan resolved ~90 textured GLB art pieces and faked the central stair from tilted slabs. Tests asserted roles/counts/material-tokens but never "is this actually primitive geometry," so they stayed green while the look failed.
+  **Rule:** a blockout must assert primitive-only — `audit.fallbackPlacements === placements.length`, empty `assetNames`, every `assetKey` a registered no-GLB primitive, and rotation 0 — not just roles/counts.
+
+- **Technique:** `buildMapPlacements(plan, { registry })` accepts a custom registry. Merge greybox piece defs into a local registry to get primitives without editing the shared `mapPieces.js` / `mapThemes.js`.
+
+- **Symptom:** node threw `SyntaxError: Invalid or unexpected token`; grep flagged a source file as "binary."
+  **Root cause:** overwriting/Editing an existing file via the Cowork tools on the OneDrive-synced mount can append trailing NUL bytes; fresh writes to a new path are clean.
+  **Rule:** for existing-file edits in this sandbox, rebuild from `git show HEAD:<path>` + apply exact-match replacements + write to a fresh path (rm then write); always `node --check` + a python NUL-scan afterward.

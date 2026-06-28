@@ -14,7 +14,7 @@ import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharact
 import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
-import { buildFirstBreachMapBuilder } from "../mapbuilder/firstBreachMapPlan.js";
+import { buildFirstBreachBlockout as buildFirstBreachMapBuilder } from "../mapbuilder/firstBreachBlockout.js";
 import { getMapTheme, mapMaterialTokenForPlacement, mapThemeMaterialToken } from "../config/mapThemes.js";
 import { classifyFullBodyMotion, enemyAnimationSet, enemyAssetUrl, enemyModelUrl, resolveEnemyAnimationClips, resolveEnemyVisual } from "./enemyVisuals.js";
 import { WORLD_DROP_RARITY_COLORS } from "../sim/worldDrops.js";
@@ -235,7 +235,7 @@ const MISSION_CAMERA = {
   maxPitch: 1.08,
   dist: 10.5,
   minDist: 4.6,
-  maxDist: 11.5,
+  maxDist: 10.5,
   targetY: 0.8,
   laneLead: 0.25,
   followSharpness: 0.025,
@@ -620,7 +620,8 @@ export class PCRenderer {
         addAt(markerMat, 1.45, 1.65, 1.0, 0.32, 0.64);
       }
     };
-    for (const lane of level.lanes || []) addLaneMarker(lane);
+    const showHardcodedGatePortals = false; // greybox: replaced by primitive shadow-gate voids in firstBreachBlockout.js
+    if (showHardcodedGatePortals) for (const lane of level.lanes || []) addLaneMarker(lane);
     this.breachEntity = this.breachEntities[0] || null;
     this._buildSpawnIndicators(level);
 
@@ -684,6 +685,7 @@ export class PCRenderer {
     coreLight.setPosition(cw.x, 2.2, cw.z);
     this.app.root.addChild(coreLight);
 
+    if (false) { // GREYBOX: cathedral walls + gothic pillars + blocked-cell chunks + showcase props disabled until art-dressing pass
     // ruined cathedral walls
     const halfW = (level.cols * level.tile) / 2 + 0.5;
     const halfH = (level.rows * level.tile) / 2 + 0.5;
@@ -723,6 +725,7 @@ export class PCRenderer {
     }
 
     this._loadMissionShowcaseArt(level);
+    } // end GREYBOX-disabled decoration block
     this._loadMapBuilderArt(level);
 
     // Build target marker. Kept disabled in Stage 1 so the hero never reads as

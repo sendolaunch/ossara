@@ -83,3 +83,8 @@ Use `tasks/map-intelligence-system.md`, `tasks/map-elevation-grammar.md`, and `t
 - Lane arrows/rings remain useful temporary Ward-magic helpers, but still need future in-world rune/stone marker replacements before final art.
 - Inventory / Forge and UI art are functional/basic and should not drive this environment pass.
 - Mission 2 planning or a heavier First Breach material pass should wait until this macro-shape pass is reviewed in motion.
+
+
+## GREYBOX RESET (primitive blockout) — pending human screenshots
+
+First Breach is now a TRUE primitive-only greybox (`src/mapbuilder/firstBreachBlockout.js`), not art pieces. Addressed: sawtooth stair -> 4 broad steps + 2 landings + 2 cheeks; blocky/table Ward -> one clean two-tier platform; huge walls/pillars/clutter near the Ward -> removed; random center props -> removed; green gate portals -> dark shadow-gate voids; permanent grid -> already off; camera max-zoom clamped to default (maxDist 10.5). Decoration stays BLOCKED until the greybox shape is approved. See `tasks/first-breach-greybox-reset-notes.md`.

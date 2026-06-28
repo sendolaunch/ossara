@@ -169,3 +169,18 @@ Close every session by updating this file per the R16 ritual.
 - Current game state for context: the **Undercroft hub ↔ Ward-Crystal map-select ↔ breach mission** loop works; per-class kits + abilities are in; a bigger ruined-courtyard map, a lower over-the-shoulder camera, and the build-ghost preview just shipped (ghost rendering still needs an eyeball confirm).
 
 **In Friendly Words:** We set up the "rules of the road" for how you and your terminal-helper (Claude Code) work together on OSSARA, and wrote three notebooks the project will keep forever — one with the rules, one that remembers what we did each time, and one that catches repeat bugs. Nothing about the game itself changed this session. Your next move is to paste the commit commands I gave you into Claude Code so these three files get saved into version control (git) with Large File Storage set up for the big art files.
+
+
+## Session — Reset First Breach to primitive crypt blockout (greybox)
+
+**Headline:** Replaced the art-dressed First Breach "whitebox" with a true primitive-only DD1 greybox so the room shape can be approved before any art returns.
+
+- Authored `src/mapbuilder/firstBreachBlockout.js` — primitive-only plan (plain axis-aligned boxes, value-ramped stone tokens) via a local registry, so `mapPieces.js` / `mapThemes.js` are untouched.
+- Room: framed shell (6 wall blocks), value-zoned floor (5 slabs dark-rear -> light-front), one two-tier raised Ward platform on {36,47}, broad stair (bottom landing + 4 steps + top landing + 2 cheeks), 5 dark shadow-gate voids + stone frames, subtle choke stones. ~51 pieces (was ~90 art pieces).
+- `src/view/pcRenderer.js`: import now points at the blockout builder; camera `maxDist` 11.5 -> 10.5; gated off green gate-portals, cathedral walls, gothic pillars, blocked-cell chunks, legacy showcase art. Kept Ward gem + halo ring + dais.
+- `test/firstBreachBlockout.test.mjs` (NEW, 613/613) locks primitive-only / axis-aligned / 4-step / clean-Ward / 5-gates / lanes / snapshot-unchanged. Added to `npm test` (40 files green).
+- Gameplay anchors unchanged (lanes, core, hero, build/reserved zones, waves) — snapshot guard + full suite green.
+- Build + browser smoke + git are Windows-side this pass: sandbox git is index-locked + CRLF/LFS-noisy; vite build needs Linux-native rollup/esbuild binaries the Windows node_modules lacks.
+- Old `firstBreachMapPlan.js` + its 3 tests are superseded/dead — removal candidates after greybox approval.
+
+**In Friendly Words:** The map only looked like a junk pile because it was secretly still made of finished art. I rebuilt First Breach as plain grey boxes — clean floor, four broad steps up to one simple Ward platform, dark enemy doorways, framing walls — and a test that keeps it that way (613/613, nothing else broke). Gameplay is untouched. Next: run it on Windows, screenshot it, approve the shape, then add art.
