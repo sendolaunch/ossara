@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.6 — 2026-06-28 — First Breach FINAL: Hudson-edited mob routes baked into the lanes (+ diagonal-safe path walker); full suite + build green, ready to push |
+| **Last session** | S7.7 — 2026-06-28 — First Breach Art Dressing v1: crypt materials, wall caps, infected gate thresholds, Ward shrine ring+halo, off-lane edge props (primitive-only, layout LOCKED); full suite + build green, eyeball pending |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.7 — 2026-06-28 — First Breach Art Dressing v1 — crypt materials/caps/gate-corruption/Ward-shrine/edge-props [GATE GREEN; EYEBALL PENDING]
+- First real art pass over the approved painted-grid blockout — layout/routes/topology/gate cells/Ward all LOCKED and unchanged. Wrote `tasks/first-breach-art-dressing-v1-plan.md` (tone, per-terrain material intent, wall/gate/Ward/prop rules, hard constraints).
+- All dressing is primitive-only (`gb-*` boxes, `allowOverlapGameplay`) authored in `firstBreachBlockout.js`, flowing through the existing `buildMapPlacements` → pcRenderer greybox-fallback path (no GLB, no renderer rewrite, no grid edit). Materials are overridden via a small `TERRAIN_MAT` map so the auto-derived `firstBreachGrid.js` stays pristine.
+- Changes: Ward shelf greener (`shrinePlatformStone` vs combat platforms' `landingHighStone`); inner walls lighter (`ruinedStoneMid`) vs dark perimeter (`ruinedStoneDark`); stone coping caps on the 9 tall perimeter wall runs; an infected-green corruption threshold pooled at each of the 5 breach gates (Gate C largest); Ward shrine = 4 corner posts + a 4-bar stone rim + a focused green halo around core {9,51}; 12 hand-placed off-lane edge props (rubble / broken pillars / bones). Lighting left as-is (theme already crypt; v2 after screenshots).
+- Tests: extended `firstBreachBlockout.test.mjs` to lock the dressing — terrain boxes still 1:1 with the 139 painted rects, caps only on tall perimeter walls, 5 gate-corruption pools (one main, biggest), Ward dressing ≤5 of core, every prop on a walkable cell + off every route/reserved/blocked cell + ring-clear, all dressing visual-only primitives. Total blockout placements 194 (bounded).
+- Verified (R5/R6): `npm test` exit 0 (firstBreachBlockout 886/886, mapSurfaceHeights 25/25, full suite green); clean `/tmp` vite build ✓ 894 modules. Unverified: the in-engine eyeball (R20/R26) — the sandbox can't render PlayCanvas, so it needs Hudson's screenshots.
+- Commit pending CC: `src/mapbuilder/firstBreachBlockout.js`, `test/firstBreachBlockout.test.mjs`, `tasks/first-breach-art-dressing-v1-plan.md`, `tasks/handoff.md`, `tasks/lessons.md` → "Dress First Breach crypt art v1".
+- **In Friendly Words:** I gave the grey crypt its first coat of paint — the Ward area now reads green, the tall walls have stone caps so they look like a real crypt, each monster doorway has an infected-green stain, the crystal sits inside a little shrine ring with a green glow, and a few rubble and bone piles are tucked into the corners well away from the paths. I didn't move a single wall, lane, gate, or the crystal. Everything passes and builds — run it in 3D and send screenshots so we can decide what v2 needs.
 
 ### S7.6 — 2026-06-28 — First Breach FINAL — Hudson-edited mob routes baked (READY TO PUSH) [GATE GREEN]
 - Added a Route mode to the 3D editor (pick lane A-E, click to add waypoints, drag to move, gate/Ward ends fixed). Hudson re-drew the 5 mob paths and exported first-breach-grid (3).json ("this is the final one push it").
@@ -245,3 +254,4 @@ Close every session by updating this file per the R16 ritual.
 - Old `firstBreachMapPlan.js` + its 3 tests are superseded/dead — removal candidates after greybox approval.
 
 **In Friendly Words:** The map only looked like a junk pile because it was secretly still made of finished art. I rebuilt First Breach as plain grey boxes — clean floor, four broad steps up to one simple Ward platform, dark enemy doorways, framing walls — and a test that keeps it that way (613/613, nothing else broke). Gameplay is untouched. Next: run it on Windows, screenshot it, approve the shape, then add art.
+

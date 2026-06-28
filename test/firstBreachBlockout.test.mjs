@@ -1,11 +1,13 @@
 // Protects the grid-driven First Breach blockout: it renders the painted grid
 // (firstBreachGrid.js) as primitive boxes at the painted terrain heights, with shadow
 // gates at the painted gate cells. No GLB art. Gameplay anchors read from LEVEL.
+// Also protects Art Dressing v1: dressing must not add/remove terrain, must keep props
+// off every route, and must keep Ward/gate dressing anchored where it belongs.
 import { LEVEL } from "../src/config/level.js";
 import { WAVES } from "../src/config/waves.js";
-import { FB_TERRAIN_RECTS, FB_HEIGHT } from "../src/config/firstBreachGrid.js";
+import { FB_TERRAIN_RECTS, FB_HEIGHT, terrainAt } from "../src/config/firstBreachGrid.js";
 import { FIRST_BREACH_BLOCKOUT_PLAN, buildFirstBreachBlockout, firstBreachSurfacePlan, firstBreachLedgeBlockers, SURFACE_HEIGHTS, GREYBOX_PIECES } from "../src/mapbuilder/firstBreachBlockout.js";
-import { validateMapPlacements } from "../src/mapbuilder/mapValidation.js";
+import { validateMapPlacements, protectedGameplayCellSet } from "../src/mapbuilder/mapValidation.js";
 import { validateSurfacePlan } from "../src/mapbuilder/mapSurfaceHeights.js";
 
 let pass = 0, fail = 0;
@@ -14,6 +16,7 @@ const built = buildFirstBreachBlockout(LEVEL);
 const again = buildFirstBreachBlockout(LEVEL);
 const P = built.placements;
 const byRole = (r) => P.filter((p) => p.readabilityRole === r);
+const tag = (t) => P.filter((p) => p.tags.includes(t));
 const core = LEVEL.core;
 const laneIds = new Set(LEVEL.lanes.map((l) => l.id));
 
@@ -69,6 +72,39 @@ ok(zp.length === 0, `no coplanar overlapping walkable slabs (z-fight): ${zp.slic
 ok(validateMapPlacements(P, LEVEL, { requiredLaneIds: LEVEL.lanes.map((l) => l.id) }).ok, "placement validation passes for all lanes");
 ok(LEVEL.cols === 73 && LEVEL.rows === 57, "grid stays 73x57");
 ok(LEVEL.lanes.length === 5 && WAVES.length === 5, "still five lanes and five waves");
+
+// ----- ART DRESSING v1: dressing must not touch topology/routes -----
+ok(tag("terrain").length === FB_TERRAIN_RECTS.length, "terrain boxes still 1:1 with painted rects (no terrain added/removed)");
+
+const caps = byRole("wall-trim");
+const tallWalls = FB_TERRAIN_RECTS.filter((rc) => rc.terrain === 6 && rc.height >= 5).length;
+ok(caps.length === tallWalls && caps.every((p) => p.tags.includes("wall-cap")), "stone caps sit only on the tall perimeter walls");
+
+const corruption = byRole("gate-corruption");
+ok(corruption.length === 5, "one infected-green corruption threshold per gate");
+ok(corruption.filter((p) => p.tags.includes("main")).length === 1, "exactly one main (Gate C) corruption pool");
+const mainCorr = corruption.find((p) => p.tags.includes("main"));
+ok(mainCorr && corruption.filter((p) => !p.tags.includes("main")).every((p) => mainCorr.scaleX > p.scaleX), "main gate corruption pool is the largest");
+for (const c of corruption) ok(LEVEL.lanes.some((l) => l.spawn.col === c.anchorCol && l.spawn.row === c.anchorRow), `${c.id} pools at a painted gate cell`);
+
+const wardDress = byRole("ward-dress");
+ok(wardDress.length >= 5 && wardDress.every((p) => Math.abs(p.anchorCol - core.col) <= 5 && Math.abs(p.anchorRow - core.row) <= 5), "Ward dressing hugs the core (<=5 cells)");
+
+const prot = protectedGameplayCellSet(LEVEL);
+const ring1Clear = (c, r) => { for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) if (prot.has(`${c + dc},${r + dr}`)) return false; return true; };
+const props = byRole("edge-prop");
+ok(props.length >= 6, "a few edge props are placed");
+for (const p of props) {
+  const t = terrainAt(p.anchorCol, p.anchorRow);
+  ok([1, 2, 3, 4, 5, 7].includes(t), `${p.id} sits on a walkable surface cell`);
+  ok(!prot.has(`${p.anchorCol},${p.anchorRow}`), `${p.id} is off every route/reserved/blocked cell`);
+  ok(ring1Clear(p.anchorCol, p.anchorRow), `${p.id} keeps a clear ring around it (off-lane)`);
+}
+
+// dressing is visual-only primitives (no GLB), overlapping gameplay freely
+const dress = tag("dress");
+ok(dress.length >= 20, "dressing layer present");
+ok(dress.every((p) => p.allowOverlapGameplay === true && String(p.assetKey).startsWith("gb-")), "all dressing is visual-only primitives");
 
 console.log(`firstBreachBlockout: ${pass}/${pass + fail} checks passed`);
 if (fail) process.exit(1);

@@ -115,3 +115,12 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Symptom:** node threw `SyntaxError: Invalid or unexpected token`; grep flagged a source file as "binary."
   **Root cause:** overwriting/Editing an existing file via the Cowork tools on the OneDrive-synced mount can append trailing NUL bytes; fresh writes to a new path are clean.
   **Rule:** for existing-file edits in this sandbox, rebuild from `git show HEAD:<path>` + apply exact-match replacements + write to a fresh path (rm then write); always `node --check` + a python NUL-scan afterward.
+
+
+## First Breach art dressing v1 (decorate without disturbing gameplay)
+
+- **Symptom:** wanted to tuck props into "void/edge" cells, but a probe found ZERO open-void cells adjacent to the play space that were also ≥2 cells from any route/reserved cell.
+  **Root cause:** the painted grid is tightly packed — routes + reserved + walls cover the margins, so there is almost no dead void next to play. "Edge" decoration has to live on off-lane *walkable* cells, not in the pit.
+  **Rule:** place map props by probing `protectedGameplayCellSet(LEVEL)` + `terrainAt` for walkable, ring-clear cells, and assert that in tests (on a walkable surface + off every route/reserved/blocked cell + a clear ring), so dressing can never drift onto a lane.
+
+- **Technique:** dress the blockout WITHOUT touching the auto-derived grid — override per-terrain materials via a small `TERRAIN_MAT` map in `firstBreachBlockout.js`, and add visual-only `gb-*` primitive pieces (`allowOverlapGameplay: true`) for wall caps / gate corruption / Ward ring / props. They ride the existing `buildMapPlacements` → pcRenderer fallback path (`placement.y` = box BASE; renderer adds `scaleY/2`), stay primitive-only (`assetNames` empty, `fallbackPlacements === placements.length`), and never change terrain counts or heights.
