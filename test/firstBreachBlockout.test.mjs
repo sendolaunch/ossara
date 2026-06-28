@@ -111,6 +111,8 @@ for (const id of ["left-upper-hall", "right-upper-hall"]) {
   ok(h.anchorRow >= 40 && Math.abs(h.anchorCol - core.col) <= 12, `${id} is near the Ward / back wall, not a far corner`);
 }
 ok(byId.has("left-hall-connector") && byId.has("right-hall-connector"), "upper halls are connected to the Ward dais");
+ok(byId.get("left-upper-hall").scaleX > byId.get("right-upper-hall").scaleX + 2, "upper halls are asymmetric (dominant left, broken right), not mirrored");
+ok(byId.has("left-spine-wall"), "a dominant left spine breaks the symmetric footprint");
 ok(countRole("upper-hall") >= 4, "upper halls + connectors form defendable top-floor extensions");
 const nearWard = placements.filter((p) => Math.abs(p.anchorCol - core.col) <= 3 && Math.abs(p.anchorRow - core.row) <= 3);
 ok(nearWard.every((p) => ["ward-shrine", "stair-landing"].includes(p.readabilityRole)), "no decorative clutter sits on the Ward dais");

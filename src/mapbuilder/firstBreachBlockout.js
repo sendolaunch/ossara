@@ -143,8 +143,9 @@ function topFloor(level) {
   out.push(piece({ id: "ward-rim-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 8.4, y: EL.top, z: 8.4 }, materialToken: "landingHighStone", role: "ward-shrine", band: "high", tags: ["ward", "rim"] }));
   out.push(piece({ id: "ward-platform-square", key: "gb-platform", type: "platform", cell: core, scale: { x: 9, y: EL.dais, z: 8.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
   out.push(piece({ id: "ward-platform-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 6.4, y: EL.dais, z: 6.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
-  out.push(piece({ id: "left-upper-hall", key: "gb-platform", type: "platform", cell: { col: 26, row: 44 }, rotation: 12, scale: { x: 9, y: EL.top, z: 12 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "left"] }));
-  out.push(piece({ id: "right-upper-hall", key: "gb-platform", type: "platform", cell: { col: 46, row: 44 }, rotation: -12, scale: { x: 9, y: EL.top, z: 12 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "right"] }));
+  out.push(piece({ id: "left-upper-hall", key: "gb-platform", type: "platform", cell: { col: 25, row: 42 }, rotation: 16, scale: { x: 11, y: EL.top, z: 19 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "left", "spine"] }));
+  out.push(piece({ id: "left-spine-wall", key: "gb-wall", type: "wall", cell: { col: 18, row: 40 }, rotation: 14, scale: { x: 1.4, y: 3.6, z: 22 }, materialToken: "ruinedStoneDark", role: "room-shell", tags: ["spine", "left"] }));
+  out.push(piece({ id: "right-upper-hall", key: "gb-platform", type: "platform", cell: { col: 48, row: 47 }, rotation: -8, scale: { x: 6.5, y: EL.top, z: 9 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "right", "broken"] }));
   out.push(piece({ id: "left-hall-connector", key: "gb-platform", type: "platform", cell: { col: 31, row: 46 }, scale: { x: 3, y: EL.top, z: 7 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "connector"] }));
   out.push(piece({ id: "right-hall-connector", key: "gb-platform", type: "platform", cell: { col: 41, row: 46 }, scale: { x: 3, y: EL.top, z: 7 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "connector"] }));
   out.push(piece({ id: "left-hall-rail", key: "gb-edge", type: "edge", cell: { col: 21, row: 44 }, rotation: 12, scale: { x: 0.9, y: 1.0, z: 12 }, materialToken: "ruinedStoneDark", role: "hall-rail", visualY: EL.top, tags: ["hall", "rail"] }));
@@ -223,8 +224,8 @@ export function firstBreachSurfacePlan(level = LEVEL) {
     defaultHeight: EL.spawn,
     zones: [
       { id: "ward-dais", height: EL.dais, bounds: { col: core.col - 5, row: core.row - 4, w: 11, h: 8 } },
-      { id: "left-upper-hall", height: EL.top, bounds: { col: 20, row: 38, w: 14, h: 13 } },
-      { id: "right-upper-hall", height: EL.top, bounds: { col: 39, row: 38, w: 14, h: 13 } },
+      { id: "left-upper-hall", height: EL.top, bounds: { col: 17, row: 36, w: 17, h: 15 } },
+      { id: "right-upper-hall", height: EL.top, bounds: { col: 42, row: 42, w: 11, h: 10 } },
       { id: "front-apron", height: EL.top, bounds: { col: 28, row: 51, w: 16, h: 5 } },
       { id: "mid-combat", height: EL.mid, bounds: { col: 14, row: 16, w: 44, h: 23 } },
       { id: "spawn-back", height: EL.spawn, bounds: { col: 0, row: 0, w: level.cols, h: 16 } },

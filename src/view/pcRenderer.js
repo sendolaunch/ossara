@@ -1647,9 +1647,15 @@ export class PCRenderer {
   _desiredCameraTarget(hero) {
     const laneX = hero.x - MISSION_CAMERA.laneLead;
     const b = this._cameraBounds;
+    // Camera follows the hero's surface band: the target rises with the floor so the
+    // hero stays framed on the upper shelf (not compressed at the top of the screen),
+    // and max zoom-out loosens on higher floors (tighter on the bottom). Still clamped.
+    const surf = this.freeCam ? 0 : this._surfaceY(hero.x, hero.z);
+    this.camMaxDist = MISSION_CAMERA.maxDist + surf * 1.15;
+    if (!this.freeCam && this.camDist > this.camMaxDist) this.camDist = this.camMaxDist;
     return {
       x: b ? clamp(laneX, b.minX, b.maxX) : laneX,
-      y: MISSION_CAMERA.targetY,
+      y: MISSION_CAMERA.targetY + surf,
       z: b ? clamp(hero.z, b.minZ, b.maxZ) : hero.z,
     };
   }
