@@ -97,8 +97,8 @@ function roomShell(level) {
 function spawnFloor(level) {
   return [
     flr("spawn-floor-back", { col: 36, row: 8 }, 60, 16, EL.spawn, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
-    flr("spawn-floor-left-pocket", { col: 8, row: 24 }, 16, 18, EL.spawn, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
-    flr("spawn-floor-right-pocket", { col: 64, row: 24 }, 16, 18, EL.spawn, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
+    flr("spawn-floor-left-pocket", { col: 8, row: 24 }, 16, 18, EL.spawn - 0.02, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
+    flr("spawn-floor-right-pocket", { col: 64, row: 24 }, 16, 18, EL.spawn - 0.02, "floorRubbleDark", "macro-floor", "low", ["spawn-floor"]),
     flr("spawn-group-left", { col: 13, row: 13 }, 20, 16, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "left"]),
     flr("spawn-group-center", { col: 36, row: 7 }, 16, 11, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "center"]),
     flr("spawn-group-right", { col: 59, row: 13 }, 20, 16, EL.spawn + 0.08, "shadowEdgeRuin", "spawn-group", "sunken", ["group", "right"]),
@@ -121,7 +121,7 @@ function middleFloor(level) {
   const ramp = (id, col, row) => ([
     piece({ id: `${id}-r1`, key: "gb-step", type: "stair", cell: { col, row }, scale: { x: 7, y: 0.55, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "low", tags: ["ramp"] }),
     piece({ id: `${id}-r2`, key: "gb-step", type: "stair", cell: { col, row: row + 1 }, scale: { x: 7, y: 1.0, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
-    piece({ id: `${id}-r3`, key: "gb-step", type: "stair", cell: { col, row: row + 2 }, scale: { x: 7, y: EL.mid, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
+    piece({ id: `${id}-r3`, key: "gb-step", type: "stair", cell: { col, row: row + 2 }, scale: { x: 7, y: EL.mid - 0.02, z: 1.1 }, materialToken: "ruinedStoneStep", role: "level-connector", band: "mid", tags: ["ramp"] }),
   ]);
   out.push(...ramp("mid-ramp-center", 36, 14));
   out.push(...ramp("mid-ramp-left", 19, 22));
@@ -140,18 +140,16 @@ function topFloor(level) {
   const core = level.core; // {36,47}
   const out = [];
   out.push(piece({ id: "ward-rim-square", key: "gb-platform", type: "platform", cell: core, scale: { x: 12, y: EL.top, z: 11 }, materialToken: "landingHighStone", role: "ward-shrine", band: "high", tags: ["ward", "rim"] }));
-  out.push(piece({ id: "ward-rim-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 8.4, y: EL.top, z: 8.4 }, materialToken: "landingHighStone", role: "ward-shrine", band: "high", tags: ["ward", "rim"] }));
+  out.push(piece({ id: "ward-rim-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 8.4, y: EL.top - 0.10, z: 8.4 }, materialToken: "landingHighStone", role: "ward-shrine", band: "high", tags: ["ward", "rim"] }));
   out.push(piece({ id: "ward-platform-square", key: "gb-platform", type: "platform", cell: core, scale: { x: 9, y: EL.dais, z: 8.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
-  out.push(piece({ id: "ward-platform-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 6.4, y: EL.dais, z: 6.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
-  out.push(piece({ id: "left-upper-hall", key: "gb-platform", type: "platform", cell: { col: 25, row: 42 }, rotation: 16, scale: { x: 11, y: EL.top, z: 19 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "left", "spine"] }));
+  out.push(piece({ id: "ward-platform-diamond", key: "gb-platform", type: "platform", cell: core, rotation: 45, scale: { x: 6.4, y: EL.dais - 0.04, z: 6.4 }, materialToken: "shrinePlatformStone", role: "ward-shrine", band: "shrine", tags: ["ward", "platform"] }));
+  out.push(piece({ id: "left-upper-hall", key: "gb-platform", type: "platform", cell: { col: 25, row: 42 }, rotation: 16, scale: { x: 11, y: EL.top - 0.02, z: 19 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "left", "spine"] }));
   out.push(piece({ id: "left-spine-wall", key: "gb-wall", type: "wall", cell: { col: 18, row: 40 }, rotation: 14, scale: { x: 1.4, y: 3.6, z: 22 }, materialToken: "ruinedStoneDark", role: "room-shell", tags: ["spine", "left"] }));
-  out.push(piece({ id: "right-upper-hall", key: "gb-platform", type: "platform", cell: { col: 48, row: 47 }, rotation: -8, scale: { x: 6.5, y: EL.top, z: 9 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "right", "broken"] }));
-  out.push(piece({ id: "left-hall-connector", key: "gb-platform", type: "platform", cell: { col: 31, row: 46 }, scale: { x: 3, y: EL.top, z: 7 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "connector"] }));
-  out.push(piece({ id: "right-hall-connector", key: "gb-platform", type: "platform", cell: { col: 41, row: 46 }, scale: { x: 3, y: EL.top, z: 7 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "connector"] }));
+  out.push(piece({ id: "right-upper-hall", key: "gb-platform", type: "platform", cell: { col: 48, row: 47 }, rotation: -8, scale: { x: 6.5, y: EL.top - 0.04, z: 9 }, materialToken: "landingHighStone", role: "upper-hall", band: "high", tags: ["hall", "right", "broken"] }));
   out.push(piece({ id: "left-hall-rail", key: "gb-edge", type: "edge", cell: { col: 21, row: 44 }, rotation: 12, scale: { x: 0.9, y: 1.0, z: 12 }, materialToken: "ruinedStoneDark", role: "hall-rail", visualY: EL.top, tags: ["hall", "rail"] }));
   out.push(piece({ id: "right-hall-rail", key: "gb-edge", type: "edge", cell: { col: 51, row: 44 }, rotation: -12, scale: { x: 0.9, y: 1.0, z: 12 }, materialToken: "ruinedStoneDark", role: "hall-rail", visualY: EL.top, tags: ["hall", "rail"] }));
   // Front apron: hero spawns up here on the top floor, beside the Ward.
-  out.push(flr("front-apron", { col: 36, row: 52 }, 16, 6, EL.top, "landingHighStone", "apron", "high", ["apron"]));
+  out.push(flr("front-apron", { col: 36, row: 52 }, 16, 6, EL.top - 0.06, "landingHighStone", "apron", "high", ["apron"]));
   // Dark riser face on the top floor's exposed front edge (the big drop read).
   out.push(riser("top-riser-front", { col: 36, row: 56 }, 18, EL.top, 0.6, ["front"]));
   return out;
@@ -164,12 +162,12 @@ function topFloor(level) {
 // ---------------------------------------------------------------------------
 function mainStair(level) {
   return [
-    piece({ id: "ward-stair-bottom-landing", key: "gb-landing", type: "landing", cell: { col: 36, row: 38 }, scale: { x: 13, y: EL.mid, z: 2.2 }, materialToken: "landingHighStone", role: "stair-landing", laneId: "north-gate", band: "high", tags: ["stair", "bottom-landing"] }),
-    piece({ id: "ward-broad-step-1-lower", key: "gb-step", type: "stair", cell: { col: 36, row: 40 }, scale: { x: 11, y: 1.75, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
+    piece({ id: "ward-stair-bottom-landing", key: "gb-landing", type: "landing", cell: { col: 36, row: 38 }, scale: { x: 13, y: EL.mid - 0.04, z: 2.2 }, materialToken: "landingHighStone", role: "stair-landing", laneId: "north-gate", band: "high", tags: ["stair", "bottom-landing"] }),
+    piece({ id: "ward-broad-step-1-lower", key: "gb-step", type: "stair", cell: { col: 36, row: 40 }, scale: { x: 11, y: 1.87, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
     piece({ id: "ward-broad-step-2-mid-low", key: "gb-step", type: "stair", cell: { col: 36, row: 41 }, scale: { x: 10.4, y: 2.1, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
-    piece({ id: "ward-broad-step-3-mid-high", key: "gb-step", type: "stair", cell: { col: 36, row: 42 }, scale: { x: 9.8, y: 2.45, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
-    piece({ id: "ward-broad-step-4-upper", key: "gb-step", type: "stair", cell: { col: 36, row: 43 }, scale: { x: 9.2, y: EL.top, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "shrine", tags: ["stair", "step"] }),
-    piece({ id: "ward-stair-top-landing", key: "gb-landing", type: "landing", cell: { col: 36, row: 44 }, scale: { x: 9, y: EL.top, z: 1.4 }, materialToken: "shrinePlatformStone", role: "stair-landing", laneId: "north-gate", band: "shrine", tags: ["stair", "top-landing"] }),
+    piece({ id: "ward-broad-step-3-mid-high", key: "gb-step", type: "stair", cell: { col: 36, row: 42 }, scale: { x: 9.8, y: 2.33, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "high", tags: ["stair", "step"] }),
+    piece({ id: "ward-broad-step-4-upper", key: "gb-step", type: "stair", cell: { col: 36, row: 43 }, scale: { x: 9.2, y: 2.57, z: 1.2 }, materialToken: "ruinedStoneStep", role: "broad-stair-step", laneId: "north-gate", band: "shrine", tags: ["stair", "step"] }),
+    piece({ id: "ward-stair-top-landing", key: "gb-landing", type: "landing", cell: { col: 36, row: 44 }, scale: { x: 9, y: EL.top - 0.03, z: 1.4 }, materialToken: "shrinePlatformStone", role: "stair-landing", laneId: "north-gate", band: "shrine", tags: ["stair", "top-landing"] }),
     piece({ id: "ward-stair-left-cheek-a", key: "gb-edge", type: "edge", cell: { col: 30, row: 40 }, scale: { x: 1.0, y: 0.7, z: 2.6 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 0.4, tags: ["stair", "cheek"] }),
     piece({ id: "ward-stair-left-cheek-b", key: "gb-edge", type: "edge", cell: { col: 31, row: 43 }, scale: { x: 1.0, y: 0.8, z: 2.4 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 1.0, tags: ["stair", "cheek"] }),
     piece({ id: "ward-stair-right-cheek-a", key: "gb-edge", type: "edge", cell: { col: 42, row: 40 }, scale: { x: 1.0, y: 0.7, z: 2.6 }, materialToken: "ruinedStoneDark", role: "stair-retaining-edge", laneId: "north-gate", visualY: EL.mid + 0.4, tags: ["stair", "cheek"] }),
