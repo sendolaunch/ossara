@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.9 — 2026-06-28 — Art Pack Audit: inventoried 517 KayKit models + built dev-only asset-lab.html browser + First Breach candidate kit/plan; audit-only, no gameplay change; suite + build green |
+| **Last session** | S7.10 — 2026-06-28 — First Breach Art Pack v3: cosmetic KayKit skin (26 GLB props) layered over the blockout via null-safe loader + ?fbKit=0 kill switch; no gameplay change; suite 55/55 + build green; eyeball pending |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,17 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.10 — 2026-06-28 — First Breach Art Pack v3 — cosmetic KayKit skin (26 GLB props) [GATE GREEN; EYEBALL PENDING]
+- Implemented the approved v3 placement plan: a new **cosmetic GLB layer** over the locked blockout. NO gameplay / layout / route / Ward / gate / collision / height change. Visual-only, null-safe, removable.
+- New `src/view/firstBreachKit.js` — `FIRST_BREACH_KIT` = **26 placements**: Gate C `wall_arched` + `torch_lit` + `wall_inset_candles`; 4 minor `wall_doorway` (A/B face south ry0, D/E face west ry90); 7 `pillar`/`column` along the north+west wall runs; 3 Ward details (2 `pillar_decorated` + offset `resource/Gems_Pile_Large`, nothing on the core); 5 `rubble_large`/`rubble_half`/`rocks_small` on the fake-cluster cells; 4 sparse `torch_lit`/`wall_inset_candles`. Loaded via the existing null-safe dungeonKit (`preloadKit`+`place`).
+- Wired into `pcRenderer.js`: `_loadFirstBreachKit(level)` mirrors `_loadMissionShowcaseArt`, called right after the primitive blockout, gated on `level.isFirstBreach` AND the **`?fbKit=0`** kill switch. A missing GLB simply isn't placed → the primitive blockout dressing stays (fallback intact). (The old `missionArt` showcase layer is still in its `if(false)` block — the kit is the active GLB skin.)
+- Assets used (10 unique): `wall_arched`, `wall_doorway`, `wall_inset_candles`, `torch_lit`, `pillar`, `column`, `pillar_decorated`, `resource/Gems_Pile_Large`, `rubble_large`, `rubble_half`, `rocks_small`. Primitives layered/replaced (kept as fallback): gate arches A–E, the 8 prop clusters, the Ward posts.
+- New `test/firstBreachKit.test.mjs` (**55/55**): kit <30, ids unique, every asset resolves, pillars+rubble off protected cells, nothing on the Ward core, deterministic, gameplay anchors unchanged. Wired into `npm test`.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 55/55, full suite green); clean `/tmp` vite build ✓ 895 modules. Unverified: the in-engine look (sandbox can't render PlayCanvas) — needs screenshots at the 6 angles incl. the `?fbKit=0` A/B.
+- Disable for A/B: append `?fbKit=0` (e.g. `?showcase=first-breach&fbKit=0`) → primitives only, no GLB kit.
+- Commit pending CC: `src/view/firstBreachKit.js`, `test/firstBreachKit.test.mjs`, `src/view/pcRenderer.js`, `package.json`, `tasks/first-breach-core-kit.md`, `tasks/first-breach-art-pack-v3-placement-plan.md`, `tasks/handoff.md` → "Add First Breach art pack props v3".
+- **In Friendly Words:** the real crypt models are now in the game as a cosmetic skin — a grand stone arch on the main door, plain doorways on the other four, pillars and torches along the big walls, real rubble where the fake cubes were, and columns + a gem pile + a torch at the crystal shrine. It sits on top of the grey map and changes nothing about play; add `?fbKit=0` to the link to see before/after. Everything passes and builds — run it and send the six screenshots (especially Gate C and the `?fbKit=0` comparison).
 
 ### S7.9 — 2026-06-28 — Art Pack Audit + dev-only Asset Lab [AUDIT/TOOLING — no gameplay change]
 - Audit pass before more First Breach art. Scanned `public/models/**` and inventoried **517 KayKit model assets**. NO gameplay / First Breach / Ward / gate / route / collision changes (only new files + a one-line `package.json` test-chain edit).

@@ -14,6 +14,7 @@ import { HERO_ATTACK_TIMING, HERO_ATTACK_VARIANTS, heroAttackPoseAt, loadCharact
 import { preloadKit, place } from "./dungeonKit.js";
 import { activeSpawnLaneIds, chokeReadabilitySpecs, laneReadabilitySpecs, spawnIndicatorSpecs, spawnIndicatorsVisible, wardCoreReadabilitySpec } from "./spawnIndicators.js";
 import { MISSION_ART_ASSET_NAMES, missionShowcaseArtSpecs } from "./missionArt.js";
+import { FIRST_BREACH_KIT_ASSET_NAMES, firstBreachKitSpecs } from "./firstBreachKit.js";
 import { buildFirstBreachBlockout as buildFirstBreachMapBuilder, firstBreachSurfacePlan } from "../mapbuilder/firstBreachBlockout.js";
 import { getSurfaceHeightAtWorld } from "../mapbuilder/mapSurfaceHeights.js";
 import { getMapTheme, mapMaterialTokenForPlacement, mapThemeMaterialToken } from "../config/mapThemes.js";
@@ -750,6 +751,7 @@ export class PCRenderer {
     this._loadMissionShowcaseArt(level);
     } // end GREYBOX-disabled decoration block
     this._loadMapBuilderArt(level);
+    this._loadFirstBreachKit(level); // cosmetic GLB skin (?fbKit=0 to disable)
 
     // Build target marker. Kept disabled in Stage 1 so the hero never reads as
     // the build target; visible feedback is attached to the tower ghost.
@@ -856,6 +858,39 @@ export class PCRenderer {
         console.log(`[missionArt] placed ${placed}/${missionShowcaseArtSpecs(level).length} props`);
       })
       .catch((err) => console.warn("[missionArt] showcase art skipped:", err));
+  }
+
+  // Cosmetic KayKit art-pack skin for First Breach (v3). Visual-only; layered over the
+  // primitive blockout via the null-safe dungeonKit loader. A missing GLB simply isn't
+  // placed (the primitive fallback stays). Disable the whole layer with ?fbKit=0.
+  _loadFirstBreachKit(level) {
+    if (this.fbKitRoot) { this.fbKitRoot.destroy(); this.fbKitRoot = null; }
+    const kitOff = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("fbKit") === "0";
+    if (!level || !level.isFirstBreach || kitOff) return;
+    const root = new pc.Entity("first-breach-art-kit");
+    this.app.root.addChild(root);
+    this.fbKitRoot = root;
+    const token = Symbol("fb-kit");
+    this._fbKitToken = token;
+    preloadKit(this.app, FIRST_BREACH_KIT_ASSET_NAMES)
+      .then(() => {
+        if (this._fbKitToken !== token || this.fbKitRoot !== root) return;
+        let placed = 0;
+        for (const spec of firstBreachKitSpecs(level)) {
+          const ent = place(this.app, root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale });
+          if (!ent) continue; // GLB missing -> primitive blockout fallback stays
+          ent.name = `fbkit-${spec.id}`;
+          for (const render of ent.findComponents("render")) {
+            for (const mesh of render.meshInstances || []) {
+              mesh.castShadow = spec.cat !== "light";
+              mesh.receiveShadow = true;
+            }
+          }
+          placed++;
+        }
+        console.log(`[fbKit] placed ${placed}/${firstBreachKitSpecs(level).length} cosmetic props (?fbKit=0 to disable)`);
+      })
+      .catch((err) => console.warn("[fbKit] art kit skipped:", err));
   }
 
   _mapBuilderFallbackMaterial(materialKey = "stone") {
