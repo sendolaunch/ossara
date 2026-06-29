@@ -964,7 +964,11 @@ export class PCRenderer {
         if (this._mapBuilderToken !== token || this.mapBuilderRoot !== root) return;
         let placed = 0;
         let fallbackCount = 0;
+        const fbKit0 = typeof window !== "undefined" && new URLSearchParams((window.location && window.location.search) || "").get("fbKit") === "0";
         for (const placement of built.placements) {
+          // The kit's GLB walls replace the primitive perimeter; hide the tall wall boxes + their
+          // caps while the kit is active (?fbKit=0 turns the kit off and brings the primitives back).
+          if (!fbKit0 && ((placement.readabilityRole === "wall" && placement.scaleY >= 5) || placement.readabilityRole === "wall-trim")) continue;
           const ent = placement.assetName
             ? place(this.app, root, placement.assetName, {
               x: placement.x,

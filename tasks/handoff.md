@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.14 — 2026-06-28 — Auto-tiled the First Breach wall skin: wall_cracked on every wall + wall_corner on every corner (79-piece kit) from Hudson's examples; suite + build green |
+| **Last session** | S7.15 — 2026-06-28 — Hid the primitive perimeter walls; cracked GLB walls now full-height (2 stacked courses) so they ARE the walls; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.15 — 2026-06-28 — Removed primitive perimeter walls; cracked GLB walls now full-height [GATE GREEN]
+- Screenshot showed the cracked panels sitting in front of the grey primitive perimeter walls (both visible). Hudson: "we have to remove the primitive walls."
+- `pcRenderer._loadMapBuilderArt` now SKIPS the tall perimeter wall boxes (role "wall", scaleY≥5) + their caps (role "wall-trim") while the kit is active. Visual-only — hero collision is the grid (`blockedZones`), untouched. `?fbKit=0` brings the primitives back (A/B).
+- `firstBreachKit.js`: cracked + corner walls are now TWO stacked KayKit courses (y 0 + 3.6 → ~7.6 tall, native proportions, no stretch) so the GLB walls fully replace the hidden primitive (no floating band / see-through gap). Kit = **132 pieces** (26 props + 98 cracked + 8 corner courses). Record at `tasks/first-breach-kit-hudson.json`; 2D view regenerated.
+- Perf: instanced (one container per asset) — ~100 wall instances is cheap (R17).
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 163/163, full suite green); clean `/tmp` build ✓ 897 modules. Unverified: the in-engine look (Hudson testing live); corner facings NW/NE/SE still a guess.
+- Commit pending CC: `src/view/firstBreachKit.js`, `src/view/pcRenderer.js`, `tasks/first-breach-kit-hudson.json`, `first-breach-layout-2d.html`, `tasks/handoff.md` → "Hide primitive perimeter walls; full-height GLB wall skin".
+- **In Friendly Words:** the grey walls behind your cracked walls are hidden now, and I made the cracked walls tall enough (two rows stacked) to be the actual walls — so the perimeter reads as proper cracked crypt stone instead of grey boxes with detail stuck on. You still cannot walk through them (collision unchanged). Refresh the live page to see it.
 
 ### S7.14 — 2026-06-28 — Auto-tiled the wall skin (cracked walls everywhere + corners) [GATE GREEN]
 - Hudson placed one `wall_cracked` + one `wall_corner` as examples and asked me to fill the rest "so i dont have to do all of it." Done: tiled `wall_cracked` along every perimeter wall run every ~4 cells (skipping the 5 gate openings), facing into the room (N ry0 / S ry180 / W ry90 / E ry270), and `wall_corner` at the four corners — all at his example height (y≈2.6), scale 1.
