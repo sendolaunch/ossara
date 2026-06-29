@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.29 — 2026-06-28 — Editor control pack: WASD fly-cam + Space up/Alt down, arrow-keys nudge selected piece, W×H×D size readout, clickable Keys legend, inspector-typing guard. Build 899 + input 66/66 |
+| **Last session** | S7.30 — 2026-06-28 — Baked export-4 (160 pcs, 10 stretched/sy-sz preserved). Added hold-V+drag = move selection vertically (replaces click-to-raise). Build 899 + suite green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,12 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.30 — 2026-06-28 — Bake export-4 + vertical-drag [GREEN]
+- Saved + **baked** `tasks/first-breach-kit-export-4.json` (160 pieces) into firstBreachKit.js, faithfully. Notably **10 pieces are non-uniformly scaled** (sy/sz) — confirms the per-axis scale fix (S7.27) works end-to-end: Hudson stretched arches and they survived export->bake.
+- **Vertical move:** hold **V** and drag a piece up/down moves the whole selection vertically (continuous), replacing the slow PgUp/PgDn clicking. `_onMove` vertical branch (drag-up = raise, 0.06 units/px, respects soft-snap); `_drag` captures startY + startScreenY; V tracked like the X/Z axis lock. Hint + legend updated.
+- Verified: firstBreachKit 189/189, build 899 modules, suite 0 fails.
+- **In Friendly Words:** Your new layout is on the map (and the arches you stretched kept their shape). For height: hold the V key and drag a piece up or down — it lifts the whole thing smoothly instead of you clicking raise over and over. The old PgUp/PgDn still works for tiny nudges.
 
 ### S7.29 — 2026-06-28 — Editor control pack [GREEN]
 - Camera (artEdit free cam): **W/A/S/D** fly, **Space** up, **Alt** down (Input.updateCamera; arrows no longer pan so they are free for objects; added Alt to preventDefault).

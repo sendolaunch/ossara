@@ -44,6 +44,7 @@ class FirstBreachBuildMode {
     this._down = null;
     this._drag = null;      // active free-drag { piece, before, offX, offZ }
     this._axis = null;      // "x" | "z" while held
+    this._vert = false;     // hold V -> drag moves the selection vertically
     this._hl = null;
     this._hiddenHud = null;
     this._undo = [];
@@ -377,13 +378,23 @@ class FirstBreachBuildMode {
         if (e.shiftKey) { this._toggleSel(piece); e.stopPropagation(); e.preventDefault(); return; } // shift-click = add/remove
         if (!this.sel.includes(piece)) this._select(piece); // clicked outside the group -> select just this one
         const sp = this._surfacePointAt(e.clientX, e.clientY, piece.entity.getPosition().y);
-        const items = this.sel.map((pc) => { const c = pc.entity.getPosition(); return { piece: pc, before: this._snapshot(pc), offX: sp ? c.x - sp.x : 0, offZ: sp ? c.z - sp.z : 0 }; });
-        this._drag = { items, refY: piece.entity.getPosition().y, moved: false };
+        const items = this.sel.map((pc) => { const c = pc.entity.getPosition(); return { piece: pc, before: this._snapshot(pc), offX: sp ? c.x - sp.x : 0, offZ: sp ? c.z - sp.z : 0, startY: c.y }; });
+        this._drag = { items, refY: piece.entity.getPosition().y, startScreenY: e.clientY, moved: false };
         e.stopPropagation(); e.preventDefault(); // don't orbit the camera while dragging
       }
     };
     this._onMove = (e) => {
       if (!this._drag) return;
+      if (this._vert) { // hold V: drag up/down moves the whole selection vertically
+        const dy = (this._drag.startScreenY - e.clientY) * 0.06;
+        for (const it of this._drag.items) {
+          const cur = it.piece.entity.getPosition();
+          let ny = it.startY + dy;
+          if (this.snapPos > 0) ny = Math.round(ny / this.snapPos) * this.snapPos;
+          it.piece.entity.setPosition(cur.x, ny, cur.z);
+        }
+        this._drag.moved = true; this._updateHighlight(); e.stopPropagation(); return;
+      }
       const sp = this._surfacePointAt(e.clientX, e.clientY, this._drag.refY);
       if (!sp) return;
       for (const it of this._drag.items) {
@@ -483,8 +494,9 @@ class FirstBreachBuildMode {
       else if (k === "ArrowDown") { e.preventDefault(); this._nudge(0, this.snapPos > 0 ? this.snapPos : 0.5); }
       else if (k === "x" || k === "X") { this._axis = "x"; this._status("Axis lock: X"); }
       else if (k === "z" || k === "Z") { this._axis = "z"; this._status("Axis lock: Z"); }
+      else if (k === "v" || k === "V") { this._vert = true; this._status("Vertical: hold V and drag a piece up/down."); }
     };
-    this._onKeyUp = (e) => { const k = (e.key || "").toLowerCase(); if ((k === "x" && this._axis === "x") || (k === "z" && this._axis === "z")) { this._axis = null; this._status("Axis lock off."); } };
+    this._onKeyUp = (e) => { const k = (e.key || "").toLowerCase(); if ((k === "x" && this._axis === "x") || (k === "z" && this._axis === "z")) { this._axis = null; this._status("Axis lock off."); } if (k === "v") this._vert = false; };
     window.addEventListener("keydown", this._onKey);
     window.addEventListener("keyup", this._onKeyUp);
   }
@@ -588,7 +600,7 @@ class FirstBreachBuildMode {
       '<div id="fbKeyHelp" style="display:none;font-size:10px;color:#8aa185;line-height:1.5;border:1px solid #2c382c;border-radius:5px;padding:6px;margin:3px 0"></div>',
       '<div class="sec">Tool</div>',
       '<div class="row" id="fbModes"><button data-m="move" class="on">Move(drag)</button><button data-m="rotate">Rotate</button><button data-m="scale">Scale</button></div>',
-      '<div class="hint">Move = drag a piece across the map. Q/R rotate &middot; PgUp/PgDn raise/lower &middot; F snap-to-floor &middot; hold X / Z to lock axis.</div>',
+      '<div class="hint">Move = drag across the map &middot; <b>hold V + drag = up/down</b> &middot; Q/R rotate &middot; arrows nudge &middot; F to floor &middot; hold X/Z lock axis.</div>',
       '<div class="sec">Soft snap (optional)</div>',
       '<div class="row"><button id="fbSnapPos">pos: off</button><button id="fbSnapRot">rot: off</button></div>',
       '<button id="fbFloor">Snap selected to floor (F)</button>',
@@ -640,7 +652,7 @@ class FirstBreachBuildMode {
     const keyHelp = wrap.querySelector("#fbKeyHelp");
     keyHelp.innerHTML = [
       "<b>Camera</b> &mdash; W/A/S/D move &middot; Space up &middot; Alt down &middot; right or middle-drag orbit &middot; scroll zoom",
-      "<b>Move piece</b> &mdash; left-drag &middot; Arrow keys nudge selected &middot; PgUp/PgDn raise/lower &middot; F snap to floor",
+      "<b>Move piece</b> &mdash; left-drag (flat) &middot; <b>hold V + drag = vertical</b> &middot; Arrows nudge &middot; PgUp/PgDn raise/lower &middot; F to floor",
       "<b>Rotate</b> &mdash; Q / R (a group spins around its center) &middot; hold X or Z to lock an axis",
       "<b>Select</b> &mdash; click &middot; Shift-click adds to the group &middot; Esc deselect",
       "<b>Copy</b> &mdash; Ctrl+C copy &middot; Ctrl+V paste &middot; Ctrl+D duplicate &middot; Del delete",
