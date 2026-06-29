@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.8 — 2026-06-28 — First Breach Art Dressing v2: readability tune — lighting lift + props reworked into clusters (broken pillars/rubble/bones); v1 confirmed rendering in-engine; full suite + build green |
+| **Last session** | S7.9 — 2026-06-28 — Art Pack Audit: inventoried 517 KayKit models + built dev-only asset-lab.html browser + First Breach candidate kit/plan; audit-only, no gameplay change; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,16 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.9 — 2026-06-28 — Art Pack Audit + dev-only Asset Lab [AUDIT/TOOLING — no gameplay change]
+- Audit pass before more First Breach art. Scanned `public/models/**` and inventoried **517 KayKit model assets**. NO gameplay / First Breach / Ward / gate / route / collision changes (only new files + a one-line `package.json` test-chain edit).
+- Packs: `dungeon` 283 (the crypt kit — floors/walls/arches/stairs/columns/rubble/torches/props), `resource` 132 (gems for the Ward + containers/ore/food), `rpgtools` 69 (tools), `characters` 17 (heroes+weapons+rigs), `skeletons` 14 (skeleton enemies+necromancer), `npc` 1 (OrcRaider), plus legacy `hero.glb`. Each KayKit `.gltf` pairs a `.bin` + a shared per-pack texture atlas.
+- Static integrity scan: all 517 parse, have meshes/materials, and their `.bin`/atlas exist → **0 broken refs**. **113** already referenced in `src/` (hub/tavern + missionArt). **135** flagged First-Breach-safe (crypt-fit, static). Honest gap: **no bone/skull/coffin/crystal meshes** in the dungeon pack (the Ward uses `resource` Gems).
+- Deliverables (all NEW, dev-only): `tasks/art-pack-inventory.md` + `.json` (full per-asset table), `asset-lab.html` (dev-only browser: category + quick filters, search, inspector, copy-path, use-now/candidate/later/reject tagging via localStorage + export, optional Three.js 3D preview under `npm run dev`), `tasks/first-breach-asset-candidates.md` (safe v3 kit), `tasks/first-breach-art-pack-integration-plan.md` (plan-only; layer GLBs via `missionArt`, never the blockout). New `test/artPackInventory.test.mjs` (inventory exists, all asset paths exist, no broken bin/tex refs, candidates resolve) wired into `npm test`.
+- Verified (R5/R6): `npm test` exit 0 (artPackInventory 9/9, full suite green); clean `/tmp` vite build ✓ 894 modules; `asset-lab.html` confirmed **absent from `dist/`** (dev-only). Only non-new edit: `package.json` test chain.
+- Open the lab: `npm run dev` → `http://localhost:5173/asset-lab.html` (3D preview needs the dev server + internet for the three.js CDN; the list + tagging work offline too).
+- Commit pending CC: `tasks/art-pack-inventory.md`, `tasks/art-pack-inventory.json`, `asset-lab.html`, `tasks/first-breach-asset-candidates.md`, `tasks/first-breach-art-pack-integration-plan.md`, `test/artPackInventory.test.mjs`, `package.json`, `tasks/handoff.md` → "Add art pack asset browser and First Breach candidate audit".
+- **In Friendly Words:** I went through the art pack you bought and made you a catalogue plus a browser. You have 517 models — a full crypt kit (floors, walls, arches, stairs, columns, rubble, torches), gems for the crystal, and skeleton/orc enemies. Open `asset-lab.html` with `npm run dev` to click through them, search, spin them in 3D, and tag the ones you like. I also wrote a shortlist of the safest pieces to drop into First Breach next and a plan to add them as a cosmetic layer that can't break the map. One gap: the pack has no real bones/skulls, so those stay fake for now.
 
 ### S7.8 — 2026-06-28 — First Breach Art Dressing v2 — readability tune (lighting + clustered props) [GATE GREEN; v1 EYEBALL CONFIRMED BY HUDSON]
 - Hudson ran v1 in-engine and sent screenshots: the shrine ring/posts/green halo, the lighter wall caps, and the green Ward zone all render correctly. Feedback drove a v2 readability pass (he picked "v2 art polish" over building the bigger dressing-engine / Design Lab from his ChatGPT research, for now).
