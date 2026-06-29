@@ -355,7 +355,7 @@ class FirstBreachBuildMode {
       }
       const piece = this._pickPiece(e.clientX, e.clientY);
       if (piece) { this._select(piece); this._status("Grabbed " + piece.asset + ". Drag to move, Q/E rotate, PgUp/PgDn raise/lower, Del."); }
-      else { this._select(null); this._status("Deselected."); }
+      // empty click keeps the current selection (press Esc to deselect) — stops the highlight vanishing on a near-miss pick
     };
     el.addEventListener("pointerdown", this._onDown, true);
     el.addEventListener("pointermove", this._onMove, true);
@@ -445,8 +445,8 @@ class FirstBreachBuildMode {
   _makeHighlight() {
     try {
       const m = new pc.StandardMaterial();
-      m.useLighting = false; m.emissive = new pc.Color(0.25, 1.0, 0.55); m.diffuse = new pc.Color(0, 0, 0);
-      m.opacity = 0.22; m.blendType = pc.BLEND_ADDITIVE; m.depthWrite = false; m.cull = pc.CULLFACE_NONE; m.update();
+      m.useLighting = false; m.emissive = new pc.Color(0.2, 0.7, 0.4); m.diffuse = new pc.Color(0, 0, 0);
+      m.opacity = 0.2; m.blendType = pc.BLEND_NORMAL; m.depthWrite = false; m.cull = pc.CULLFACE_NONE; m.update();
       this._hl = this._box(m); this._hl.name = "build-highlight"; this._hl.enabled = false; this.app.root.addChild(this._hl);
     } catch (e) { this._hl = null; }
   }
