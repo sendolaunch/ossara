@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.20 — 2026-06-28 — Build Lab v2.0: editor upgrade (game HUD hidden, real ray-pick, neon selection glow, clone/nudge) + full editor roadmap; suite + build green; eyeball pending |
+| **Last session** | S7.22 — 2026-06-28 — Build Lab v2.1 reworked to a 3D editor: grab+drag pieces across the map surface (capture-phase, beats camera orbit), Q/R rotate, PgUp/Dn raise/lower, F floor-snap, X/Z axis lock, soft snap, undo/redo, inspector, overlays, import; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,27 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.22 — 2026-06-28 — Build Lab v2.1: 3D in-game placement (drag on the map) [GATE GREEN; EYEBALL PENDING]
+- Hudson clarified the editor must feel like a 3D in-game editor (drag props on the actual map), NOT a 2D grid tool. Reworked `firstBreachBuildMode.js` (570 lines) around free-drag.
+- **3D free-drag (Move tool):** grab a piece's body and drag it across the map surface — ray projects the cursor onto a horizontal plane at the piece's height (`_surfacePointAt`), piece follows with a grab offset. Pointer listeners are **capture-phase + stopPropagation while dragging** so the camera does NOT orbit during a drag (orbits normally on empty-space drag). Move tool uses no translate gizmo; Rotate/Scale tools keep their gizmos.
+- **Assists (optional, not forced):** soft snap pos off/0.25/0.5/1 + rot off/15/45/90; **Q/R** rotate; **PgUp/PgDn** raise/lower; **F** snap Y to the floor/platform height under the piece (`surfaceHeightAtCell`); **hold X / Z** to lock the drag to that axis.
+- Kept v2.1: undo/redo (Ctrl+Z/Y, gizmo + drag + rotate + raise + delete + inspector edits, bounded 50), Delete-restore, numeric inspector (X/Y/Z/RotY/Scale + Copy JSON), route/reserve/protected overlays + on-protected warning, JSON import. His export stays at `tasks/first-breach-kit-export-2.json` — NOT baked.
+- Verified (R5/R6): `npm test` exit 0 (full suite green); clean `/tmp` build ✓ 898 modules (build-mode lazy chunk ~58KB). Unverified: in-engine feel — Hudson screenshots (esp. does drag beat camera orbit, does floor-snap land right).
+- Commit pending CC: `src/view/firstBreachBuildMode.js`, `src/ui/mission.js`, `tasks/build-lab-v2-plan.md`, `tasks/first-breach-kit-export-2.json`, `tasks/handoff.md` → "Build Lab v2.1: undo, 3D placement assist, inspector, safe overlays".
+- **In Friendly Words:** the editor now works like a real 3D map tool — you grab a prop and drag it around on the actual map with the mouse (the camera stays put while you drag), spin it with Q/R, raise/lower with PageUp/Down, press F to drop it onto the floor, and hold X or Z to slide it along one direction. Snapping is optional (off by default). Undo, the type-in inspector, the route/no-build overlays, and import are all still there. Your saved layout isn't baked. Run ?artEdit=1 and drag something.
+
+### S7.21 — 2026-06-28 — Build Lab v2.1 (undo, snap, inspector, overlays, import) [GATE GREEN; EYEBALL PENDING]
+- Built the v2.1 editor feature set in `firstBreachBuildMode.js` (full rewrite, 502 lines). His latest export stays at `tasks/first-breach-kit-export-2.json` — NOT baked; live map untouched.
+- **Undo/redo** (Ctrl+Z, Ctrl+Y / Ctrl+Shift+Z, + panel buttons): command stack bounded to 50; tracks gizmo move/rotate/scale (via `transform:start/end` snapshots), place, clone, delete (restores), arrow-nudge, and inspector edits. **Delete** (Del) restorable.
+- **Grid snap**: toggle + position step 1/0.5/0.25 + rotation 15/45/90, wired to the gizmos' built-in `snap`/`snapIncrement` and the arrow nudge.
+- **Transform inspector**: editable X/Y/Z, RotY, uniform Scale fields + asset name + **Copy placement JSON**; edits are undoable.
+- **Safe overlays**: toggle routes (cyan) / ward-gate reserves (orange) / protected no-prop (red), drawn as additive cell quads from `pathCellSet` / `reservedZones` / `protectedGameplayCellSet` (capped 1600). Selected prop/pillar/rubble **warns** if its cell is protected/route.
+- **Import** a saved kit JSON (clears + reloads) next to Export. Still cosmetic-only; no gameplay/collision/grid touched.
+- Hazard hit + handled: the file-tool Write **truncated** the 430-line file mid-line (line 370) → vite parse error. Rewrote via bash heredoc (atomic) → clean. (Lessons already note this; use heredocs for big files.)
+- Verified (R5/R6): `npm test` exit 0 (full suite green); clean `/tmp` build ✓ 898 modules (build-mode lazy chunk 63KB). Unverified: the editor UX in-engine — Hudson screenshots.
+- Commit pending CC: `src/view/firstBreachBuildMode.js`, `tasks/build-lab-v2-plan.md`, `tasks/handoff.md` → "Build Lab v2.1: undo, snap, inspector, safe overlays".
+- **In Friendly Words:** the editor now works like a real one — undo/redo your mistakes, delete and bring things back, snap to a grid, type exact positions/rotation/scale in boxes, see where the monster routes + no-build zones are (with a warning if you drop a prop on one), and load a saved layout file. Your saved export is kept safe and not baked. Run `?artEdit=1` and tell me how it feels.
 
 ### S7.20 — 2026-06-28 — Build Lab v2.0: in-game editor upgrade [GATE GREEN; EYEBALL PENDING]
 - Hudson wants `?artEdit=1` turned into a "full dev system" (Fortnite-Creative-style); the old picking "sucked" (wacky click area) + no selection feedback. Saved his latest export (156 pieces) to `tasks/first-breach-kit-export-2.json` — NOT baked (kept while overhauling).

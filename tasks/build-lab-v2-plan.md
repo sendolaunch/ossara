@@ -14,7 +14,7 @@ stage ships, Hudson screenshots, we tune.
 - **Click empty = deselect.** **Ctrl+D = clone** selected. **Arrow keys = nudge** (Shift = bigger
   steps). Wall buttress added to the palette; build mode now loads the full kit (no missing pieces).
 
-## Next (v2.1 — high-value, low-risk)
+## Done in v2.1 (shipped — Ctrl+Z/Y undo-redo, Delete-restore, grid snap 1/0.5/0.25 + rot 15/45/90, transform inspector X/Y/Z/RotY/Scale + Copy JSON, route/reserve/protected overlays + on-protected warning, JSON import)
 - **Hover highlight** — outline the piece you're *about* to click, before you click.
 - **Grid snap toggle** — snap position to the 1-unit grid + snap rotation to 15°/90°; on/off button.
 - **Numeric inspector** — show + edit the selected piece's exact X/Y/Z, rotation, scale in text
