@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.30 — 2026-06-28 — Baked export-4 (160 pcs, 10 stretched/sy-sz preserved). Added hold-V+drag = move selection vertically (replaces click-to-raise). Build 899 + suite green |
+| **Last session** | S7.31 — 2026-06-28 — Baked export-5 (170 pcs). Added floor (dirt/wood/foundation) + scaffold balcony/overhang + long-stair pieces to the palette; lifted kit cap 250->600. Build 899 + suite green. Flooring approach = open Q to Hudson |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.31 — 2026-06-28 — Bake export-5 + flooring/balcony palette [GREEN]
+- Walls declared done. Baked `tasks/first-breach-kit-export-5.json` (170 pcs, 15 stretched) to firstBreachKit.js.
+- Palette (`firstBreachKitPalette.js`) +12 pieces: floors (`floor_dirt_large`, `floor_dirt_large_rocky`, `floor_wood_large/small`, `floor_foundation_allsides`), balcony/overhang scaffolding (`scaffold_beams_connected`, `scaffold_beam_wall`, `scaffold_frame_large`, `scaffold_pillars_connected`, `scaffold_pillar_wall_torch`), long stairs (`stairs_long`, `stairs_long_modular_center`). New cat "balcony".
+- Lifted kit cap 250->600 in `test/firstBreachKit.test.mjs` so floor tiling fits (off-route guard still only on pillar/rubble; floors/balconies sit under/around gameplay so they're exempt by design).
+- Verified: palette 73/73 (all resolve), kit 199/199, build 899, suite 0 fails.
+- **RESOLVED -> re-skin:** Hudson chose re-skin. Found 4 floor/surface tokens still green (S7.24 missed them): `floorRubbleDark` (entry), `shrinePlatformStone` (ward), `ruinedStoneStep` (stairs), `ruinedStoneMid` (low walls/gates) -> de-greened to warm stone + glossed the main floor (`courtyardMidStone`/`landingHighStone`). That green entry/spawn floor Hudson saw is fixed. Verified build 899 + suite green.
+- **Open question to Hudson:** base-floor coverage — auto-skin the existing ground to stone (cheap), auto-tile with big floor pieces (I do it, ~heavy), or hand-tile (full control). Frame-budget note: hundreds of GLB floor tiles is a lot of draw calls; large pieces / re-skin are lighter.
+- **In Friendly Words:** Your latest layout is live. I added flooring options (stone, dirt, wood) plus wooden scaffold beams/frames/posts to build the balcony overhangs, and longer staircases — all in the editor palette now. Big question before we tile the whole floor: do you want me to just re-skin the ground to look like stone (fast, light), auto-lay floor tiles for you, or place them yourself? Tiling a whole floor by hand is a lot of clicks.
 
 ### S7.30 — 2026-06-28 — Bake export-4 + vertical-drag [GREEN]
 - Saved + **baked** `tasks/first-breach-kit-export-4.json` (160 pieces) into firstBreachKit.js, faithfully. Notably **10 pieces are non-uniformly scaled** (sy/sz) — confirms the per-axis scale fix (S7.27) works end-to-end: Hudson stretched arches and they survived export->bake.
