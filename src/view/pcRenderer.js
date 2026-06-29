@@ -752,6 +752,7 @@ export class PCRenderer {
     } // end GREYBOX-disabled decoration block
     this._loadMapBuilderArt(level);
     this._loadFirstBreachKit(level); // cosmetic GLB skin (?fbKit=0 to disable)
+    this._maybeStartFirstBreachBuildMode(level); // ?artEdit=1 -> in-game placement tool
 
     // Build target marker. Kept disabled in Stage 1 so the hero never reads as
     // the build target; visible feedback is attached to the tower ghost.
@@ -866,7 +867,8 @@ export class PCRenderer {
   _loadFirstBreachKit(level) {
     if (this.fbKitRoot) { this.fbKitRoot.destroy(); this.fbKitRoot = null; }
     const kitOff = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("fbKit") === "0";
-    if (!level || !level.isFirstBreach || kitOff) return;
+    const artEdit = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("artEdit") === "1";
+    if (!level || !level.isFirstBreach || kitOff || artEdit) return; // build mode (?artEdit=1) owns the art layer
     const root = new pc.Entity("first-breach-art-kit");
     this.app.root.addChild(root);
     this.fbKitRoot = root;
@@ -891,6 +893,16 @@ export class PCRenderer {
         console.log(`[fbKit] placed ${placed}/${firstBreachKitSpecs(level).length} cosmetic props (?fbKit=0 to disable)`);
       })
       .catch((err) => console.warn("[fbKit] art kit skipped:", err));
+  }
+
+  // In-game art placement tool (dev-only). Dynamically imported so it never ships in the
+  // normal play path; only runs on First Breach with ?artEdit=1.
+  _maybeStartFirstBreachBuildMode(level) {
+    const artEdit = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("artEdit") === "1";
+    if (!artEdit || !level || !level.isFirstBreach) return;
+    import("./firstBreachBuildMode.js")
+      .then((m) => { this._fbBuildMode = m.startFirstBreachBuildMode(this, level); })
+      .catch((err) => console.warn("[buildMode] load failed:", err));
   }
 
   _mapBuilderFallbackMaterial(materialKey = "stone") {

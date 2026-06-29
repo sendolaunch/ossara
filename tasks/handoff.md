@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.10 — 2026-06-28 — First Breach Art Pack v3: cosmetic KayKit skin (26 GLB props) layered over the blockout via null-safe loader + ?fbKit=0 kill switch; no gameplay change; suite 55/55 + build green; eyeball pending |
+| **Last session** | S7.11 — 2026-06-28 — In-game BUILD MODE (?artEdit=1): place KayKit models on the real map with PlayCanvas's own move/rotate/scale gizmos, export kit JSON; dev-only lazy chunk; suite + build green; needs Hudson eyeball |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,17 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.11 — 2026-06-28 — In-game BUILD MODE for art placement (?artEdit=1) [GATE GREEN; EYEBALL PENDING]
+- Hudson said the v3 blind-placed props looked bad and asked to "build in the map." Confirmed PlayCanvas's cloud Editor can't plug into our code-built scene, BUT engine 1.77 ships built-in transform gizmos (`pc.TranslateGizmo/RotateGizmo/ScaleGizmo`) — verified present in `node_modules`. Built an in-game placement tool that reuses them.
+- New `src/view/firstBreachBuildMode.js` (dev-only, dynamic-imported): enter with `?artEdit=1` on First Breach. Left palette of the core kit (22 models); click a model then click the map to place (reuses the existing `pointerToCell` ground raycast → snaps to a cell); the selected piece gets a real PlayCanvas gizmo to **Move/Rotate/Scale by dragging**; placed-list with select/delete; **Export (E)** writes the placements in the exact `FIRST_BREACH_KIT` shape → clipboard + console + `first-breach-kit.json`. **Seeds from the current kit** so you EDIT the existing (bad) layout, not a blank map. Status banner + try/catch so errors surface on-screen.
+- New `src/view/firstBreachKitPalette.js` (plain data, no engine import → testable). Wired into `pcRenderer.js`: `_maybeStartFirstBreachBuildMode(level)` dynamic-imports the tool only when `?artEdit=1`; `_loadFirstBreachKit` early-returns under artEdit so the static kit doesn't double with the editable seed.
+- Gizmo facts (verified in installed 1.77): `new pc.TranslateGizmo(cameraComponent, layer)`, `Gizmo.createLayer(app)`, `attach([entity])`/`detach()`; the gizmo binds its own pointer listeners to the WebGL canvas (no `pc.Mouse` needed) — works with our DOM-input app. Added the gizmo layer to the mission camera's layer list defensively.
+- New `test/firstBreachBuildPalette.test.mjs` (47/47): every palette model resolves to a real file, unique, categorized. Wired into `npm test`. (The interactive tool itself is dev-only, like the blueprint HTML editors — not unit-tested beyond the palette.)
+- Verified (R5/R6): `npm test` exit 0 (firstBreachBuildPalette 47/47, firstBreachKit 55/55, full suite green); clean `/tmp` build ✓ 897 modules — build mode is a **lazy 51 KB chunk** (`firstBreachBuildMode-*.js`), NOT in the normal play path. Unverified: the tool in-engine (sandbox can't render PlayCanvas) — needs Hudson to run `?devMission=first-breach&artEdit=1` and confirm placing + gizmo dragging work.
+- Open it: `npm run dev` → `?devMission=first-breach&artEdit=1` (or `?showcase=first-breach&artEdit=1`). Place, drag the handles, press **E** to export, send me `first-breach-kit.json`.
+- Commit pending CC: `src/view/firstBreachBuildMode.js`, `src/view/firstBreachKitPalette.js`, `test/firstBreachBuildPalette.test.mjs`, `src/view/pcRenderer.js`, `package.json`, `tasks/handoff.md` → "Add in-game art build mode (artEdit)".
+- **In Friendly Words:** instead of me guessing where art goes, you can now place it yourself inside the real game. Run with `?artEdit=1`, click a model from the menu, click the map to drop it, then grab the move/rotate/scale handles (PlayCanvas's own) to position it exactly. When it looks right, press **E** — it saves a file you send me, and I bake your placements in. It can't break anything (dev-only layer). I can't watch it run from here, so this is the one thing you'll confirm: launch it and tell me if placing + dragging work.
 
 ### S7.10 — 2026-06-28 — First Breach Art Pack v3 — cosmetic KayKit skin (26 GLB props) [GATE GREEN; EYEBALL PENDING]
 - Implemented the approved v3 placement plan: a new **cosmetic GLB layer** over the locked blockout. NO gameplay / layout / route / Ward / gate / collision / height change. Visual-only, null-safe, removable.
