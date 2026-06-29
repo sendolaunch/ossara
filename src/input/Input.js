@@ -38,6 +38,7 @@ export class Input {
     this.pendingStart = false;
     this._eHoldStart = null; // ms timestamp of the first E keydown (hold-to-start round 1)
     this._eHoldFired = false;
+    this._artEdit = typeof window !== "undefined" && new URLSearchParams((window.location && window.location.search) || "").get("artEdit") === "1";
     this.selected = null;
     this.rotation = 0;
     this.hoverCell = null;
@@ -101,7 +102,7 @@ export class Input {
       if (k === "q" && this._canQueueHeroAbility()) this.pendingSlam = true;
       if (k === DASH_KEY && this._canQueueHeroDash()) this.pendingDash = true;
       if (k === "e" && this._canQueueInteract()) this.pendingInteract = true;
-      if (k === "e" && !this.keys.has("e")) this._eHoldStart = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      if (k === "e" && !this._artEdit && !this.keys.has("e")) this._eHoldStart = (typeof performance !== "undefined" ? performance.now() : Date.now());
       if (k === "enter" && !this.commandTargetMode) this.pendingStart = true;
       if (k === "escape") {
         if (this.actionMenuOpen) this.closeActionMenu();

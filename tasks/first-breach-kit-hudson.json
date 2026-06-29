@@ -1,0 +1,792 @@
+[
+ {
+  "id": "wall-0",
+  "asset": "wall_arched",
+  "col": 65,
+  "row": 7,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 1.4,
+  "cat": "wall"
+ },
+ {
+  "id": "light-1",
+  "asset": "torch_lit",
+  "col": 63,
+  "row": 8,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 0.5,
+  "cat": "light"
+ },
+ {
+  "id": "light-2",
+  "asset": "wall_inset_candles",
+  "col": 65,
+  "row": 6,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 1,
+  "cat": "light"
+ },
+ {
+  "id": "wall-3",
+  "asset": "wall_doorway",
+  "col": 5,
+  "row": 6,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-4",
+  "asset": "wall_doorway",
+  "col": 22,
+  "row": 6,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-5",
+  "asset": "wall_doorway",
+  "col": 66,
+  "row": 30,
+  "y": 1.3,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-6",
+  "asset": "wall_doorway",
+  "col": 66,
+  "row": 52,
+  "y": 1.3,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "pillar-7",
+  "asset": "pillar",
+  "col": 27,
+  "row": 7,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 0.65,
+  "cat": "pillar"
+ },
+ {
+  "id": "pillar-8",
+  "asset": "pillar",
+  "col": 33,
+  "row": 7,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 0.65,
+  "cat": "pillar"
+ },
+ {
+  "id": "pillar-9",
+  "asset": "pillar",
+  "col": 57,
+  "row": 7,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 0.65,
+  "cat": "pillar"
+ },
+ {
+  "id": "pillar-10",
+  "asset": "pillar",
+  "col": 3,
+  "row": 35,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 0.65,
+  "cat": "pillar"
+ },
+ {
+  "id": "pillar-11",
+  "asset": "pillar",
+  "col": 5,
+  "row": 23,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 0.65,
+  "cat": "pillar"
+ },
+ {
+  "id": "pillar-12",
+  "asset": "column",
+  "col": 10,
+  "row": 8,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 0.6,
+  "cat": "pillar"
+ },
+ {
+  "id": "pillar-13",
+  "asset": "column",
+  "col": 64,
+  "row": 48,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 0.6,
+  "cat": "pillar"
+ },
+ {
+  "id": "ward-14",
+  "asset": "pillar_decorated",
+  "col": 6,
+  "row": 49,
+  "y": 3,
+  "ry": 0,
+  "scale": 0.6,
+  "cat": "ward"
+ },
+ {
+  "id": "ward-15",
+  "asset": "pillar_decorated",
+  "col": 12,
+  "row": 53,
+  "y": 3,
+  "ry": 0,
+  "scale": 0.6,
+  "cat": "ward"
+ },
+ {
+  "id": "ward-16",
+  "asset": "resource/Gems_Pile_Large",
+  "col": 11,
+  "row": 51,
+  "y": 3,
+  "ry": 20,
+  "scale": 0.5,
+  "cat": "ward"
+ },
+ {
+  "id": "rubble-17",
+  "asset": "rubble_large",
+  "col": 26,
+  "row": 8,
+  "y": 1.3,
+  "ry": 18,
+  "scale": 0.5,
+  "cat": "rubble"
+ },
+ {
+  "id": "rubble-18",
+  "asset": "rubble_large",
+  "col": 37,
+  "row": 38,
+  "y": 1.3,
+  "ry": 8,
+  "scale": 0.5,
+  "cat": "rubble"
+ },
+ {
+  "id": "rubble-19",
+  "asset": "rubble_large",
+  "col": 64,
+  "row": 44,
+  "y": 1.3,
+  "ry": 30,
+  "scale": 0.5,
+  "cat": "rubble"
+ },
+ {
+  "id": "rubble-20",
+  "asset": "rubble_half",
+  "col": 11,
+  "row": 35,
+  "y": 2.6,
+  "ry": 24,
+  "scale": 0.5,
+  "cat": "rubble"
+ },
+ {
+  "id": "rubble-21",
+  "asset": "rocks_small",
+  "col": 63,
+  "row": 54,
+  "y": 2.6,
+  "ry": 342,
+  "scale": 0.45,
+  "cat": "rubble"
+ },
+ {
+  "id": "light-22",
+  "asset": "torch_lit",
+  "col": 24,
+  "row": 8,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 0.5,
+  "cat": "light"
+ },
+ {
+  "id": "light-23",
+  "asset": "torch_lit",
+  "col": 64,
+  "row": 50,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 0.5,
+  "cat": "light"
+ },
+ {
+  "id": "light-24",
+  "asset": "torch_lit",
+  "col": 13,
+  "row": 51,
+  "y": 3,
+  "ry": 0,
+  "scale": 0.5,
+  "cat": "light"
+ },
+ {
+  "id": "light-25",
+  "asset": "wall_inset_candles",
+  "col": 33,
+  "row": 6,
+  "y": 1.3,
+  "ry": 0,
+  "scale": 0.8,
+  "cat": "light"
+ },
+ {
+  "id": "wall-26",
+  "asset": "wall_cracked",
+  "col": 2,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-27",
+  "asset": "wall_cracked",
+  "col": 10,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-28",
+  "asset": "wall_cracked",
+  "col": 14,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-29",
+  "asset": "wall_cracked",
+  "col": 18,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-30",
+  "asset": "wall_cracked",
+  "col": 26,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-31",
+  "asset": "wall_cracked",
+  "col": 30,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-32",
+  "asset": "wall_cracked",
+  "col": 34,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-33",
+  "asset": "wall_cracked",
+  "col": 38,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-34",
+  "asset": "wall_cracked",
+  "col": 42,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-35",
+  "asset": "wall_cracked",
+  "col": 46,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-36",
+  "asset": "wall_cracked",
+  "col": 50,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-37",
+  "asset": "wall_cracked",
+  "col": 54,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-38",
+  "asset": "wall_cracked",
+  "col": 58,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-39",
+  "asset": "wall_cracked",
+  "col": 62,
+  "row": 6,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-40",
+  "asset": "wall_cracked",
+  "col": 1,
+  "row": 8,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-41",
+  "asset": "wall_cracked",
+  "col": 1,
+  "row": 12,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-42",
+  "asset": "wall_cracked",
+  "col": 1,
+  "row": 16,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-43",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 12,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-44",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 16,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-45",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 20,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-46",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 24,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-47",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 36,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-48",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 40,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-49",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 44,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-50",
+  "asset": "wall_cracked",
+  "col": 66,
+  "row": 48,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-51",
+  "asset": "wall_cracked",
+  "col": 1,
+  "row": 25,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-52",
+  "asset": "wall_cracked",
+  "col": 1,
+  "row": 29,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-53",
+  "asset": "wall_cracked",
+  "col": 1,
+  "row": 33,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-54",
+  "asset": "wall_cracked",
+  "col": 0,
+  "row": 38,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-55",
+  "asset": "wall_cracked",
+  "col": 0,
+  "row": 42,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-56",
+  "asset": "wall_cracked",
+  "col": 0,
+  "row": 46,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-57",
+  "asset": "wall_cracked",
+  "col": 0,
+  "row": 50,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-58",
+  "asset": "wall_cracked",
+  "col": 0,
+  "row": 54,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-59",
+  "asset": "wall_cracked",
+  "col": 2,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-60",
+  "asset": "wall_cracked",
+  "col": 6,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-61",
+  "asset": "wall_cracked",
+  "col": 10,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-62",
+  "asset": "wall_cracked",
+  "col": 14,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-63",
+  "asset": "wall_cracked",
+  "col": 18,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-64",
+  "asset": "wall_cracked",
+  "col": 22,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-65",
+  "asset": "wall_cracked",
+  "col": 26,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-66",
+  "asset": "wall_cracked",
+  "col": 30,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-67",
+  "asset": "wall_cracked",
+  "col": 34,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-68",
+  "asset": "wall_cracked",
+  "col": 38,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-69",
+  "asset": "wall_cracked",
+  "col": 42,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-70",
+  "asset": "wall_cracked",
+  "col": 46,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-71",
+  "asset": "wall_cracked",
+  "col": 50,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-72",
+  "asset": "wall_cracked",
+  "col": 54,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-73",
+  "asset": "wall_cracked",
+  "col": 58,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-74",
+  "asset": "wall_cracked",
+  "col": 62,
+  "row": 56,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-75",
+  "asset": "wall_corner",
+  "col": 0,
+  "row": 6,
+  "y": 2.6,
+  "ry": 90,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-76",
+  "asset": "wall_corner",
+  "col": 66,
+  "row": 6,
+  "y": 2.6,
+  "ry": 180,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-77",
+  "asset": "wall_corner",
+  "col": 0,
+  "row": 56,
+  "y": 2.6,
+  "ry": 0,
+  "scale": 1,
+  "cat": "wall"
+ },
+ {
+  "id": "wall-78",
+  "asset": "wall_corner",
+  "col": 66,
+  "row": 56,
+  "y": 2.6,
+  "ry": 270,
+  "scale": 1,
+  "cat": "wall"
+ }
+]

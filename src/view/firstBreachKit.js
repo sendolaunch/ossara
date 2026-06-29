@@ -1,58 +1,96 @@
 // ============================================================================
-// FIRST BREACH — ART PACK KIT v3 (cosmetic KayKit skin over the primitive blockout)
+// FIRST BREACH — ART PACK KIT (Hudson const layout + auto-tiled wall skin)
 // ----------------------------------------------------------------------------
-// Visual-only GLB props layered on top of the painted-grid blockout via the null-safe
-// dungeonKit loader (preloadKit + place). NO collision, NO gameplay, NO layout/route/
-// height change — every piece is decorative and falls back to the primitive blockout if
-// its GLB fails to load (place() returns null on a miss, so nothing breaks).
-//
-// Disable the whole layer for A/B testing with ?fbKit=0.
-// Anchors + scales come straight from tasks/first-breach-art-pack-v3-placement-plan.md;
-// each cell was verified walkable + off-route (gate frames sit on their painted gate cell).
-// asset = dungeonKit loadName · col,row = grid cell · y = base height (painted surface) ·
-// ry = degrees · scale = uniform. World X/Z derive from gridToWorld (tile = 1).
+// Hand-placed props from the in-game build tool (?artEdit=1), PLUS wall_cracked tiled along
+// every perimeter wall (skipping gate openings) and wall_corner at the four corners — the
+// "fill the rest like my example" pass. Visual-only GLB layered on the painted-grid blockout
+// via the null-safe dungeonKit loader; a missing GLB just is not placed (primitive stays).
+// NO collision / gameplay / layout change. ?fbKit=0 disables; ?artEdit=1 to re-edit + re-export.
+// asset = dungeonKit loadName | col,row = grid cell | y = base height | ry = deg | scale = uniform.
 // ============================================================================
 
 import { gridToWorld } from "../sim/pathing.js";
 
 export const FIRST_BREACH_KIT = Object.freeze([
-  // 1. Gate C — main arched entrance (north wall, NE; faces south)
-  { id: "gateC-arch", asset: "wall_arched", col: 65, row: 7, y: 1.3, ry: 0, scale: 1.4, cat: "wall" },
-  { id: "gateC-torch", asset: "torch_lit", col: 63, row: 8, y: 1.3, ry: 0, scale: 0.5, cat: "light" },
-  { id: "gateC-candles", asset: "wall_inset_candles", col: 65, row: 6, y: 1.3, ry: 0, scale: 1.0, cat: "light" },
-
-  // 2. Minor gates A/B (north wall, face south) + D/E (east wall, face west)
-  { id: "gateA-door", asset: "wall_doorway", col: 5, row: 6, y: 1.3, ry: 0, scale: 1.0, cat: "wall" },
-  { id: "gateB-door", asset: "wall_doorway", col: 22, row: 6, y: 1.3, ry: 0, scale: 1.0, cat: "wall" },
-  { id: "gateD-door", asset: "wall_doorway", col: 66, row: 30, y: 1.3, ry: 90, scale: 1.0, cat: "wall" },
-  { id: "gateE-door", asset: "wall_doorway", col: 66, row: 52, y: 1.3, ry: 90, scale: 1.0, cat: "wall" },
-
-  // 3. Pillar / column rhythm — long straight runs only (north wall + west wall)
-  { id: "pil-n1", asset: "pillar", col: 27, row: 7, y: 1.3, ry: 0, scale: 0.65, cat: "pillar" },
-  { id: "pil-n2", asset: "pillar", col: 33, row: 7, y: 1.3, ry: 0, scale: 0.65, cat: "pillar" },
-  { id: "pil-n3", asset: "pillar", col: 57, row: 7, y: 1.3, ry: 0, scale: 0.65, cat: "pillar" },
-  { id: "pil-w1", asset: "pillar", col: 3, row: 35, y: 2.6, ry: 0, scale: 0.65, cat: "pillar" },
-  { id: "pil-w2", asset: "pillar", col: 5, row: 23, y: 2.6, ry: 0, scale: 0.65, cat: "pillar" },
-  { id: "col-nw", asset: "column", col: 10, row: 8, y: 2.6, ry: 0, scale: 0.6, cat: "pillar" },
-  { id: "col-se", asset: "column", col: 64, row: 48, y: 2.6, ry: 0, scale: 0.6, cat: "pillar" },
-
-  // 4. Ward shrine — columns + offset gem pile (nothing on the crystal core cell)
-  { id: "ward-col-nw", asset: "pillar_decorated", col: 6, row: 49, y: 3.0, ry: 0, scale: 0.6, cat: "ward" },
-  { id: "ward-col-se", asset: "pillar_decorated", col: 12, row: 53, y: 3.0, ry: 0, scale: 0.6, cat: "ward" },
-  { id: "ward-gems", asset: "resource/Gems_Pile_Large", col: 11, row: 51, y: 3.0, ry: 20, scale: 0.5, cat: "ward" },
-
-  // 5. Rubble / rocks — drop onto the exact cells the fake primitive clusters use now
-  { id: "rub-1", asset: "rubble_large", col: 26, row: 8, y: 1.3, ry: 18, scale: 0.5, cat: "rubble" },
-  { id: "rub-2", asset: "rubble_large", col: 37, row: 38, y: 1.3, ry: 8, scale: 0.5, cat: "rubble" },
-  { id: "rub-3", asset: "rubble_large", col: 64, row: 44, y: 1.3, ry: 30, scale: 0.5, cat: "rubble" },
-  { id: "rub-4", asset: "rubble_half", col: 11, row: 35, y: 2.6, ry: 24, scale: 0.5, cat: "rubble" },
-  { id: "rub-5", asset: "rocks_small", col: 63, row: 54, y: 2.6, ry: -18, scale: 0.45, cat: "rubble" },
-
-  // 6. Torches / candles — sparse (Gate C lights are above; avoid flooding)
-  { id: "torch-b", asset: "torch_lit", col: 24, row: 8, y: 1.3, ry: 0, scale: 0.5, cat: "light" },
-  { id: "torch-e", asset: "torch_lit", col: 64, row: 50, y: 2.6, ry: 0, scale: 0.5, cat: "light" },
-  { id: "torch-ward", asset: "torch_lit", col: 13, row: 51, y: 3.0, ry: 0, scale: 0.5, cat: "light" },
-  { id: "candles-n", asset: "wall_inset_candles", col: 33, row: 6, y: 1.3, ry: 0, scale: 0.8, cat: "light" },
+  {"id":"wall-0","asset":"wall_arched","col":65,"row":7,"y":1.3,"ry":0,"scale":1.4,"cat":"wall"},
+  {"id":"light-1","asset":"torch_lit","col":63,"row":8,"y":1.3,"ry":0,"scale":0.5,"cat":"light"},
+  {"id":"light-2","asset":"wall_inset_candles","col":65,"row":6,"y":1.3,"ry":0,"scale":1,"cat":"light"},
+  {"id":"wall-3","asset":"wall_doorway","col":5,"row":6,"y":1.3,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-4","asset":"wall_doorway","col":22,"row":6,"y":1.3,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-5","asset":"wall_doorway","col":66,"row":30,"y":1.3,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-6","asset":"wall_doorway","col":66,"row":52,"y":1.3,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"pillar-7","asset":"pillar","col":27,"row":7,"y":1.3,"ry":0,"scale":0.65,"cat":"pillar"},
+  {"id":"pillar-8","asset":"pillar","col":33,"row":7,"y":1.3,"ry":0,"scale":0.65,"cat":"pillar"},
+  {"id":"pillar-9","asset":"pillar","col":57,"row":7,"y":1.3,"ry":0,"scale":0.65,"cat":"pillar"},
+  {"id":"pillar-10","asset":"pillar","col":3,"row":35,"y":2.6,"ry":0,"scale":0.65,"cat":"pillar"},
+  {"id":"pillar-11","asset":"pillar","col":5,"row":23,"y":2.6,"ry":0,"scale":0.65,"cat":"pillar"},
+  {"id":"pillar-12","asset":"column","col":10,"row":8,"y":2.6,"ry":0,"scale":0.6,"cat":"pillar"},
+  {"id":"pillar-13","asset":"column","col":64,"row":48,"y":2.6,"ry":0,"scale":0.6,"cat":"pillar"},
+  {"id":"ward-14","asset":"pillar_decorated","col":6,"row":49,"y":3,"ry":0,"scale":0.6,"cat":"ward"},
+  {"id":"ward-15","asset":"pillar_decorated","col":12,"row":53,"y":3,"ry":0,"scale":0.6,"cat":"ward"},
+  {"id":"ward-16","asset":"resource/Gems_Pile_Large","col":11,"row":51,"y":3,"ry":20,"scale":0.5,"cat":"ward"},
+  {"id":"rubble-17","asset":"rubble_large","col":26,"row":8,"y":1.3,"ry":18,"scale":0.5,"cat":"rubble"},
+  {"id":"rubble-18","asset":"rubble_large","col":37,"row":38,"y":1.3,"ry":8,"scale":0.5,"cat":"rubble"},
+  {"id":"rubble-19","asset":"rubble_large","col":64,"row":44,"y":1.3,"ry":30,"scale":0.5,"cat":"rubble"},
+  {"id":"rubble-20","asset":"rubble_half","col":11,"row":35,"y":2.6,"ry":24,"scale":0.5,"cat":"rubble"},
+  {"id":"rubble-21","asset":"rocks_small","col":63,"row":54,"y":2.6,"ry":342,"scale":0.45,"cat":"rubble"},
+  {"id":"light-22","asset":"torch_lit","col":24,"row":8,"y":1.3,"ry":0,"scale":0.5,"cat":"light"},
+  {"id":"light-23","asset":"torch_lit","col":64,"row":50,"y":2.6,"ry":0,"scale":0.5,"cat":"light"},
+  {"id":"light-24","asset":"torch_lit","col":13,"row":51,"y":3,"ry":0,"scale":0.5,"cat":"light"},
+  {"id":"light-25","asset":"wall_inset_candles","col":33,"row":6,"y":1.3,"ry":0,"scale":0.8,"cat":"light"},
+  {"id":"wall-26","asset":"wall_cracked","col":2,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-27","asset":"wall_cracked","col":10,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-28","asset":"wall_cracked","col":14,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-29","asset":"wall_cracked","col":18,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-30","asset":"wall_cracked","col":26,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-31","asset":"wall_cracked","col":30,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-32","asset":"wall_cracked","col":34,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-33","asset":"wall_cracked","col":38,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-34","asset":"wall_cracked","col":42,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-35","asset":"wall_cracked","col":46,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-36","asset":"wall_cracked","col":50,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-37","asset":"wall_cracked","col":54,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-38","asset":"wall_cracked","col":58,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-39","asset":"wall_cracked","col":62,"row":6,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-40","asset":"wall_cracked","col":1,"row":8,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-41","asset":"wall_cracked","col":1,"row":12,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-42","asset":"wall_cracked","col":1,"row":16,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-43","asset":"wall_cracked","col":66,"row":12,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-44","asset":"wall_cracked","col":66,"row":16,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-45","asset":"wall_cracked","col":66,"row":20,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-46","asset":"wall_cracked","col":66,"row":24,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-47","asset":"wall_cracked","col":66,"row":36,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-48","asset":"wall_cracked","col":66,"row":40,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-49","asset":"wall_cracked","col":66,"row":44,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-50","asset":"wall_cracked","col":66,"row":48,"y":2.6,"ry":270,"scale":1,"cat":"wall"},
+  {"id":"wall-51","asset":"wall_cracked","col":1,"row":25,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-52","asset":"wall_cracked","col":1,"row":29,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-53","asset":"wall_cracked","col":1,"row":33,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-54","asset":"wall_cracked","col":0,"row":38,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-55","asset":"wall_cracked","col":0,"row":42,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-56","asset":"wall_cracked","col":0,"row":46,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-57","asset":"wall_cracked","col":0,"row":50,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-58","asset":"wall_cracked","col":0,"row":54,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-59","asset":"wall_cracked","col":2,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-60","asset":"wall_cracked","col":6,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-61","asset":"wall_cracked","col":10,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-62","asset":"wall_cracked","col":14,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-63","asset":"wall_cracked","col":18,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-64","asset":"wall_cracked","col":22,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-65","asset":"wall_cracked","col":26,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-66","asset":"wall_cracked","col":30,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-67","asset":"wall_cracked","col":34,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-68","asset":"wall_cracked","col":38,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-69","asset":"wall_cracked","col":42,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-70","asset":"wall_cracked","col":46,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-71","asset":"wall_cracked","col":50,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-72","asset":"wall_cracked","col":54,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-73","asset":"wall_cracked","col":58,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-74","asset":"wall_cracked","col":62,"row":56,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-75","asset":"wall_corner","col":0,"row":6,"y":2.6,"ry":90,"scale":1,"cat":"wall"},
+  {"id":"wall-76","asset":"wall_corner","col":66,"row":6,"y":2.6,"ry":180,"scale":1,"cat":"wall"},
+  {"id":"wall-77","asset":"wall_corner","col":0,"row":56,"y":2.6,"ry":0,"scale":1,"cat":"wall"},
+  {"id":"wall-78","asset":"wall_corner","col":66,"row":56,"y":2.6,"ry":270,"scale":1,"cat":"wall"}
 ]);
 
 export const FIRST_BREACH_KIT_ASSET_NAMES = Object.freeze([...new Set(FIRST_BREACH_KIT.map((s) => s.asset))]);

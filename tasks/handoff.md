@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.12 — 2026-06-28 — Round-1 HOLD-E-TO-START: wave 1 prep pauses until a deliberate 1.5s E-hold (filling bar); waves 2-5 unchanged; suite + build green; eyeball pending |
+| **Last session** | S7.14 — 2026-06-28 — Auto-tiled the First Breach wall skin: wall_cracked on every wall + wall_corner on every corner (79-piece kit) from Hudson's examples; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,23 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.14 — 2026-06-28 — Auto-tiled the wall skin (cracked walls everywhere + corners) [GATE GREEN]
+- Hudson placed one `wall_cracked` + one `wall_corner` as examples and asked me to fill the rest "so i dont have to do all of it." Done: tiled `wall_cracked` along every perimeter wall run every ~4 cells (skipping the 5 gate openings), facing into the room (N ry0 / S ry180 / W ry90 / E ry270), and `wall_corner` at the four corners — all at his example height (y≈2.6), scale 1.
+- New kit = **79 pieces** = 26 of his hand-placed props (arch/doorways/pillars/torches/ward/rubble) + 49 cracked panels + 4 corners. Baked into `src/view/firstBreachKit.js` (record at `tasks/first-breach-kit-hudson.json`). Relaxed the kit-count test guard (<30 → <250) since it is now a full wall skin, not "limited props"; all other guards (off-route props, nothing on core, assets resolve, deterministic) still pass.
+- Perf: the cracked + corner panels are instanced (one cached container per asset, instantiated many) → cheap (R17). 2D view (`first-breach-layout-2d.html`) regenerated to the 79-piece layout.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 110/110, full suite green); clean `/tmp` build ✓ 897 modules. Unverified: in-engine look — the **corner rotations for NW/NE/SE are a best guess** (SW matches his example); a wrong-facing corner is a 90° tweak in `?artEdit=1`.
+- Commit pending CC: `src/view/firstBreachKit.js`, `test/firstBreachKit.test.mjs`, `src/input/Input.js`, `tasks/first-breach-kit-hudson.json`, `first-breach-layout-2d.html`, `tasks/handoff.md` → "Auto-tile First Breach wall skin (cracked + corners)".
+- **In Friendly Words:** you placed one cracked wall and one corner as examples — I copied that all the way around the map, so every wall now has cracked stone and every corner has a corner piece, without you placing each one (~50 panels + 4 corners, matching your height and size). Everything passes and builds. One heads-up: I had to guess which way 3 of the 4 corner pieces face — if any looks backwards, just spin it in build mode; quick fix.
+
+### S7.13 — 2026-06-28 — Baked Hudson\'s hand-built walls + 2D layout view + build-mode E fix [GATE GREEN]
+- Hudson dressed the walls in the in-game build tool (?artEdit=1), exported `first-breach-kit.json` (29 pieces), and sent it. Validated: 29 (<30), unique ids, all assets resolve, nothing on the Ward core, no pillar/rubble on protected cells, ward ≤5 of core, scale 0.45–1.4 — clean.
+- His additions over the seed: `wall_corner` @1,55 + 2× `wall_cracked` (@1,51 ry89, @5,55) around the SW/Ward corner (the brick detail in his shot). **Baked his exact export into `src/view/firstBreachKit.js`** as `FIRST_BREACH_KIT` (replaces the auto-placed seed); saved a record copy at `tasks/first-breach-kit-hudson.json`.
+- Fixed the build-mode **E** clash: `?artEdit=1` now disables the round-1 hold-to-start in the game `Input`, so pressing E to export can\'t accidentally hold-start a wave / spawn enemies into a build session. (Also guarded `window.location` for the node Input test.)
+- New 2D reference: **`first-breach-layout-2d.html`** — top-down terrain map + every placed piece as a colour-coded dot (wall/pillar/light/ward/rubble) with a facing tick + hover details, gates/Ward annotated, plus a categorised list of all 29 ("what all the walls are"). Dev-only, excluded from dist.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 60/60, input 66/66, holdStart 17/17, full suite green); clean `/tmp` build ✓ 897 modules; dev-only *.html not in dist.
+- Commit pending CC: `src/view/firstBreachKit.js`, `src/input/Input.js`, `tasks/first-breach-kit-hudson.json`, `first-breach-layout-2d.html`, `tasks/handoff.md` → "Bake Hudson const First Breach wall layout + 2D view".
+- **In Friendly Words:** I saved exactly what you built in the game and baked it in, so those walls are the real First Breach art now (not just in your tab). I also made a flat top-down picture of your whole layout — every wall, pillar, torch and rubble pile as a labelled dot — so you can see the plan at a glance. And I stopped the build tool\'s E key from accidentally starting a wave. Everything passes and builds.
 
 ### S7.12 — 2026-06-28 — Round-1 hold-E-to-start (deliberate begin) [GATE GREEN; EYEBALL PENDING]
 - Hudson asked for a pause before round 1 where you must hold E to start. Chose (AskUserQuestion): **only round 1**, **~1.5s hold**. Waves 2-5 keep the instant Enter/button/timer start.
