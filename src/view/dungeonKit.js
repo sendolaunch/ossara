@@ -51,7 +51,7 @@ export function kitReady(app, name) {
 
 // Instantiate `name` at (x,y,z) with Y-rotation ryDeg (degrees) and uniform scale.
 // Returns the entity (added to `parent`), or null if the piece isn't loaded.
-export function place(app, parent, name, { x = 0, y = 0, z = 0, ry = 0, scale = 1, sx = null } = {}) {
+export function place(app, parent, name, { x = 0, y = 0, z = 0, ry = 0, scale = 1, sx = null, sy = null, sz = null } = {}) {
   const asset = app._kitCache && app._kitCache.get(urlFor(name));
   if (!asset || !asset.resource) return null;
   let e;
@@ -61,7 +61,7 @@ export function place(app, parent, name, { x = 0, y = 0, z = 0, ry = 0, scale = 
     console.warn("[dungeonKit] instantiate failed:", name, err);
     return null;
   }
-  if (sx != null) e.setLocalScale(sx, scale, scale);
+  if (sx != null || sy != null || sz != null) e.setLocalScale(sx != null ? sx : scale, sy != null ? sy : scale, sz != null ? sz : scale);
   else if (scale !== 1) e.setLocalScale(scale, scale, scale);
   e.setLocalPosition(x, y, z);
   if (ry) e.setLocalEulerAngles(0, ry, 0);

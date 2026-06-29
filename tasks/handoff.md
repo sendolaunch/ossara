@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.26 — 2026-06-28 — BAKED Hudson's export-3 (159 pcs) into firstBreachKit.js — fixes the 'editor resets to old layout / 0 progress' miss. Editor now seeds from HIS layout. Build 899 + suite green. New rule: bake exports, don't just save |
+| **Last session** | S7.27 — 2026-06-28 — Fixed per-axis (non-uniform) scale through the whole pipeline: stretched walls now survive copy/paste AND export/bake/reload (was saving only s.x). Build 899 + suite green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,13 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.27 — 2026-06-28 — Per-axis scale preserved (stretched walls stick) [GREEN]
+- **Bug:** the Scale gizmo stretches a piece non-uniformly, but `_specOf` / `_specsForExport` / `_copySelectedJson` only stored `s.x` and `_spawn` re-applied it uniformly. So a stretched wall snapped back to a uniform cube on copy/paste AND on export -> bake -> reload. That's why Hudson's added walls "lost their scaling."
+- **Fix (3 files):** `dungeonKit.place()` now takes `sy`/`sz` and sets `setLocalScale(sx??scale, sy??scale, sz??scale)` (backward-compatible). Editor captures + re-applies all three axes (copy/paste/duplicate/seed). Export + copy-JSON write `sy`/`sz` only when non-uniform (clean data). `pcRenderer` baked-kit loader passes them through; `firstBreachKitSpecs` already spreads them.
+- **Caveat:** export-3 (already baked) has NO sy/sz — those walls are uniform now; that data was never saved. Hudson re-stretches once, exports, I bake -> from now on it persists.
+- Verified: clean build 899 modules, `npm test` 0 fails (firstBreachKit still green with the new optional keys).
+- **In Friendly Words:** Found why your stretched walls kept snapping back to square — the editor was only remembering the width, not the height/depth. Fixed everywhere now: stretch a wall any direction, copy it, paste it, save it — it keeps its shape. The walls from your last save are square again because the old save never recorded the stretch, so you'll need to re-stretch them once; after that they'll stick for good.
 
 ### S7.26 — 2026-06-28 — Baked export-3 -> progress now persists [GREEN]
 - **The miss:** the Build Lab seeds from `firstBreachKit.js`; I'd been SAVING Hudson's exports to tasks/ but never baking them, so every reload reset to the old 156-piece bake. From his side = "0 progress." 

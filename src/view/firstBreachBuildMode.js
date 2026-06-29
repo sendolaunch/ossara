@@ -146,10 +146,10 @@ class FirstBreachBuildMode {
   // ---- spec / spawn / remove (undo-friendly) ------------------------------
   _specOf(piece) {
     const e = piece.entity, p = e.getPosition(), a = e.getLocalEulerAngles(), s = e.getLocalScale();
-    return { asset: piece.asset, cat: piece.cat, x: p.x, y: p.y, z: p.z, ry: a.y, scale: s.x };
+    return { asset: piece.asset, cat: piece.cat, x: p.x, y: p.y, z: p.z, ry: a.y, scale: s.x, sy: s.y, sz: s.z };
   }
   _spawn(spec) {
-    const ent = place(this.app, this.root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale });
+    const ent = place(this.app, this.root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale, sy: spec.sy, sz: spec.sz });
     if (!ent) return null;
     ent.name = "build-" + this.placed.length;
     const piece = { entity: ent, asset: spec.asset, cat: spec.cat || FB_ASSET_CAT[spec.asset] || "prop" };
@@ -169,7 +169,7 @@ class FirstBreachBuildMode {
     let specs = [];
     try { specs = firstBreachKitSpecs(this.level); } catch (_) { specs = []; }
     for (const s of specs) {
-      const ent = place(this.app, this.root, s.asset, { x: s.x, y: s.y, z: s.z, ry: s.ry, scale: s.scale });
+      const ent = place(this.app, this.root, s.asset, { x: s.x, y: s.y, z: s.z, ry: s.ry, scale: s.scale, sy: s.sy, sz: s.sz });
       if (!ent) continue;
       ent.name = "build-" + s.id;
       this.placed.push({ entity: ent, asset: s.asset, cat: s.cat || FB_ASSET_CAT[s.asset] || "prop" });
@@ -280,7 +280,10 @@ class FirstBreachBuildMode {
     const cx = (this.level.cols - 1) / 2, cz = (this.level.rows - 1) / 2;
     return this.placed.map((p, i) => {
       const w = p.entity.getPosition(), e = p.entity.getLocalEulerAngles(), s = p.entity.getLocalScale();
-      return { id: p.cat + "-" + i, asset: p.asset, col: Math.round(w.x + cx), row: Math.round(w.z + cz), y: +w.y.toFixed(2), ry: Math.round(((e.y % 360) + 360) % 360), scale: +s.x.toFixed(3), cat: p.cat };
+      const o = { id: p.cat + "-" + i, asset: p.asset, col: Math.round(w.x + cx), row: Math.round(w.z + cz), y: +w.y.toFixed(2), ry: Math.round(((e.y % 360) + 360) % 360), scale: +s.x.toFixed(3), cat: p.cat };
+      if (Math.abs(s.y - s.x) > 1e-3) o.sy = +s.y.toFixed(3);
+      if (Math.abs(s.z - s.x) > 1e-3) o.sz = +s.z.toFixed(3);
+      return o;
     });
   }
   _export() {
@@ -295,6 +298,8 @@ class FirstBreachBuildMode {
     if (!this.selected) return;
     const cx = (this.level.cols - 1) / 2, cz = (this.level.rows - 1) / 2, p = this.selected, w = p.entity.getPosition(), e = p.entity.getLocalEulerAngles(), s = p.entity.getLocalScale();
     const spec = { asset: p.asset, col: Math.round(w.x + cx), row: Math.round(w.z + cz), y: +w.y.toFixed(2), ry: Math.round(((e.y % 360) + 360) % 360), scale: +s.x.toFixed(3), cat: p.cat };
+    if (Math.abs(s.y - s.x) > 1e-3) spec.sy = +s.y.toFixed(3);
+    if (Math.abs(s.z - s.x) > 1e-3) spec.sz = +s.z.toFixed(3);
     if (navigator.clipboard) navigator.clipboard.writeText(JSON.stringify(spec)).catch(() => {});
     this._status("Copied placement JSON.");
   }

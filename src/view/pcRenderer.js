@@ -880,7 +880,7 @@ export class PCRenderer {
         if (this._fbKitToken !== token || this.fbKitRoot !== root) return;
         let placed = 0;
         for (const spec of firstBreachKitSpecs(level)) {
-          const ent = place(this.app, root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale });
+          const ent = place(this.app, root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale, sy: spec.sy, sz: spec.sz });
           if (!ent) continue; // GLB missing -> primitive blockout fallback stays
           ent.name = `fbkit-${spec.id}`;
           for (const render of ent.findComponents("render")) {
