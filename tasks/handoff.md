@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.17 — 2026-06-28 — Added wall_pillar buttresses (~17, every ~12 cells) into the wall skin for protruding rhythm; big arched gates + black mist; suite + build green |
+| **Last session** | S7.18 — 2026-06-28 — FIX: missing-wall gaps — wall skin now tiles the FULL length of every wall run (0 gaps, verified 230/230 cells); 156 pieces; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -39,11 +39,19 @@ Close every session by updating this file per the R16 ritual.
 - [ ] **More breach maps** (data-driven `LEVEL`s): The Drowned Causeway, The Bone Choir (currently locked in map-select).
 - [ ] **Animated hero** — current `hero.glb` is static; needs a rigged+animated model + PlayCanvas anim wiring.
 - [ ] **Remove dead `three` code** once confirmed unused (R21 cleanup): `view/Renderer.js`, `meshFactory.js`, `assets.js`, `ui/preview.js`.
+- [ ] **Perf: batch the static map art** (planning-ahead — no current lag). Trigger: more maps/enemies or fps dips on phones. Fix: set a `batchGroupId` on the kit + blockout static meshes (`_loadFirstBreachKit` / `_loadMapBuilderArt`) and call `app.batcher.generate()` → the ~130 wall/prop draw calls collapse to ~10 with NO visual change (walls never move = ideal static-batch candidates). Cheap pre-knobs with zero code risk (regen the kit): widen cracked spacing (every 8 cells not 4) or drop to one wall course instead of two = ~half the pieces. Also consider turning off shadow-casting on the wall skin. Needs an eyeball after — batching can have quirks with transparent/rotated meshes.
 - [x] **Git remote live** — `origin` → github.com/sendolaunch/ossara (`main`), pushed with LFS healthy.
 
 ---
 
 ## Session log (newest first)
+
+### S7.18 — 2026-06-28 — FIX missing-wall gaps (full-coverage wall skin) [GATE GREEN]
+- Hudson: "a lot of the walls are missing now, a lot more gaps." Root cause: the renderer hides ALL tall primitive perimeter walls, but the GLB cracked tiling only covered a few long runs — run-ends, short wall segments, and a 5-cell margin around each gate were hidden-but-not-replaced (measured: 38 of 230 wall cells = 17% gaps).
+- Fix (`firstBreachKit.js` regen): the wall skin now tiles `wall_cracked` across the FULL length of every wall rect (start→end, short segments + ends included), shrank the gate skip to ±1 (the big arches cover it), buttress every 3rd tile. **Verified programmatically: 230/230 wall cells covered, 0 uncovered.** 156 pieces, 16 buttresses.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 187/187, full suite green); clean `/tmp` build ✓ 897 modules. 2D view regenerated.
+- Commit pending CC: `src/view/firstBreachKit.js`, `tasks/first-breach-kit-hudson.json`, `first-breach-layout-2d.html`, `tasks/handoff.md` → "Fix missing-wall gaps (full-coverage wall skin)".
+- **In Friendly Words:** the holes are fixed — the cracked walls now cover every wall cell end to end (I checked all 230 in code), so nothing's missing. The grey primitive stays hidden, the openings are just the gates. Refresh and the perimeter should be solid.
 
 ### S7.17 — 2026-06-28 — wall_pillar buttress rhythm in the wall skin [GATE GREEN; EYEBALL PENDING]
 - Hudson picked `wall_pillar` buttresses for the "well but skinnier" accent. Regenerated the wall skin: still `wall_cracked` in two stacked courses, but every 3rd tile (~12 cells) is a full-height `wall_pillar` whose pillar protrudes into the room — **17 buttress points** ringing the perimeter for a "pattern sticks out + follows along" rhythm. Big arched gates + props + corners kept.
@@ -343,8 +351,4 @@ Close every session by updating this file per the R16 ritual.
 - `src/view/pcRenderer.js`: import now points at the blockout builder; camera `maxDist` 11.5 -> 10.5; gated off green gate-portals, cathedral walls, gothic pillars, blocked-cell chunks, legacy showcase art. Kept Ward gem + halo ring + dais.
 - `test/firstBreachBlockout.test.mjs` (NEW, 613/613) locks primitive-only / axis-aligned / 4-step / clean-Ward / 5-gates / lanes / snapshot-unchanged. Added to `npm test` (40 files green).
 - Gameplay anchors unchanged (lanes, core, hero, build/reserved zones, waves) — snapshot guard + full suite green.
-- Build + browser smoke + git are Windows-side this pass: sandbox git is index-locked + CRLF/LFS-noisy; vite build needs Linux-native rollup/esbuild binaries the Windows node_modules lacks.
-- Old `firstBreachMapPlan.js` + its 3 tests are superseded/dead — removal candidates after greybox approval.
-
-**In Friendly Words:** The map only looked like a junk pile because it was secretly still made of finished art. I rebuilt First Breach as plain grey boxes — clean floor, four broad steps up to one simple Ward platform, dark enemy doorways, framing walls — and a test that keeps it that way (613/613, nothing else broke). Gameplay is untouched. Next: run it on Windows, screenshot it, approve the shape, then add art.
-
+- Build + browser smoke + 
