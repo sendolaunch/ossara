@@ -167,9 +167,24 @@ class FirstBreachBuildMode {
     this._updateHighlight(); this._refreshList(); this._refreshInspector();
   }
 
+  _autoSave() {
+    try { localStorage.setItem("fbBuildSave", JSON.stringify(this._specsForExport())); this._markSaved(); } catch (_) {}
+  }
+  _markSaved() {
+    if (!this._ui) return;
+    const el = this._ui.wrap.querySelector("#fbSaved");
+    if (el) el.textContent = "saved locally " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  _resetToMap() {
+    try { localStorage.removeItem("fbBuildSave"); } catch (_) {}
+    this._status("Local save cleared - reloading the deployed map...");
+    setTimeout(() => { try { location.reload(); } catch (_) {} }, 400);
+  }
   _seedFromKit() {
-    let specs = [];
-    try { specs = firstBreachKitSpecs(this.level); } catch (_) { specs = []; }
+    // Prefer the local in-editor save (survives reloads without re-baking); fall back to the deployed kit.
+    let specs = null, fromSave = false;
+    try { const raw = localStorage.getItem("fbBuildSave"); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) { specs = arr.map((s) => { const w = gridToWorld(s.col, s.row, this.level); return { ...s, x: w.x, z: w.z }; }); fromSave = true; } } } catch (_) {}
+    if (!specs) { try { specs = firstBreachKitSpecs(this.level); } catch (_) { specs = []; } }
     for (const s of specs) {
       const ent = place(this.app, this.root, s.asset, { x: s.x, y: s.y, z: s.z, ry: s.ry, scale: s.scale, sy: s.sy, sz: s.sz });
       if (!ent) continue;
@@ -177,7 +192,7 @@ class FirstBreachBuildMode {
       this.placed.push({ entity: ent, asset: s.asset, cat: s.cat || FB_ASSET_CAT[s.asset] || "prop" });
     }
     this._refreshList();
-    this._status("Loaded " + this.placed.length + " existing pieces to edit.");
+    this._status(fromSave ? ("Restored your local save: " + this.placed.length + " pieces. ('Reset to deployed map' to discard.)") : ("Loaded " + this.placed.length + " pieces from the deployed map."));
   }
 
   _placeAt(asset, col, row, y) {
@@ -270,9 +285,9 @@ class FirstBreachBuildMode {
   }
 
   // ---- undo / redo --------------------------------------------------------
-  _pushUndo(entry) { this._undo.push(entry); if (this._undo.length > 50) this._undo.shift(); this._redo.length = 0; this._syncHistButtons(); }
-  _doUndo() { const e = this._undo.pop(); if (!e) { this._status("Nothing to undo."); return; } e.undo(); this._redo.push(e); this._syncHistButtons(); this._status("Undid."); }
-  _doRedo() { const e = this._redo.pop(); if (!e) { this._status("Nothing to redo."); return; } e.redo(); this._undo.push(e); this._syncHistButtons(); this._status("Redid."); }
+  _pushUndo(entry) { this._undo.push(entry); if (this._undo.length > 50) this._undo.shift(); this._redo.length = 0; this._syncHistButtons(); this._autoSave(); }
+  _doUndo() { const e = this._undo.pop(); if (!e) { this._status("Nothing to undo."); return; } e.undo(); this._redo.push(e); this._syncHistButtons(); this._status("Undid."); this._autoSave(); }
+  _doRedo() { const e = this._redo.pop(); if (!e) { this._status("Nothing to redo."); return; } e.redo(); this._undo.push(e); this._syncHistButtons(); this._status("Redid."); this._autoSave(); }
   _snapshot(piece) { const e = piece.entity; return { pos: e.getLocalPosition().clone(), rot: e.getLocalEulerAngles().clone(), scale: e.getLocalScale().clone() }; }
   _applySnap(piece, s) { const e = piece.entity; e.setLocalPosition(s.pos.x, s.pos.y, s.pos.z); e.setLocalEulerAngles(s.rot.x, s.rot.y, s.rot.z); e.setLocalScale(s.scale.x, s.scale.y, s.scale.z); }
   _sameSnap(a, b) { return a.pos.equals(b.pos) && a.rot.equals(b.rot) && a.scale.equals(b.scale); }
@@ -317,6 +332,7 @@ class FirstBreachBuildMode {
     }
     this._select(null);
     this._status("Imported " + n + "/" + arr.length + " pieces.");
+    this._autoSave();
   }
 
   // ---- safe-zone overlays -------------------------------------------------
@@ -618,8 +634,10 @@ class FirstBreachBuildMode {
       '<div class="sec">Models</div><div id="fbPalette"></div>',
       '<div class="sec">Placed (<span id="fbCount">0</span>)</div><div id="fbList"></div>',
       '<div class="sec">Save / load</div>',
+      '<div id="fbSaved" style="font-size:10px;color:#7bd86b;text-align:center;margin:1px 0 3px">auto-saves locally</div>',
       '<button id="fbExport" class="exp">Export kit JSON (E)</button>',
       '<button id="fbImport">Import kit JSON...</button>',
+      '<button id="fbReset">Reset to deployed map</button>',
       '<input type="file" id="fbImportFile" accept="application/json" style="display:none">',
     ].join("");
     document.body.appendChild(wrap);
@@ -649,6 +667,7 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbExport").onclick = () => this._export();
     wrap.querySelector("#fbImport").onclick = () => wrap.querySelector("#fbImportFile").click();
     wrap.querySelector("#fbImportFile").onchange = (ev) => { const f = ev.target.files && ev.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => this._import(String(rd.result)); rd.readAsText(f); ev.target.value = ""; };
+    wrap.querySelector("#fbReset").onclick = () => this._resetToMap();
     const keyHelp = wrap.querySelector("#fbKeyHelp");
     keyHelp.innerHTML = [
       "<b>Camera</b> &mdash; W/A/S/D move &middot; Space up &middot; Alt down &middot; right or middle-drag orbit &middot; scroll zoom",
