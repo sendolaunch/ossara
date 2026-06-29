@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.27 — 2026-06-28 — Fixed per-axis (non-uniform) scale through the whole pipeline: stretched walls now survive copy/paste AND export/bake/reload (was saving only s.x). Build 899 + suite green |
+| **Last session** | S7.28 — 2026-06-28 — ?artEdit=1 is now a real editor: skips login, free-fly no-clip camera, hero hidden, GAME INPUT OFF (frees Shift -> multi-select copy/paste works). All gated on artEdit; normal play untouched (input 66/66). Build 899 green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.28 — 2026-06-28 — Dedicated dev editor mode (?artEdit=1) [GREEN]
+- **Bug:** copy/paste broke because Shift (and clicks) were still driving the live game — the camera was chase-locked to the hero, and game input grabbed Shift. The editor was running on top of a full playable mission.
+- **Fix (3 files, all gated on artEdit so normal play is identical):**
+  - `Input.js`: in ?artEdit, keydown returns right after preventDefault (editor owns Shift/Q/R/etc.) and `_handleClick` no-ops. Camera controls (wheel zoom, right/middle-drag orbit, arrow pan) still work.
+  - `firstBreachBuildMode.js`: `_setupEditorView()` flips on free-cam (detaches the camera = no-clip fly) and `_keepEditorView()` hides the hero every tick (loads async).
+  - `main.js`: ?artEdit=1 boots straight into First Breach (seedDevMissionProfile + startMission) — no wallet/login screen.
+- Verified: build 899 modules, `npm test` 0 fails, **input 66/66** (normal-play input path unchanged).
+- **In Friendly Words:** Dev mode is now a proper map editor. Open the art link and you skip the login, the knight is gone, and you're a free-floating camera that flies through anything. The game no longer steals Shift, so Shift-click to grab a group and Ctrl+C / Ctrl+V actually work now. Normal players are completely unaffected — none of this touches the real game.
 
 ### S7.27 — 2026-06-28 — Per-axis scale preserved (stretched walls stick) [GREEN]
 - **Bug:** the Scale gizmo stretches a piece non-uniformly, but `_specOf` / `_specsForExport` / `_copySelectedJson` only stored `s.x` and `_spawn` re-applied it uniformly. So a stretched wall snapped back to a uniform cube on copy/paste AND on export -> bake -> reload. That's why Hudson's added walls "lost their scaling."

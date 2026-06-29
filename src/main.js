@@ -57,6 +57,7 @@ let mapSelect = null;
 let heroSelect = null;
 let username = "The Warded";
 const devMissionId = devMissionIdFromLocation(window.location, import.meta.env);
+const artEditMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("artEdit") === "1";
 const showcaseMissionId = showcaseMissionIdFromLocation(window.location);
 const devEnemyGallery = devEnemyGalleryEnabled(window.location, import.meta.env);
 const devHeroAttackClass = devHeroAttackClassFromLocation(window.location, import.meta.env);
@@ -351,6 +352,9 @@ if (devHeroAttackClass) {
   startMission(devMissionId);
 } else if (showcaseMissionId) {
   startMission(showcaseMissionId);
+} else if (artEditMode) {
+  seedDevMissionProfile();
+  startMission("first-breach");
 } else {
   flow.showLogin();
 }

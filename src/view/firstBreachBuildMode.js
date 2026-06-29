@@ -68,8 +68,9 @@ class FirstBreachBuildMode {
     this._wirePointer();
     this._wireKeys();
     this._hideGameHud();
+    this._setupEditorView();
     this._makeHighlight();
-    this._onTick = () => this._updateHighlight();
+    this._onTick = () => { this._updateHighlight(); this._keepEditorView(); };
     this.app.on("update", this._onTick);
     this._refreshInspector();
     this._status("Move mode: drag a piece across the map. Q/E rotate, PgUp/PgDn raise/lower, F=snap-to-floor, hold X/Z to lock. Ctrl+Z undo. E export.");
@@ -510,6 +511,15 @@ class FirstBreachBuildMode {
     } catch (_) {}
   }
 
+  _setupEditorView() {
+    // Editor = free-fly no-clip camera; character + game input are gone in ?artEdit mode.
+    try { if (this.r && !this.r.freeCam && typeof this.r.toggleFreeCam === "function") this.r.toggleFreeCam(); } catch (_) {}
+    this._keepEditorView();
+  }
+  _keepEditorView() {
+    // hero loads async / camera can snap back -> keep it hidden each tick (cheap + idempotent)
+    try { if (this.r && this.r.heroEntity && this.r.heroEntity.enabled) this.r.heroEntity.enabled = false; } catch (_) {}
+  }
   _makeHighlight() {
     try {
       const m = new pc.StandardMaterial();

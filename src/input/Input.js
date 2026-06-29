@@ -99,6 +99,7 @@ export class Input {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
       if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c", "q", "e"].includes(k)) e.preventDefault();
+      if (this._artEdit) { this.keys.add(k); return; } // editor owns the keyboard (Shift + all keys)
       if (k === "q" && this._canQueueHeroAbility()) this.pendingSlam = true;
       if (k === DASH_KEY && this._canQueueHeroDash()) this.pendingDash = true;
       if (k === "e" && this._canQueueInteract()) this.pendingInteract = true;
@@ -364,6 +365,7 @@ export class Input {
   }
 
   _handleClick(e = {}) {
+    if (this._artEdit) return; // ?artEdit=1: no gameplay clicks; the Build Lab owns the pointer
     if (this.commandCast) return;
     if (this.commandTargetMode) {
       this.confirmCommandTarget();
