@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.19 — 2026-06-28 — FIX build-mode broken walls (preload full kit, not just palette → wall_pillar buttresses were vanishing on ?artEdit=1) + click-to-grab pieces; suite + build green |
+| **Last session** | S7.20 — 2026-06-28 — Build Lab v2.0: editor upgrade (game HUD hidden, real ray-pick, neon selection glow, clone/nudge) + full editor roadmap; suite + build green; eyeball pending |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.20 — 2026-06-28 — Build Lab v2.0: in-game editor upgrade [GATE GREEN; EYEBALL PENDING]
+- Hudson wants `?artEdit=1` turned into a "full dev system" (Fortnite-Creative-style); the old picking "sucked" (wacky click area) + no selection feedback. Saved his latest export (156 pieces) to `tasks/first-breach-kit-export-2.json` — NOT baked (kept while overhauling).
+- v2.0 shipped (`firstBreachBuildMode.js`): **hides the in-game HUD** (`mission.js` hudRoot now `id="mission-hud"`); **real ray-vs-AABB click picking** (replaces the center-distance guess); **neon-green additive glow box** on the selected piece; **click-empty deselects**; **Ctrl+D clones**; **arrow keys nudge** (Shift = bigger). Plus the prior fix (full-kit preload + `wall_pillar` in palette).
+- Verified APIs in installed pc 1.77: `Picker` / `Ray` / `BoundingBox.intersectsRay` / `screenToWorld` all present; no built-in mesh outline → rolled a neon AABB glow box.
+- Wrote `tasks/build-lab-v2-plan.md` — the full editor roadmap (v2.1 hover/snap/numeric-inspector/undo; v2.2 full asset library/multi-select/array tools/groups; v2.3 named saves/recolor/direct bake).
+- Verified (R5/R6): `npm test` exit 0 (full suite green); clean `/tmp` build ✓ 897 modules. Unverified: editor look/feel in-engine (neon box density, pick accuracy) — needs Hudson screenshots.
+- Commit pending CC: `src/view/firstBreachBuildMode.js`, `src/ui/mission.js`, `tasks/build-lab-v2-plan.md`, `tasks/first-breach-kit-export-2.json`, `tasks/handoff.md` → "Build Lab v2.0: editor HUD-off + ray pick + neon highlight + clone/nudge".
+- **In Friendly Words:** I started turning the rough placement tool into a real map editor. Now the game HUD is hidden (clean view), clicking a piece actually grabs the right one (real aim, not nearest-center), what you grab gets a neon glow, and you can clone with Ctrl+D + nudge with arrow keys. I also wrote the full plan for the rest — grid snap, type-in numbers, undo, browse all 517 models, multi-select, named saves. It builds + passes; run `?artEdit=1` and tell me how the picking + glow feel.
 
 ### S7.19 — 2026-06-28 — Fix build-mode broken walls + click-to-grab [GATE GREEN]
 - Hudson: the ?artEdit=1 (art) link's walls looked broken/stale while the plain ?showcase link was fine. ROOT CAUSE: the build mode preloaded only `FB_PALETTE_ASSET_NAMES`, but `wall_pillar` (the buttress, added to the kit later) was NOT in the palette → `place()` returns null for un-preloaded assets → ~32 buttress pieces silently failed to render in build mode → gaps. The normal link preloads `FIRST_BREACH_KIT_ASSET_NAMES` so it was fine. (So it WAS updating — the build-mode seed was just dropping the buttresses.)

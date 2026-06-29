@@ -52,6 +52,7 @@ export class Mission {
 
     // HUD lives in its own container so we can show/hide it independently.
     this.hudRoot = document.createElement("div");
+    this.hudRoot.id = "mission-hud";
     this.hudRoot.style.position = "absolute";
     this.hudRoot.style.inset = "0";
     this.hudRoot.style.pointerEvents = "none";

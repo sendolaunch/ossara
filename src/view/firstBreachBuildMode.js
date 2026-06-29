@@ -41,6 +41,8 @@ class FirstBreachBuildMode {
     this.mode = "move";
     this.placeY = 1.3;
     this._down = null;
+    this._hl = null;          // neon selection highlight box
+    this._hiddenHud = null;   // the game HUD we hide in editor mode
   }
 
   async init() {
@@ -56,6 +58,10 @@ class FirstBreachBuildMode {
     this._seedFromKit();
     this._wirePointer();
     this._wireKeys();
+    this._hideGameHud();
+    this._makeHighlight();
+    this._onTick = () => this._updateHighlight();
+    this.app.on("update", this._onTick);
     this._status("Ready. Pick a model + click map to place. Click any placed piece to GRAB it, then Move/Rotate/Scale. E = export.");
     console.log("[buildMode] active — ?artEdit=1. Press E (or the Export button) to copy the kit JSON.");
     return this;
@@ -89,6 +95,7 @@ class FirstBreachBuildMode {
         if (piece && k === this.mode) g.attach([piece.entity]); else g.detach();
       }
     }
+    this._updateHighlight();
     this._refreshList();
   }
 
@@ -182,36 +189,112 @@ class FirstBreachBuildMode {
       }
       // no brush armed -> click an existing piece to grab + select it
       const piece = this._pickPiece(e.clientX, e.clientY);
-      if (piece) { this._select(piece); this._status(`Grabbed ${piece.asset} — drag the Move/Rotate/Scale handles, or Delete.`); }
+      if (piece) { this._select(piece); this._status(`Grabbed ${piece.asset} — drag the handles, Ctrl+D to clone, arrows to nudge.`); }
+      else { this._select(null); this._status("Deselected — click a piece to grab it, or pick a model to place."); }
     };
     el.addEventListener("pointerdown", this._onDown);
     el.addEventListener("pointerup", this._onUp);
   }
 
-  // Click a placed piece to grab it: nearest piece whose centre is under the cursor.
-  _pickPiece(clientX, clientY) {
+  // Real pick: cast a ray from the cursor and hit the nearest piece's bounding box.
+  _screenRay(clientX, clientY) {
     const el = this.r.domElement || this.app.graphicsDevice.canvas;
     const rect = el.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
-    const rx = (el.width || rect.width) / rect.width, ryy = (el.height || rect.height) / rect.height;
-    const cx = (clientX - rect.left) * rx, cy = (clientY - rect.top) * ryy;
-    const sp = new pc.Vec3();
-    let best = null, bestD = Infinity;
+    const sx = (clientX - rect.left) * ((el.width || rect.width) / rect.width);
+    const sy = (clientY - rect.top) * ((el.height || rect.height) / rect.height);
+    const cam = this.camComp;
+    const a = cam.screenToWorld(sx, sy, cam.nearClip);
+    const b = cam.screenToWorld(sx, sy, cam.farClip);
+    return new pc.Ray(a.clone(), new pc.Vec3().sub2(b, a).normalize());
+  }
+
+  _entAabb(entity) {
+    let aabb = null;
+    for (const r of entity.findComponents("render")) {
+      for (const mi of r.meshInstances || []) {
+        if (!aabb) aabb = mi.aabb.clone(); else aabb.add(mi.aabb);
+      }
+    }
+    return aabb;
+  }
+
+  _pickPiece(clientX, clientY) {
+    const ray = this._screenRay(clientX, clientY);
+    if (!ray) return null;
+    const hit = new pc.Vec3();
+    let best = null, bestT = Infinity;
     for (const p of this.placed) {
       if (!p.entity) continue;
-      this.camComp.worldToScreen(p.entity.getPosition(), sp);
-      if (sp.z < 0) continue; // behind the camera
-      const dd = Math.hypot(sp.x - cx, sp.y - cy);
-      if (dd < bestD) { bestD = dd; best = p; }
+      const aabb = this._entAabb(p.entity);
+      if (aabb && aabb.intersectsRay(ray, hit)) {
+        const t = hit.distance(ray.origin);
+        if (t < bestT) { bestT = t; best = p; }
+      }
     }
-    return bestD < 110 * rx ? best : null; // within ~110 css px of a piece centre
+    return best;
+  }
+
+  // Hide the in-game HUD so the editor view is clean.
+  _hideGameHud() {
+    try { const hud = document.getElementById("mission-hud"); if (hud) { this._hiddenHud = hud; hud.style.display = "none"; } } catch (_) {}
+  }
+
+  // Neon glow box around the selected piece (so you can see what you grabbed).
+  _makeHighlight() {
+    try {
+      const m = new pc.StandardMaterial();
+      m.useLighting = false;
+      m.emissive = new pc.Color(0.25, 1.0, 0.55);
+      m.diffuse = new pc.Color(0, 0, 0);
+      m.opacity = 0.22; m.blendType = pc.BLEND_ADDITIVE; m.depthWrite = false; m.cull = pc.CULLFACE_NONE;
+      m.update();
+      this._hl = new pc.Entity("build-highlight");
+      this._hl.addComponent("render", { type: "box", castShadows: false, receiveShadows: false });
+      if (this._hl.render && this._hl.render.meshInstances[0]) this._hl.render.meshInstances[0].material = m;
+      this._hl.enabled = false;
+      this.app.root.addChild(this._hl);
+    } catch (e) { this._hl = null; }
+  }
+
+  _updateHighlight() {
+    if (!this._hl) return;
+    const p = this.selected;
+    if (!p || !p.entity) { this._hl.enabled = false; return; }
+    const aabb = this._entAabb(p.entity);
+    if (!aabb) { this._hl.enabled = false; return; }
+    const c = aabb.center, h = aabb.halfExtents, pad = 0.35;
+    this._hl.setPosition(c.x, c.y, c.z);
+    this._hl.setLocalScale(h.x * 2 + pad, h.y * 2 + pad, h.z * 2 + pad);
+    this._hl.enabled = true;
+  }
+
+  _duplicate() {
+    if (!this.selected) return;
+    const p = this.selected;
+    const wp = p.entity.getPosition(), e = p.entity.getLocalEulerAngles(), sc = p.entity.getLocalScale();
+    const ent = place(this.app, this.root, p.asset, { x: wp.x + 1, y: wp.y, z: wp.z + 1, ry: e.y, scale: sc.x });
+    if (!ent) return;
+    ent.name = `build-dup-${this.placed.length}`;
+    const piece = { entity: ent, asset: p.asset, cat: p.cat };
+    this.placed.push(piece);
+    this._select(piece);
+    this._status(`Cloned ${p.asset}.`);
   }
 
   _wireKeys() {
     this._onKey = (e) => {
-      if (e.key === "Escape") { this.brush = null; this._syncBrushButtons(); this._status("Placing cancelled — edit mode."); }
-      else if (e.key === "Delete" || e.key === "Backspace") { this._deleteSelected(); }
-      else if (e.key === "e" || e.key === "E") { this._export(); }
+      const k = e.key;
+      if (k === "Escape") { this.brush = null; this._syncBrushButtons(); this._select(null); this._status("Deselected."); }
+      else if (k === "Delete" || k === "Backspace") { this._deleteSelected(); }
+      else if ((k === "d" || k === "D") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this._duplicate(); }
+      else if (k === "e" || k === "E") { this._export(); }
+      else if (this.selected && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 1 : 0.25;
+        const d = { ArrowUp: [0, 0, -step], ArrowDown: [0, 0, step], ArrowLeft: [-step, 0, 0], ArrowRight: [step, 0, 0] }[k];
+        this._nudge(d[0], d[1], d[2]); this._updateHighlight();
+      }
     };
     window.addEventListener("keydown", this._onKey);
   }
