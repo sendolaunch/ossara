@@ -1442,7 +1442,7 @@ section("full clear -> WIN (perfect defense)");
   let steps = 0;
   const maxSteps = 60000;
   while (w.status === "playing" && steps < maxSteps) {
-    w.update(0.1, { startWave: true });
+    w.update(0.1, { startWave: true, holdStart: true }); // holdStart begins round 1 (hold-to-start)
     // perfect defense: vaporize anything alive this tick
     for (const e of w.enemies) if (e.alive) w._damageEnemy(e, e.hp + 1);
     steps++;
@@ -1462,7 +1462,7 @@ section("no defense -> LOSE");
   let steps = 0;
   const maxSteps = 60000;
   while (w.status === "playing" && steps < maxSteps) {
-    w.update(0.1, { startWave: true });
+    w.update(0.1, { startWave: true, holdStart: true }); // holdStart begins round 1 (hold-to-start)
     steps++;
   }
   ok(w.status === "lost", "core overwhelmed sets status = lost (status=" + w.status + ")");

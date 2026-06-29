@@ -122,6 +122,8 @@ export class World {
     this.waveIndex = 0; // 0-based index into WAVES
     this.phase = "prep"; // prep | active | won | lost
     this.prepTimer = this.waves[0].prepTime;
+    this.holdStartActive = false; // round 1 build phase waits for a deliberate E-hold
+    this.holdStartProgress = 0;
     this.schedule = []; // [{type, time}] for the active wave
     this.spawnCursor = 0;
     this.waveElapsed = 0;
@@ -357,8 +359,14 @@ export class World {
     this.events.length = 0;
 
     if (this.phase === "prep") {
-      this.prepTimer = advancePrepTimer(this.prepTimer, dt);
-      if (shouldStartWave(this.phase, this.prepTimer, input.startWave)) this.startWave();
+      const holdGate = (this.waveIndex || 0) === 0; // round 1 must be hold-started (deliberate begin)
+      this.holdStartActive = holdGate;
+      this.holdStartProgress = holdGate ? Math.max(0, Math.min(1, input.holdProgress || 0)) : 0;
+      if (!holdGate) this.prepTimer = advancePrepTimer(this.prepTimer, dt); // round 1 timer pauses until you hold E
+      if (shouldStartWave(this.phase, this.prepTimer, input.startWave, { holdGate, holdReady: input.holdStart })) this.startWave();
+    } else if (this.holdStartActive) {
+      this.holdStartActive = false;
+      this.holdStartProgress = 0;
     }
 
     if (this.phase === "active") {

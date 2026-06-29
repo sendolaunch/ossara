@@ -127,8 +127,10 @@ const flowWorld = {
 const buildPhase = wavePhaseBannerData(flowWorld);
 ok(buildPhase.phaseText === "BUILD - WAVE 3/5 - Bonebow Backline - 19s", "build phase banner includes wave number, name, and timer");
 ok(buildPhase.hintText === "Build to answer range." && buildPhase.startVisible, "build phase data exposes hint and start button state");
-const fallbackBuildPhase = wavePhaseBannerData({ phase: "prep", waveIndex: 0, totalWaves: 1, prepTimer: 9, waves: [{ name: "Fallback" }] });
+const fallbackBuildPhase = wavePhaseBannerData({ phase: "prep", waveIndex: 1, totalWaves: 2, prepTimer: 9, waves: [{ name: "Intro" }, { name: "Fallback" }] });
 ok(fallbackBuildPhase.hintText === "Use [1]/[2], click a green choke, then Start Wave or Enter.", "fallback build hint explains build selection and wave start controls");
+const round1Phase = wavePhaseBannerData({ phase: "prep", waveIndex: 0, totalWaves: 5, prepTimer: 30, holdStartProgress: 0.5, waves: [{ name: "Rotlings" }] });
+ok(round1Phase.holdToStart && !round1Phase.startVisible && /HOLD E TO START/.test(round1Phase.phaseText) && Math.abs((round1Phase.holdProgress || 0) - 0.5) < 1e-6, "round 1 build phase requires hold-E-to-start with a progress bar");
 const combatPhase = wavePhaseBannerData({ ...flowWorld, phase: "active", prepTimer: 0 });
 ok(combatPhase.phaseText === "COMBAT - WAVE 3/5 - Bonebow Backline", "combat phase banner includes wave number and name");
 ok(combatPhase.hintText === "Bonebows are firing." && !combatPhase.startVisible, "combat phase data exposes warning and hides start button");

@@ -199,6 +199,17 @@ export function wavePhaseBannerData(world) {
   const currentWave = world.waves?.[Math.min(world.waveIndex || 0, total - 1)] || {};
   const waveName = currentWave.name || `Wave ${waveNumber}`;
   if (world.phase === "prep") {
+    const holdGate = (world.waveIndex || 0) === 0 || world.holdStartActive;
+    if (holdGate) {
+      return {
+        phaseText: `BUILD - WAVE ${waveNumber}/${total} - ${waveName} - HOLD E TO START`,
+        hintText: currentWave.hint || "Hold E (1.5s) to begin the first wave.",
+        startVisible: false,
+        holdToStart: true,
+        holdProgress: Math.max(0, Math.min(1, world.holdStartProgress || 0)),
+        color: CSS.plague,
+      };
+    }
     const t = Math.max(0, Math.ceil(world.prepTimer || 0));
     return {
       phaseText: `BUILD - WAVE ${waveNumber}/${total} - ${waveName} - ${t}s`,
@@ -734,7 +745,18 @@ export class HUD {
     if (world.phase === "prep" || world.phase === "active") {
       this.elPhase.textContent = phaseData.phaseText;
       this.elPhase.style.color = phaseData.color;
-      this.elStart.style.display = phaseData.startVisible ? "" : "none";
+      if (phaseData.holdToStart) {
+        const pct = Math.round((phaseData.holdProgress || 0) * 100);
+        this.elStart.style.display = "";
+        this.elStart.textContent = pct >= 100 ? "STARTING..." : "HOLD E TO START";
+        this.elStart.style.background = `linear-gradient(90deg, ${CSS.plague} ${pct}%, #20281f ${pct}%)`;
+        this.elStart.style.cursor = "default";
+      } else {
+        this.elStart.style.display = phaseData.startVisible ? "" : "none";
+        this.elStart.textContent = "START WAVE (ENTER)";
+        this.elStart.style.background = CSS.plague;
+        this.elStart.style.cursor = "pointer";
+      }
       this.elHint.textContent = phaseData.hintText;
     } else {
       this.elStart.style.display = "none";

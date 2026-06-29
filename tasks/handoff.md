@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.11 — 2026-06-28 — In-game BUILD MODE (?artEdit=1): place KayKit models on the real map with PlayCanvas's own move/rotate/scale gizmos, export kit JSON; dev-only lazy chunk; suite + build green; needs Hudson eyeball |
+| **Last session** | S7.12 — 2026-06-28 — Round-1 HOLD-E-TO-START: wave 1 prep pauses until a deliberate 1.5s E-hold (filling bar); waves 2-5 unchanged; suite + build green; eyeball pending |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,17 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.12 — 2026-06-28 — Round-1 hold-E-to-start (deliberate begin) [GATE GREEN; EYEBALL PENDING]
+- Hudson asked for a pause before round 1 where you must hold E to start. Chose (AskUserQuestion): **only round 1**, **~1.5s hold**. Waves 2-5 keep the instant Enter/button/timer start.
+- Pure logic (`src/sim/waveSpawner.js`): added `HOLD_START_SECONDS = 1.5`, `holdStartProgress`, `holdStartReady`, and extended `shouldStartWave(phase, prepTimer, inputStart, opts)` — when `opts.holdGate` (round 1), it starts ONLY on a completed hold (timer + tap ignored); otherwise unchanged (backward-compatible default `opts={}`).
+- `World.js`: in prep, `holdGate = waveIndex === 0`. For round 1 the prep timer is **paused** (no auto-start) and the wave begins only when `input.holdStart` is true; World mirrors `holdStartActive`/`holdStartProgress` for the HUD. Waves >0 behave exactly as before.
+- `Input.js`: tracks the E key-down timestamp; emits `holdProgress` (0..1) and a one-shot `holdStart` when held ≥1.5s; resets on keyup/blur. E stays the interact key (no chest in round-1 prep, so no clash).
+- `hud.js`: round-1 build banner shows **"HOLD E TO START"** and the start button becomes a **filling bar** (`linear-gradient` driven by `holdProgress`); waves 2-5 keep "START WAVE (ENTER)" + countdown.
+- Tests: new `test/holdStart.test.mjs` (17/17 — pure helpers, the round-1 gate, World round-1-waits-then-starts-on-hold, waves>0 still auto-start, HUD banner). Updated `test/sim.test.mjs` (the 2 full-mission loops now pass `holdStart:true` to begin round 1) and `test/hudData.test.mjs` (fallback-hint case moved to a non-first wave + a round-1 hold-banner assertion). Wired holdStart.test into `npm test`.
+- Verified (R5/R6): `npm test` exit 0 (holdStart 17/17, sim + hudData + full suite green); clean `/tmp` build ✓ 897 modules. Unverified: the in-engine feel (sandbox can't render PlayCanvas) — Hudson can confirm live: round 1 now shows HOLD E TO START and the bar fills over ~1.5s.
+- Commit pending CC: `src/sim/waveSpawner.js`, `src/sim/World.js`, `src/input/Input.js`, `src/view/hud.js`, `test/holdStart.test.mjs`, `test/sim.test.mjs`, `test/hudData.test.mjs`, `package.json`, `tasks/handoff.md` → "Round 1 hold-E-to-start".
+- **In Friendly Words:** before the very first wave, the game now waits — it says HOLD E TO START and you press and hold E for about 1.5 seconds (a little bar fills) to kick it off. Every later wave starts the way it did before. It can't be triggered by accident, and nothing else about the game changed. I can't watch it run from here, so give it a go and tell me if the hold length feels right.
 
 ### S7.11 — 2026-06-28 — In-game BUILD MODE for art placement (?artEdit=1) [GATE GREEN; EYEBALL PENDING]
 - Hudson said the v3 blind-placed props looked bad and asked to "build in the map." Confirmed PlayCanvas's cloud Editor can't plug into our code-built scene, BUT engine 1.77 ships built-in transform gizmos (`pc.TranslateGizmo/RotateGizmo/ScaleGizmo`) — verified present in `node_modules`. Built an in-game placement tool that reuses them.

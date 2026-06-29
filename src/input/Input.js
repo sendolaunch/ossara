@@ -36,6 +36,8 @@ export class Input {
     this.pendingInteract = false;
     this.pendingAttack = null;
     this.pendingStart = false;
+    this._eHoldStart = null; // ms timestamp of the first E keydown (hold-to-start round 1)
+    this._eHoldFired = false;
     this.selected = null;
     this.rotation = 0;
     this.hoverCell = null;
@@ -63,6 +65,7 @@ export class Input {
 
   resetState(opts = {}) {
     if (!opts.preserveKeys) this.keys.clear();
+    if (!opts.preserveKeys) { this._eHoldStart = null; this._eHoldFired = false; }
     if (!opts.preservePending) {
       this.pendingSlam = false;
       this.pendingDash = false;
@@ -98,6 +101,7 @@ export class Input {
       if (k === "q" && this._canQueueHeroAbility()) this.pendingSlam = true;
       if (k === DASH_KEY && this._canQueueHeroDash()) this.pendingDash = true;
       if (k === "e" && this._canQueueInteract()) this.pendingInteract = true;
+      if (k === "e" && !this.keys.has("e")) this._eHoldStart = (typeof performance !== "undefined" ? performance.now() : Date.now());
       if (k === "enter" && !this.commandTargetMode) this.pendingStart = true;
       if (k === "escape") {
         if (this.actionMenuOpen) this.closeActionMenu();
@@ -118,7 +122,11 @@ export class Input {
       if (k === "3") this._selectIdx(2);
       this.keys.add(k);
     });
-    window.addEventListener("keyup", (e) => this.keys.delete(e.key.toLowerCase()));
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.toLowerCase();
+      this.keys.delete(k);
+      if (k === "e") { this._eHoldStart = null; this._eHoldFired = false; }
+    });
 
     canvas.addEventListener("mousemove", (e) => {
       this._mouse = { x: e.clientX, y: e.clientY };
@@ -544,6 +552,14 @@ export class Input {
     const slam = this._canQueueHeroAbility() && this.pendingSlam;
     const dash = this._canQueueHeroDash() && this.pendingDash;
     const interact = this._canQueueInteract() && this.pendingInteract;
+    let holdProgress = 0, holdStart = false;
+    if (this._eHoldStart != null) {
+      const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      const elapsed = (now - this._eHoldStart) / 1000;
+      const HOLD = 1.5; // seconds — matches HOLD_START_SECONDS
+      holdProgress = Math.max(0, Math.min(1, elapsed / HOLD));
+      if (elapsed >= HOLD && !this._eHoldFired) { holdStart = true; this._eHoldFired = true; }
+    }
     const out = {
       moveX,
       moveZ,
@@ -551,6 +567,8 @@ export class Input {
       dash,
       interact,
       startWave: this.pendingStart,
+      holdStart,
+      holdProgress,
       attack: !!pendingAttack,
       attackX: pendingAttack?.x,
       attackZ: pendingAttack?.z,

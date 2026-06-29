@@ -22,8 +22,21 @@ export function advancePrepTimer(prepTimer, dt) {
   return prepTimer - dt;
 }
 
-export function shouldStartWave(phase, prepTimer, inputStart = false) {
-  return phase === "prep" && (inputStart || prepTimer <= 0);
+export const HOLD_START_SECONDS = 1.5;
+
+export function holdStartProgress(elapsed, threshold = HOLD_START_SECONDS) {
+  if (!(threshold > 0)) return 0;
+  return Math.max(0, Math.min(1, elapsed / threshold));
+}
+
+export function holdStartReady(elapsed, threshold = HOLD_START_SECONDS) {
+  return threshold > 0 && elapsed >= threshold;
+}
+
+export function shouldStartWave(phase, prepTimer, inputStart = false, opts = {}) {
+  if (phase !== "prep") return false;
+  if (opts.holdGate) return !!opts.holdReady; // round 1: only a completed E-hold starts (timer + tap ignored)
+  return inputStart || prepTimer <= 0;
 }
 
 export function advanceWaveSpawns(schedule, spawnCursor, waveElapsed, dt) {
