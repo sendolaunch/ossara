@@ -415,7 +415,20 @@ class FirstBreachBuildMode {
     window.addEventListener("keyup", this._onKeyUp);
   }
 
-  _hideGameHud() { try { const h = document.getElementById("mission-hud"); if (h) { this._hiddenHud = h; h.style.display = "none"; } } catch (_) {} }
+  _hideGameHud() {
+    try {
+      const h = document.getElementById("mission-hud");
+      if (h) { this._hiddenHud = h; h.style.display = "none"; }
+      // Bulletproof: a persistent !important rule keeps the HUD hidden even if it is
+      // (re)created or re-shown after this runs — the editor owns the screen in ?artEdit mode.
+      if (!document.getElementById("fbHideHud")) {
+        const st = document.createElement("style");
+        st.id = "fbHideHud";
+        st.textContent = "#mission-hud{display:none!important}";
+        (document.head || document.documentElement).appendChild(st);
+      }
+    } catch (_) {}
+  }
 
   _makeHighlight() {
     try {

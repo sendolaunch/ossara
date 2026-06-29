@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.22 — 2026-06-28 — Build Lab v2.1 reworked to a 3D editor: grab+drag pieces across the map surface (capture-phase, beats camera orbit), Q/R rotate, PgUp/Dn raise/lower, F floor-snap, X/Z axis lock, soft snap, undo/redo, inspector, overlays, import; suite + build green |
+| **Last session** | S7.24 — 2026-06-28 — Live-diagnosed the art link (v3 IS rendering: 157 pieces+gates+shrine, deploy 4e20635); fixed the 3 things making it READ as bare: de-greened lighting+floor, killed leftover primitive walls. Build+test green; visual needs eyeball post-deploy |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,26 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.24 — 2026-06-28 — "none of v3 is there" -> it IS there; fixed why it READ bare [BUILD+TEST GREEN, VISUAL UNVERIFIED]
+- Drove the live site via Chrome MCP into the First Breach build lab and inspected the real scene. Proof the v3 art is deployed + rendering: **157 kit pieces, every one with a mesh**, all **5 arched gates**, the **spawn mist**, Ward shrine, gems, KayKit stone walls. Deploy current (badge `4e20635`); every dungeon model file 200s. So it was a "looks bare," not a "didn't load."
+- Found the 3 real causes, all in `src/config/mapThemes.js` + one line of `pcRenderer.js`, and prototyped fixes live (applied cleanly; couldn't screenshot — page froze under combat load):
+  1. **Green wash** = Ward `coreLight` at intensity 2.65 / **range 18** (washes whole center) + green fog `#0c150c` + green ambient `#424a3c`. -> coreLight **1.15 / range 9**, fog `#101015`, ambient `#46464d`.
+  2. **Bare olive floor** = theme floor stones tinted green (`courtyardMidStone #414938` etc.). -> de-greened to warm grey (`#4a4640`, `#2a2825`, `#6a655c`, `#302e2a`).
+  3. **Grey primitive walls** (30 short, scaleY 2.6) still rendering with the kit. `pcRenderer.js:1008` only hid tall (scaleY>=5) walls -> now hides ALL `wall`/`wall-trim` primitives when the kit is active.
+- Verified (R5/R6): clean `/tmp` build ✓ 898 modules; mount `npm test` exit 0, 0 fails (firstBreachKit 187/187). **Unverified: the actual look** — sandbox can't render + live page froze; needs Hudson's eyeball after deploy. Light/floor values are conservative starting points to tune.
+- **Tradeoff flagged:** hiding all primitive walls is render-only (collision is grid, R20) — if any interior low wall the kit doesn't cover vanishes, there'll be an invisible blocked cell. If Hudson bumps nothing, name the spot and I'll dress it.
+- Also still pending from S7.23: corner rotations baked (NW90/NE0/SW180/SE270) in `firstBreachKit.js`.
+- **HUD leak fixed:** the Build Lab only hid `#mission-hud` once at init, so the Warden panel / wave banner / bottom buttons leaked back in. `firstBreachBuildMode.js _hideGameHud` now also injects a persistent `#mission-hud{display:none!important}` stylesheet — timing-independent, survives HUD re-renders. Clean editor screen in ?artEdit.
+- **In Friendly Words:** Your v3 art was never missing — I went into your live game and counted it, it's all there. What made it look like the old grey map was three things: a super-bright green light drowning everything, the floor being tinted green instead of stone, and 30 leftover grey blocks. I fixed all three at the source and it builds + passes. I couldn't take a picture because the game page froze on me, so the exact look is the one thing I can't promise until you push it live and look. Deploy it, walk the map, and tell me "greener/greyer/brighter" and I'll dial it in.
+
+### S7.23 — 2026-06-28 — Baked editor export + fixed all corners [GATE GREEN]
+- Build Lab v2.1 confirmed live. Hudson edited the **NE corner** rotation in the editor (180->0) and asked to save it + make "all corners like that setup" (common sense).
+- Diff of his export vs the baked kit: identical except the NE corner (`66,6`) ry 180->0. The four corners should go 0/90/180/270 to each wrap their corner; his NW(90)/NE(0)/SE(270) already fit, only **SW(`0,56`) was 0** (should be 180).
+- **Baked his export** into `src/view/firstBreachKit.js` (156 pieces; NE corner fix preserved) AND completed the set: SW corner 0->180 (both courses). Corners now NW90 / NE0 / SE270 / SW180. Record at `tasks/first-breach-kit-hudson.json`; export kept at `tasks/first-breach-kit-export-2.json`.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 187/187, full suite green); clean `/tmp` build ✓ 898 modules. Unverified: SW=180 is my common-sense inference — Hudson confirms all 4 corners look right in-engine.
+- Commit pending CC: `src/view/firstBreachKit.js`, `tasks/first-breach-kit-hudson.json`, `tasks/handoff.md` -> "Bake editor export + complete corner rotations".
+- **In Friendly Words:** I saved exactly what you set up in the editor (your fixed top-right corner) into the real map, and I fixed the last corner the same way so all four corners now wrap properly instead of one facing the wrong way. Everything passes and builds. If any corner still looks off, tell me which and I'll spin it.
 
 ### S7.22 — 2026-06-28 — Build Lab v2.1: 3D in-game placement (drag on the map) [GATE GREEN; EYEBALL PENDING]
 - Hudson clarified the editor must feel like a 3D in-game editor (drag props on the actual map), NOT a 2D grid tool. Reworked `firstBreachBuildMode.js` (570 lines) around free-drag.

@@ -1005,7 +1005,7 @@ export class PCRenderer {
         for (const placement of built.placements) {
           // The kit's GLB walls replace the primitive perimeter; hide the tall wall boxes + their
           // caps while the kit is active (?fbKit=0 turns the kit off and brings the primitives back).
-          if (!fbKit0 && ((placement.readabilityRole === "wall" && placement.scaleY >= 5) || placement.readabilityRole === "wall-trim")) continue;
+          if (!fbKit0 && (placement.readabilityRole === "wall" || placement.readabilityRole === "wall-trim")) continue;
           const ent = placement.assetName
             ? place(this.app, root, placement.assetName, {
               x: placement.x,
