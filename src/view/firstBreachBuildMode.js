@@ -15,6 +15,7 @@ import { surfaceHeightAtCell } from "../config/firstBreachGrid.js";
 import { protectedGameplayCellSet } from "../mapbuilder/mapValidation.js";
 import { FB_BUILD_PALETTE, FB_PALETTE_ASSET_NAMES, FB_ASSET_CAT } from "./firstBreachKitPalette.js";
 import { firstBreachKitSpecs, FIRST_BREACH_KIT_ASSET_NAMES } from "./firstBreachKit.js";
+import { rotateGroup } from "./buildGroupMath.js";
 
 export function startFirstBreachBuildMode(renderer, level) {
   try {
@@ -36,6 +37,8 @@ class FirstBreachBuildMode {
     this.placed = [];
     this.brush = null;
     this.selected = null;
+    this.sel = [];          // multi-selection; this.selected is the primary
+    this.clip = null;       // copied group of specs, for paste
     this.mode = "move";     // move = free-drag in 3D; rotate/scale = gizmo
     this.placeY = 1.3;
     this._down = null;
@@ -111,6 +114,7 @@ class FirstBreachBuildMode {
 
   _select(piece) {
     this.selected = piece || null;
+    this.sel = piece ? [piece] : [];
     if (this.gizmos) {
       for (const [k, g] of Object.entries(this.gizmos)) {
         if (piece && k === this.mode) g.attach([piece.entity]); else g.detach();
@@ -122,6 +126,21 @@ class FirstBreachBuildMode {
     this._refreshInspector();
   }
 
+  _toggleSel(piece) {
+    if (!piece) return;
+    const i = this.sel.indexOf(piece);
+    if (i >= 0) { this.sel.splice(i, 1); this.selected = this.sel[this.sel.length - 1] || null; }
+    else { this.sel.push(piece); this.selected = piece; }
+    if (this.gizmos) { for (const [k, g] of Object.entries(this.gizmos)) { if (this.selected && k === this.mode) g.attach([this.selected.entity]); else g.detach(); } this._applyGizmoSnap(); }
+    this._updateHighlight(); this._refreshList(); this._refreshInspector();
+    this._status(this.sel.length + " selected.");
+  }
+  _selectMany(pieces) {
+    this.sel = (pieces || []).filter(Boolean);
+    this.selected = this.sel[this.sel.length - 1] || null;
+    if (this.gizmos) { for (const [k, g] of Object.entries(this.gizmos)) { if (this.selected && k === this.mode) g.attach([this.selected.entity]); else g.detach(); } this._applyGizmoSnap(); }
+    this._updateHighlight(); this._refreshList(); this._refreshInspector();
+  }
   _setMode(mode) { this.mode = mode; this._select(this.selected); this._syncModeButtons(); }
 
   // ---- spec / spawn / remove (undo-friendly) ------------------------------
@@ -170,22 +189,37 @@ class FirstBreachBuildMode {
   }
 
   _duplicate() {
-    if (!this.selected) return;
-    const spec = this._specOf(this.selected); spec.x += 1; spec.z += 1;
-    const piece = this._spawn(spec);
-    if (!piece) return;
-    this._select(piece);
-    this._pushUndo({ undo: () => this._remove(piece), redo: () => { const p = this._spawn(this._specOf(piece)); this._select(p); } });
-    this._status("Cloned " + spec.asset + ".");
+    if (!this.sel.length) return;
+    const specs = this.sel.map((p) => { const sp = this._specOf(p); sp.x += 1; sp.z += 1; return sp; });
+    let made = specs.map((sp) => this._spawn(sp)).filter(Boolean);
+    if (!made.length) return;
+    this._selectMany(made);
+    this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
+    this._status("Cloned " + made.length + " piece(s).");
+  }
+  _copy() {
+    if (!this.sel.length) { this._status("Nothing selected to copy."); return; }
+    this.clip = this.sel.map((p) => this._specOf(p));
+    this._status("Copied " + this.clip.length + " piece(s). Ctrl+V to paste.");
+  }
+  _paste() {
+    if (!this.clip || !this.clip.length) { this._status("Clipboard empty - select pieces and Ctrl+C first."); return; }
+    const off = 2;
+    const specs = this.clip.map((sp) => ({ ...sp, x: sp.x + off, z: sp.z + off }));
+    let made = specs.map((sp) => this._spawn(sp)).filter(Boolean);
+    if (!made.length) { this._status("Paste failed."); return; }
+    this._selectMany(made);
+    this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
+    this._status("Pasted " + made.length + " piece(s). Drag to move, Q/R rotate the group.");
   }
 
   _deleteSelected() {
-    if (!this.selected) return;
-    const piece = this.selected, spec = this._specOf(piece);
-    this._remove(piece);
-    let cur = null;
-    this._pushUndo({ undo: () => { cur = this._spawn(spec); this._select(cur); }, redo: () => { if (cur) { this._remove(cur); cur = null; } } });
-    this._status("Deleted. " + this.placed.length + " left. (Ctrl+Z to restore)");
+    if (!this.sel.length) return;
+    const specs = this.sel.map((p) => this._specOf(p));
+    for (const p of [...this.sel]) this._remove(p);
+    let cur = [];
+    this._pushUndo({ undo: () => { cur = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(cur); }, redo: () => { for (const p of cur) this._remove(p); cur = []; } });
+    this._status("Deleted " + specs.length + ". " + this.placed.length + " left. (Ctrl+Z to restore)");
   }
 
   // record one undo step around an action that mutates the selected transform
@@ -198,8 +232,30 @@ class FirstBreachBuildMode {
     this._pushUndo({ undo: () => { this._applySnap(piece, before); this._select(piece); }, redo: () => { this._applySnap(piece, after); this._select(piece); } });
     this._updateHighlight(); this._refreshInspector();
   }
-  _rotateSel(dir) { const inc = this.snapRot > 0 ? this.snapRot : 15; this._withUndo((p) => { const a = p.entity.getLocalEulerAngles(); p.entity.setLocalEulerAngles(0, a.y + dir * inc, 0); }); }
-  _raiseSel(dy) { this._withUndo((p) => { const o = p.entity.getPosition(); let ny = o.y + dy; if (this.snapPos > 0) ny = Math.round(ny / this.snapPos) * this.snapPos; p.entity.setPosition(o.x, ny, o.z); }); }
+  _rotateSel(dir) {
+    const inc = (this.snapRot > 0 ? this.snapRot : 15) * dir;
+    if (this.sel.length > 1) return this._rotateGroup(inc);
+    this._withUndo((p) => { const a = p.entity.getLocalEulerAngles(); p.entity.setLocalEulerAngles(0, a.y + inc, 0); });
+  }
+  _rotateGroup(deg) {
+    if (this.sel.length < 1) return;
+    const ref = this.sel.map((p) => ({ piece: p, snap: this._snapshot(p) }));
+    const pts = this.sel.map((p) => { const w = p.entity.getPosition(), e = p.entity.getLocalEulerAngles(); return { x: w.x, y: w.y, z: w.z, ry: e.y }; });
+    const rot = rotateGroup(pts, deg);
+    this.sel.forEach((p, i) => { p.entity.setPosition(rot[i].x, pts[i].y, rot[i].z); p.entity.setLocalEulerAngles(0, rot[i].ry, 0); });
+    const after = this.sel.map((p) => this._snapshot(p));
+    this._pushUndo({ undo: () => { ref.forEach((b) => this._applySnap(b.piece, b.snap)); this._updateHighlight(); this._refreshInspector(); }, redo: () => { ref.forEach((b, i) => this._applySnap(b.piece, after[i])); this._updateHighlight(); this._refreshInspector(); } });
+    this._updateHighlight(); this._refreshInspector();
+    this._status("Rotated group " + deg + " deg.");
+  }
+  _raiseSel(dy) {
+    if (!this.sel.length) return;
+    const ref = this.sel.map((p) => ({ piece: p, snap: this._snapshot(p) }));
+    for (const p of this.sel) { const o = p.entity.getPosition(); let ny = o.y + dy; if (this.snapPos > 0) ny = Math.round(ny / this.snapPos) * this.snapPos; p.entity.setPosition(o.x, ny, o.z); }
+    const after = this.sel.map((p) => this._snapshot(p));
+    this._pushUndo({ undo: () => { ref.forEach((b) => this._applySnap(b.piece, b.snap)); this._updateHighlight(); this._refreshInspector(); }, redo: () => { ref.forEach((b, i) => this._applySnap(b.piece, after[i])); this._updateHighlight(); this._refreshInspector(); } });
+    this._updateHighlight(); this._refreshInspector();
+  }
   _snapToFloor() {
     if (!this.selected) return;
     this._withUndo((p) => {
@@ -308,26 +364,29 @@ class FirstBreachBuildMode {
   _wirePointer() {
     const el = this.r.domElement || this.app.graphicsDevice.canvas;
     this._onDown = (e) => {
-      this._down = { x: e.clientX, y: e.clientY };
+      this._down = { x: e.clientX, y: e.clientY, shift: e.shiftKey };
       if (this.brush) return; // placing handled on up
       const piece = this._pickPiece(e.clientX, e.clientY);
       if (piece && this.mode === "move") {
-        if (this.selected !== piece) this._select(piece);
+        if (e.shiftKey) { this._toggleSel(piece); e.stopPropagation(); e.preventDefault(); return; } // shift-click = add/remove
+        if (!this.sel.includes(piece)) this._select(piece); // clicked outside the group -> select just this one
         const sp = this._surfacePointAt(e.clientX, e.clientY, piece.entity.getPosition().y);
-        const cur = piece.entity.getPosition();
-        this._drag = { piece, before: this._snapshot(piece), offX: sp ? cur.x - sp.x : 0, offZ: sp ? cur.z - sp.z : 0, moved: false };
-        e.stopPropagation(); e.preventDefault(); // don't orbit the camera while dragging a piece
+        const items = this.sel.map((pc) => { const c = pc.entity.getPosition(); return { piece: pc, before: this._snapshot(pc), offX: sp ? c.x - sp.x : 0, offZ: sp ? c.z - sp.z : 0 }; });
+        this._drag = { items, refY: piece.entity.getPosition().y, moved: false };
+        e.stopPropagation(); e.preventDefault(); // don't orbit the camera while dragging
       }
     };
     this._onMove = (e) => {
       if (!this._drag) return;
-      const piece = this._drag.piece, cur = piece.entity.getPosition();
-      const sp = this._surfacePointAt(e.clientX, e.clientY, cur.y);
+      const sp = this._surfacePointAt(e.clientX, e.clientY, this._drag.refY);
       if (!sp) return;
-      let nx = sp.x + this._drag.offX, nz = sp.z + this._drag.offZ;
-      if (this._axis === "x") nz = cur.z; else if (this._axis === "z") nx = cur.x;
-      if (this.snapPos > 0) { nx = Math.round(nx / this.snapPos) * this.snapPos; nz = Math.round(nz / this.snapPos) * this.snapPos; }
-      piece.entity.setPosition(nx, cur.y, nz);
+      for (const it of this._drag.items) {
+        const cur = it.piece.entity.getPosition();
+        let nx = sp.x + it.offX, nz = sp.z + it.offZ;
+        if (this._axis === "x") nz = cur.z; else if (this._axis === "z") nx = cur.x;
+        if (this.snapPos > 0) { nx = Math.round(nx / this.snapPos) * this.snapPos; nz = Math.round(nz / this.snapPos) * this.snapPos; }
+        it.piece.entity.setPosition(nx, cur.y, nz);
+      }
       this._drag.moved = true;
       this._updateHighlight();
       e.stopPropagation();
@@ -336,10 +395,9 @@ class FirstBreachBuildMode {
       const d = this._down; this._down = null;
       if (this._drag) {
         const dr = this._drag; this._drag = null;
-        const after = this._snapshot(dr.piece);
-        if (dr.moved && !this._sameSnap(dr.before, after)) {
-          const piece = dr.piece, before = dr.before;
-          this._pushUndo({ undo: () => { this._applySnap(piece, before); this._select(piece); }, redo: () => { this._applySnap(piece, after); this._select(piece); } });
+        if (dr.moved) {
+          const moved = dr.items.map((it) => ({ piece: it.piece, before: it.before, after: this._snapshot(it.piece) })).filter((it) => !this._sameSnap(it.before, it.after));
+          if (moved.length) this._pushUndo({ undo: () => { for (const it of moved) this._applySnap(it.piece, it.before); this._updateHighlight(); this._refreshInspector(); }, redo: () => { for (const it of moved) this._applySnap(it.piece, it.after); this._updateHighlight(); this._refreshInspector(); } });
         }
         this._refreshInspector();
         e.stopPropagation();
@@ -354,8 +412,11 @@ class FirstBreachBuildMode {
         return;
       }
       const piece = this._pickPiece(e.clientX, e.clientY);
-      if (piece) { this._select(piece); this._status("Grabbed " + piece.asset + ". Drag to move, Q/E rotate, PgUp/PgDn raise/lower, Del."); }
-      // empty click keeps the current selection (press Esc to deselect) — stops the highlight vanishing on a near-miss pick
+      if (piece) {
+        if (d.shift) { this._toggleSel(piece); }
+        else { this._select(piece); this._status("Grabbed " + piece.asset + ". Shift-click adds, Ctrl+C/V copy-paste, Q/R rotate, Del."); }
+      }
+      // empty click keeps the current selection (press Esc to deselect)
     };
     el.addEventListener("pointerdown", this._onDown, true);
     el.addEventListener("pointermove", this._onMove, true);
@@ -399,6 +460,8 @@ class FirstBreachBuildMode {
       if (ctrl && (k === "z" || k === "Z") && !e.shiftKey) { e.preventDefault(); this._doUndo(); }
       else if (ctrl && ((k === "y" || k === "Y") || (e.shiftKey && (k === "z" || k === "Z")))) { e.preventDefault(); this._doRedo(); }
       else if (ctrl && (k === "d" || k === "D")) { e.preventDefault(); this._duplicate(); }
+      else if (ctrl && (k === "c" || k === "C")) { e.preventDefault(); this._copy(); }
+      else if (ctrl && (k === "v" || k === "V")) { e.preventDefault(); this._paste(); }
       else if (k === "Escape") { this.brush = null; this._syncBrushButtons(); this._select(null); this._status("Deselected."); }
       else if (k === "Delete" || k === "Backspace") { this._deleteSelected(); }
       else if (k === "e" || k === "E") { this._export(); }
@@ -447,19 +510,28 @@ class FirstBreachBuildMode {
       const m = new pc.StandardMaterial();
       m.useLighting = false; m.emissive = new pc.Color(0.2, 0.7, 0.4); m.diffuse = new pc.Color(0, 0, 0);
       m.opacity = 0.2; m.blendType = pc.BLEND_NORMAL; m.depthWrite = false; m.cull = pc.CULLFACE_NONE; m.update();
-      this._hl = this._box(m); this._hl.name = "build-highlight"; this._hl.enabled = false; this.app.root.addChild(this._hl);
-    } catch (e) { this._hl = null; }
+      this._hlMat = m; this._hls = [];
+    } catch (e) { this._hlMat = null; this._hls = []; }
+  }
+  _hlBox(i) {
+    if (!this._hls[i]) { const b = this._box(this._hlMat); b.name = "build-highlight-" + i; b.enabled = false; this.app.root.addChild(b); this._hls[i] = b; }
+    return this._hls[i];
   }
   _updateHighlight() {
-    if (!this._hl) return;
-    const p = this.selected;
-    if (!p || !p.entity) { this._hl.enabled = false; return; }
-    const aabb = this._entAabb(p.entity);
-    if (!aabb) { this._hl.enabled = false; return; }
-    const c = aabb.center, h = aabb.halfExtents, pad = 0.35;
-    this._hl.setPosition(c.x, c.y, c.z);
-    this._hl.setLocalScale(h.x * 2 + pad, h.y * 2 + pad, h.z * 2 + pad);
-    this._hl.enabled = true;
+    if (!this._hlMat) return;
+    const list = (this.sel && this.sel.length) ? this.sel : (this.selected ? [this.selected] : []);
+    let n = 0;
+    for (const p of list) {
+      if (!p || !p.entity) continue;
+      const aabb = this._entAabb(p.entity);
+      if (!aabb) continue;
+      const c = aabb.center, h = aabb.halfExtents, pad = 0.35;
+      const b = this._hlBox(n++);
+      b.setPosition(c.x, c.y, c.z);
+      b.setLocalScale(h.x * 2 + pad, h.y * 2 + pad, h.z * 2 + pad);
+      b.enabled = true;
+    }
+    for (let i = n; i < this._hls.length; i++) if (this._hls[i]) this._hls[i].enabled = false;
   }
 
   // ---- UI -----------------------------------------------------------------

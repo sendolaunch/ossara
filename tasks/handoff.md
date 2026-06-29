@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.24 — 2026-06-28 — Live-diagnosed the art link (v3 IS rendering: 157 pieces+gates+shrine, deploy 4e20635); fixed the 3 things making it READ as bare: de-greened lighting+floor, killed leftover primitive walls. Build+test green; visual needs eyeball post-deploy |
+| **Last session** | S7.25 — 2026-06-28 — Build Lab multi-select + copy/paste: shift-click groups, Ctrl+C/V, group drag + Q/R group-rotate (pure math unit-tested 9/9). Saved export-3 (159 pcs, NOT baked). Build 899 + suite green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.25 — 2026-06-28 — Build Lab multi-select + copy/paste [BUILD+TEST GREEN, VISUAL UNVERIFIED]
+- Saved Hudson's 3rd export -> `tasks/first-breach-kit-export-3.json` (159 pieces; adds 6 `wall`). NOT baked to the live map (awaiting his ok).
+- New **pure** module `src/view/buildGroupMath.js` (groupCentroid / rotateAroundY / rotateGroup / offsetGroup) + `test/buildGroupMath.test.mjs` (9/9) — the copy/paste/rotate geometry is now headlessly verified. Added to the npm test chain.
+- `firstBreachBuildMode.js` multi-select rework: **Shift-click** add/remove pieces (build a shape); **Ctrl+C / Ctrl+V** copy-paste the group (paste offsets +2,+2 and auto-selects); **drag** moves the whole group; **Q/R** rotate the group around its centroid; PgUp/PgDn + Delete + Ctrl+D operate on the whole selection; highlight pool draws a box per selected piece; single-select path preserved. Group ops are undo/redo-tracked.
+- Also folded in the prior unpushed editor polish (loot panel hidden, editor's own Free Cam button, softer+sticky selection highlight) — all in this one firstBreachBuildMode.js change.
+- Verified (R5/R6): clean `/tmp` build 899 modules; `npm test` exit 0, 0 fails, buildGroupMath 9/9. **Unverified: the in-editor feel** (sandbox can't render) — Hudson eyeballs after deploy.
+- **In Friendly Words:** You can now hold Shift and click several walls to grab a whole shape, Ctrl+C to copy it, Ctrl+V to drop a copy, then drag it and press Q or R to spin the whole group. I proved the rotate/centre math with an automatic test, and it builds clean. The feel itself you'll judge once it's live. I saved your new layout but didn't put it on the map yet — say the word and I will.
 
 ### S7.24 — 2026-06-28 — "none of v3 is there" -> it IS there; fixed why it READ bare [BUILD+TEST GREEN, VISUAL UNVERIFIED]
 - Drove the live site via Chrome MCP into the First Breach build lab and inspected the real scene. Proof the v3 art is deployed + rendering: **157 kit pieces, every one with a mesh**, all **5 arched gates**, the **spawn mist**, Ward shrine, gems, KayKit stone walls. Deploy current (badge `4e20635`); every dungeon model file 200s. So it was a "looks bare," not a "didn't load."
