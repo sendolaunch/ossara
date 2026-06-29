@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.25 — 2026-06-28 — Build Lab multi-select + copy/paste: shift-click groups, Ctrl+C/V, group drag + Q/R group-rotate (pure math unit-tested 9/9). Saved export-3 (159 pcs, NOT baked). Build 899 + suite green |
+| **Last session** | S7.26 — 2026-06-28 — BAKED Hudson's export-3 (159 pcs) into firstBreachKit.js — fixes the 'editor resets to old layout / 0 progress' miss. Editor now seeds from HIS layout. Build 899 + suite green. New rule: bake exports, don't just save |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.26 — 2026-06-28 — Baked export-3 -> progress now persists [GREEN]
+- **The miss:** the Build Lab seeds from `firstBreachKit.js`; I'd been SAVING Hudson's exports to tasks/ but never baking them, so every reload reset to the old 156-piece bake. From his side = "0 progress." 
+- **Fix:** baked `tasks/first-breach-kit-export-3.json` (159 pieces) faithfully into `src/view/firstBreachKit.js` (id/precision normalized only, no layout edits). The live map AND the editor seed are now his latest layout.
+- Note: export-3 has the SW (0,56) corner back at ry0 (we'd verified 180 wraps correctly). Left it as he exported it — flagged to him, one-flip fix if he wants.
+- Verified: firstBreachKit 189/189, clean build 899 modules, `npm test` 0 fails.
+- **NEW WORKING RULE (supersedes "don't bake"):** when Hudson sends an editor export, BAKE it (so his progress sticks), don't just save. Loop until in-editor save lands (v2.3): build -> export -> I bake -> deploy.
+- Commit pending: `src/view/firstBreachKit.js`, `tasks/handoff.md`.
+- **In Friendly Words:** This is the fix for "I keep losing my work." Your latest build is now the actual map, so when you open the editor it starts from YOUR layout, not the old one. From now on, whenever you send me an export I'll bake it straight in so it sticks. Your bottom-left corner came back at the old angle in this export — say the word and I'll flip it.
 
 ### S7.25 — 2026-06-28 — Build Lab multi-select + copy/paste [BUILD+TEST GREEN, VISUAL UNVERIFIED]
 - Saved Hudson's 3rd export -> `tasks/first-breach-kit-export-3.json` (159 pieces; adds 6 `wall`). NOT baked to the live map (awaiting his ok).
