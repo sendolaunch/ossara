@@ -462,6 +462,7 @@ class FirstBreachBuildMode {
 
   _wireKeys() {
     this._onKey = (e) => {
+      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return; // don't hijack typing in the inspector
       const k = e.key, ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && (k === "z" || k === "Z") && !e.shiftKey) { e.preventDefault(); this._doUndo(); }
       else if (ctrl && ((k === "y" || k === "Y") || (e.shiftKey && (k === "z" || k === "Z")))) { e.preventDefault(); this._doRedo(); }
@@ -476,6 +477,10 @@ class FirstBreachBuildMode {
       else if (k === "f" || k === "F") { this._snapToFloor(); }
       else if (k === "PageUp") { e.preventDefault(); this._raiseSel(this.snapPos > 0 ? this.snapPos : 0.25); }
       else if (k === "PageDown") { e.preventDefault(); this._raiseSel(-(this.snapPos > 0 ? this.snapPos : 0.25)); }
+      else if (k === "ArrowLeft") { e.preventDefault(); this._nudge(-(this.snapPos > 0 ? this.snapPos : 0.5), 0); }
+      else if (k === "ArrowRight") { e.preventDefault(); this._nudge(this.snapPos > 0 ? this.snapPos : 0.5, 0); }
+      else if (k === "ArrowUp") { e.preventDefault(); this._nudge(0, -(this.snapPos > 0 ? this.snapPos : 0.5)); }
+      else if (k === "ArrowDown") { e.preventDefault(); this._nudge(0, this.snapPos > 0 ? this.snapPos : 0.5); }
       else if (k === "x" || k === "X") { this._axis = "x"; this._status("Axis lock: X"); }
       else if (k === "z" || k === "Z") { this._axis = "z"; this._status("Axis lock: Z"); }
     };
@@ -579,6 +584,8 @@ class FirstBreachBuildMode {
     wrap.innerHTML = [
       '<h3>BUILD LAB &middot; 3D editor</h3>',
       '<div class="row"><button id="fbUndo">Undo</button><button id="fbRedo">Redo</button></div>',
+      '<button id="fbKeys">&#9000; Keys / Controls</button>',
+      '<div id="fbKeyHelp" style="display:none;font-size:10px;color:#8aa185;line-height:1.5;border:1px solid #2c382c;border-radius:5px;padding:6px;margin:3px 0"></div>',
       '<div class="sec">Tool</div>',
       '<div class="row" id="fbModes"><button data-m="move" class="on">Move(drag)</button><button data-m="rotate">Rotate</button><button data-m="scale">Scale</button></div>',
       '<div class="hint">Move = drag a piece across the map. Q/R rotate &middot; PgUp/PgDn raise/lower &middot; F snap-to-floor &middot; hold X / Z to lock axis.</div>',
@@ -592,6 +599,7 @@ class FirstBreachBuildMode {
       '<label><input type="checkbox" id="fbOvReserve"> ward/gate reserves</label>',
       '<label><input type="checkbox" id="fbOvProt"> protected (no-prop)</label>',
       '<div class="sec">Inspector</div><div class="insp" id="fbInsp">- nothing selected -</div>',
+      '<div class="sec">Size W&times;H&times;D</div><div id="fbSize">-</div>',
       '<div id="fbWarn"></div>',
       '<button id="fbCopySel">Copy placement JSON</button>',
       '<button id="fbDel">Delete selected (Del)</button>',
@@ -629,11 +637,22 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbExport").onclick = () => this._export();
     wrap.querySelector("#fbImport").onclick = () => wrap.querySelector("#fbImportFile").click();
     wrap.querySelector("#fbImportFile").onchange = (ev) => { const f = ev.target.files && ev.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => this._import(String(rd.result)); rd.readAsText(f); ev.target.value = ""; };
+    const keyHelp = wrap.querySelector("#fbKeyHelp");
+    keyHelp.innerHTML = [
+      "<b>Camera</b> &mdash; W/A/S/D move &middot; Space up &middot; Alt down &middot; right or middle-drag orbit &middot; scroll zoom",
+      "<b>Move piece</b> &mdash; left-drag &middot; Arrow keys nudge selected &middot; PgUp/PgDn raise/lower &middot; F snap to floor",
+      "<b>Rotate</b> &mdash; Q / R (a group spins around its center) &middot; hold X or Z to lock an axis",
+      "<b>Select</b> &mdash; click &middot; Shift-click adds to the group &middot; Esc deselect",
+      "<b>Copy</b> &mdash; Ctrl+C copy &middot; Ctrl+V paste &middot; Ctrl+D duplicate &middot; Del delete",
+      "<b>History</b> &mdash; Ctrl+Z undo &middot; Ctrl+Y redo &middot; E export",
+    ].join("<br>");
+    wrap.querySelector("#fbKeys").onclick = () => { keyHelp.style.display = keyHelp.style.display === "none" ? "block" : "none"; };
     this._syncHistButtons();
   }
 
   _refreshInspector() {
     if (!this._ui) return;
+    this._refreshSize();
     const el = this._ui.wrap.querySelector("#fbInsp");
     const warn = this._ui.wrap.querySelector("#fbWarn");
     const p = this.selected;
@@ -662,6 +681,31 @@ class FirstBreachBuildMode {
     if (warn) warn.textContent = this._overlapWarn();
   }
 
+  _refreshSize() {
+    if (!this._ui) return;
+    const el = this._ui.wrap.querySelector("#fbSize"); if (!el) return;
+    const list = (this.sel && this.sel.length) ? this.sel : (this.selected ? [this.selected] : []);
+    if (!list.length) { el.textContent = "-"; return; }
+    let mnx = 1e9, mny = 1e9, mnz = 1e9, mxx = -1e9, mxy = -1e9, mxz = -1e9, ok = false;
+    for (const p of list) {
+      const a = this._entAabb(p.entity); if (!a) continue; ok = true;
+      const c = a.center, h = a.halfExtents;
+      mnx = Math.min(mnx, c.x - h.x); mxx = Math.max(mxx, c.x + h.x);
+      mny = Math.min(mny, c.y - h.y); mxy = Math.max(mxy, c.y + h.y);
+      mnz = Math.min(mnz, c.z - h.z); mxz = Math.max(mxz, c.z + h.z);
+    }
+    if (!ok) { el.textContent = "-"; return; }
+    const f = (n) => Math.round(n * 10) / 10;
+    el.textContent = "W " + f(mxx - mnx) + "   H " + f(mxy - mny) + "   D " + f(mxz - mnz) + "    (" + list.length + " pc)";
+  }
+  _nudge(dx, dz) {
+    if (!this.sel.length) return;
+    const ref = this.sel.map((p) => ({ piece: p, snap: this._snapshot(p) }));
+    for (const p of this.sel) { const o = p.entity.getPosition(); p.entity.setPosition(o.x + dx, o.y, o.z + dz); }
+    const after = this.sel.map((p) => this._snapshot(p));
+    this._pushUndo({ undo: () => { ref.forEach((b) => this._applySnap(b.piece, b.snap)); this._updateHighlight(); this._refreshInspector(); }, redo: () => { ref.forEach((b, i) => this._applySnap(b.piece, after[i])); this._updateHighlight(); this._refreshInspector(); } });
+    this._updateHighlight(); this._refreshInspector();
+  }
   _syncBrushButtons() { if (this._ui) this._ui.wrap.querySelectorAll("#fbPalette button").forEach((b) => b.classList.toggle("on", b.dataset.asset === this.brush)); }
   _syncModeButtons() { if (this._ui) this._ui.wrap.querySelectorAll("#fbModes button").forEach((b) => b.classList.toggle("on", b.dataset.m === this.mode)); }
   _syncHistButtons() { if (!this._ui) return; this._ui.wrap.querySelector("#fbUndo").disabled = !this._undo.length; this._ui.wrap.querySelector("#fbRedo").disabled = !this._redo.length; }

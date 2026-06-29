@@ -98,7 +98,7 @@ export class Input {
   _bind(canvas) {
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", " ", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c", "q", "e"].includes(k)) e.preventDefault();
+      if (["w", "a", "s", "d", " ", "alt", "arrowup", "arrowdown", "arrowleft", "arrowright", "r", "u", "f", "x", "tab", "o", "c", "q", "e"].includes(k)) e.preventDefault();
       if (this._artEdit) { this.keys.add(k); return; } // editor owns the keyboard (Shift + all keys)
       if (k === "q" && this._canQueueHeroAbility()) this.pendingSlam = true;
       if (k === DASH_KEY && this._canQueueHeroDash()) this.pendingDash = true;
@@ -485,10 +485,20 @@ export class Input {
     // Free cam: arrow keys pan across the map (orbit stays on mouse drag, zoom on wheel).
     if (this.renderer.freeCam && typeof this.renderer.panCamera === "function") {
       const pan = (this.renderer.camDist || 20) * 0.9 * dt;
-      if (this.keys.has("arrowleft")) this.renderer.panCamera(-pan, 0);
-      if (this.keys.has("arrowright")) this.renderer.panCamera(pan, 0);
-      if (this.keys.has("arrowup")) this.renderer.panCamera(0, pan);
-      if (this.keys.has("arrowdown")) this.renderer.panCamera(0, -pan);
+      if (this._artEdit) {
+        // WASD flies the camera, Space/Alt move it up/down; arrows are reserved for nudging the selected piece
+        if (this.keys.has("a")) this.renderer.panCamera(-pan, 0);
+        if (this.keys.has("d")) this.renderer.panCamera(pan, 0);
+        if (this.keys.has("w")) this.renderer.panCamera(0, pan);
+        if (this.keys.has("s")) this.renderer.panCamera(0, -pan);
+        if (this.keys.has(" ") && this.renderer.camTarget) this.renderer.camTarget.y += pan;
+        if (this.keys.has("alt") && this.renderer.camTarget) this.renderer.camTarget.y -= pan;
+      } else {
+        if (this.keys.has("arrowleft")) this.renderer.panCamera(-pan, 0);
+        if (this.keys.has("arrowright")) this.renderer.panCamera(pan, 0);
+        if (this.keys.has("arrowup")) this.renderer.panCamera(0, pan);
+        if (this.keys.has("arrowdown")) this.renderer.panCamera(0, -pan);
+      }
       return;
     }
     if (this.keys.has("arrowleft")) this.renderer.orbit(ROTATE_RATE * dt);

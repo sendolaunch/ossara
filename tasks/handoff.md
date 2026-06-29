@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.28 — 2026-06-28 — ?artEdit=1 is now a real editor: skips login, free-fly no-clip camera, hero hidden, GAME INPUT OFF (frees Shift -> multi-select copy/paste works). All gated on artEdit; normal play untouched (input 66/66). Build 899 green |
+| **Last session** | S7.29 — 2026-06-28 — Editor control pack: WASD fly-cam + Space up/Alt down, arrow-keys nudge selected piece, W×H×D size readout, clickable Keys legend, inspector-typing guard. Build 899 + input 66/66 |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.29 — 2026-06-28 — Editor control pack [GREEN]
+- Camera (artEdit free cam): **W/A/S/D** fly, **Space** up, **Alt** down (Input.updateCamera; arrows no longer pan so they are free for objects; added Alt to preventDefault).
+- **Arrow keys nudge** the selected piece(s) by snap step (0.5 default) for mouse-free fine-tune — new `_nudge(dx,dz)`, undo-tracked.
+- **Size readout** `W x H x D` of the selection (combined AABB) in the panel (`#fbSize` + `_refreshSize`) so shapes can be matched/copied.
+- **Keys / Controls legend** — clickable toggle in the panel listing every binding.
+- Guard: editor hotkeys ignored while typing in an inspector field (was a latent bug; arrows/E etc. no longer fire while editing numbers).
+- Verified: build 899 modules, suite 0 fails, input 66/66. In-editor feel = Hudson's eyeball.
+- **In Friendly Words:** Now you fly the camera with WASD (Space up, Alt down) and the arrow keys gently nudge whatever piece you've got selected for fine adjustments. The panel shows the exact width/height/depth of your selection so you can match sizes, and there's a "Keys / Controls" button that lists everything if you forget.
 
 ### S7.28 — 2026-06-28 — Dedicated dev editor mode (?artEdit=1) [GREEN]
 - **Bug:** copy/paste broke because Shift (and clicks) were still driving the live game — the camera was chase-locked to the hero, and game input grabbed Shift. The editor was running on top of a full playable mission.
