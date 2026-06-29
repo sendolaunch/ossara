@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.7 — 2026-06-28 — First Breach Art Dressing v1: crypt materials, wall caps, infected gate thresholds, Ward shrine ring+halo, off-lane edge props (primitive-only, layout LOCKED); full suite + build green, eyeball pending |
+| **Last session** | S7.8 — 2026-06-28 — First Breach Art Dressing v2: readability tune — lighting lift + props reworked into clusters (broken pillars/rubble/bones); v1 confirmed rendering in-engine; full suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.8 — 2026-06-28 — First Breach Art Dressing v2 — readability tune (lighting + clustered props) [GATE GREEN; v1 EYEBALL CONFIRMED BY HUDSON]
+- Hudson ran v1 in-engine and sent screenshots: the shrine ring/posts/green halo, the lighter wall caps, and the green Ward zone all render correctly. Feedback drove a v2 readability pass (he picked "v2 art polish" over building the bigger dressing-engine / Design Lab from his ChatGPT research, for now).
+- Lighting (`mapThemes.js`, theme `ruined_ward_courtyard_v1`): ambient `#343a30`→`#424a3c`, sunIntensity `0.82`→`0.98`, fog `16/62`→`24/84` so the edges/corners aren't near-black. Crypt mood kept (sun colour, fog colour, plague spawn/core lights unchanged).
+- Props reworked (`firstBreachBlockout.js`): the 12 scattered single cubes are now 8 CLUSTERS (3 boxes each = 24) so each reads as a real broken pillar (taller 3.1 shaft + fallen top chunk + base rubble), a chunky rubble pile, or a bone heap. Each cluster anchors to one verified off-lane cell; the sub-boxes spread via `offset` within that cell (the anchor stays an integer, so the off-route test still holds). Dropped the one prop cell (64,38) that overlapped an existing `missionArt` prop.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachBlockout 970/970, mapSurfaceHeights 25/25, full suite green); clean `/tmp` vite build ✓ 894 modules. The blockout test file was unchanged — its existing per-piece assertions already cover the new prop boxes. Unverified: the v2 lighting/prop look in-engine — needs fresh screenshots, especially a shot looking straight at a gate to confirm the infected-green corruption pools read.
+- Commit pending CC: `src/config/mapThemes.js`, `src/mapbuilder/firstBreachBlockout.js`, `tasks/handoff.md` → "Tune First Breach crypt art v2 (lighting + clustered props)".
+- **In Friendly Words:** you showed me the crypt actually running and it looks right, so I brightened it just enough that the dark corners read, and I rebuilt the rubble, pillars and bones into proper little piles instead of stray cubes. Everything still passes and builds. Paste the commit block, then send a couple fresh shots — one looking straight at a monster doorway — so we can confirm the green door-stains read before we call the art pass done.
 
 ### S7.7 — 2026-06-28 — First Breach Art Dressing v1 — crypt materials/caps/gate-corruption/Ward-shrine/edge-props [GATE GREEN; EYEBALL PENDING]
 - First real art pass over the approved painted-grid blockout — layout/routes/topology/gate cells/Ward all LOCKED and unchanged. Wrote `tasks/first-breach-art-dressing-v1-plan.md` (tone, per-terrain material intent, wall/gate/Ward/prop rules, hard constraints).

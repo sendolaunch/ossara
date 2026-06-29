@@ -1,5 +1,5 @@
 // ============================================================================
-// FIRST BREACH — PRIMITIVE BLOCKOUT + ART DRESSING v1, from the PAINTED GRID
+// FIRST BREACH — PRIMITIVE BLOCKOUT + ART DRESSING (v2), from the PAINTED GRID
 // ----------------------------------------------------------------------------
 // Renders tasks/first-breach-grid.json (via src/config/firstBreachGrid.js): each
 // merged terrain rectangle becomes one primitive box at that terrain's height, so
@@ -8,11 +8,12 @@
 // (C = larger main). Surface heights come straight from the grid. Hero collision is
 // the grid's walls + void (level.blockedZones). Primitive-only (no GLB art).
 //
-// ART DRESSING v1 (visual-only, allowOverlapGameplay): per-terrain material intent
+// ART DRESSING (visual-only, allowOverlapGameplay): per-terrain material intent
 // (greener Ward plateau, lighter inner walls vs dark perimeter), stone coping caps on
 // the tall perimeter walls, infected-green corruption thresholds at each breach gate,
-// a stone shrine ring + focused green halo around the Ward dais, and a few hand-placed
-// rubble/pillar/bone props at off-lane map edges. No layout / route / topology change.
+// a stone shrine ring + focused green halo around the Ward dais, and a few CLUSTERED
+// rubble/pillar/bone props at off-lane map edges (v2: clusters read as real piles, not
+// stray cubes). No layout / route / topology change.
 // See tasks/first-breach-art-dressing-v1-plan.md.
 // ============================================================================
 
@@ -27,7 +28,7 @@ const ROLE = { 1: "entry-floor", 2: "combat-floor", 3: "high-ground", 4: "ward-s
 const TYPE = { 1: "laneFloor", 2: "laneFloor", 3: "platform", 4: "platform", 5: "platform", 6: "wall", 7: "stair" };
 const BAND = { 1: "low", 2: "mid", 3: "high", 4: "high", 5: "shrine", 6: "wall", 7: "low" };
 
-// Art-dressing v1 material intent (overrides FB_TERRAIN[t].mat without touching the
+// Art-dressing material intent (overrides FB_TERRAIN[t].mat without touching the
 // auto-derived grid file). Ward shelf reads greener than combat platforms.
 const TERRAIN_MAT = { 4: "shrinePlatformStone" };
 // Tall perimeter walls stay dark crypt backdrop; low inner walls read lighter/solid.
@@ -48,8 +49,8 @@ export const BLOCKOUT_REGISTRY = Object.freeze({ ...MAP_PIECES, ...GREYBOX_PIECE
 
 const GATE_LANE = { A: "northwest-stairs", B: "north-gate", C: "northeast-market", D: "southwest-crypt", E: "southeast-garden" };
 
-function piece({ id, key, type, cell, scale, materialToken, role, laneId, band, visualY = 0, rotation = 0, tags = [] }) {
-  return { id, assetKey: key, type, cell, scale, rotation, visualY, elevationBand: band, materialToken, readabilityRole: role, laneId, allowOverlapGameplay: true, tags: ["greybox", "whitebox", "mapbuilder", ...tags] };
+function piece({ id, key, type, cell, scale, materialToken, role, laneId, band, visualY = 0, rotation = 0, offset, tags = [] }) {
+  return { id, assetKey: key, type, cell, scale, rotation, visualY, offset, elevationBand: band, materialToken, readabilityRole: role, laneId, allowOverlapGameplay: true, tags: ["greybox", "whitebox", "mapbuilder", ...tags] };
 }
 
 // One primitive box per merged terrain rectangle, at that terrain's height.
@@ -122,30 +123,54 @@ function wardDressing(level) {
   return out;
 }
 
-// Very limited props at off-lane map edges/corners (every cell verified walkable,
-// off every route, and clear of reserved/blocked cells). Sit on the painted surface.
-const PROP_SPECS = [
-  { kind: "rubble", col: 26, row: 8, mat: "shadowRubble", scale: { x: 1.0, y: 0.55, z: 0.9 }, ry: 18 },
-  { kind: "rubble", col: 15, row: 36, mat: "shadowRubble", scale: { x: 0.95, y: 0.5, z: 1.0 }, ry: -22 },
-  { kind: "rubble", col: 37, row: 38, mat: "shadowRubble", scale: { x: 1.05, y: 0.6, z: 0.95 }, ry: 8 },
-  { kind: "rubble", col: 44, row: 38, mat: "shadowRubble", scale: { x: 0.9, y: 0.5, z: 0.9 }, ry: -14 },
-  { kind: "rubble", col: 64, row: 44, mat: "shadowRubble", scale: { x: 1.0, y: 0.6, z: 1.0 }, ry: 30 },
-  { kind: "pillar", col: 10, row: 8, mat: "ruinedStoneMid", scale: { x: 0.55, y: 2.4, z: 0.55 }, ry: 6 },
-  { kind: "pillar", col: 5, row: 23, mat: "ruinedStoneMid", scale: { x: 0.55, y: 2.0, z: 0.55 }, ry: -10 },
-  { kind: "pillar", col: 3, row: 35, mat: "ruinedStoneMid", scale: { x: 0.55, y: 2.6, z: 0.55 }, ry: 14 },
-  { kind: "pillar", col: 64, row: 48, mat: "ruinedStoneMid", scale: { x: 0.55, y: 2.2, z: 0.55 }, ry: -6 },
-  { kind: "bones", col: 11, row: 35, mat: "boneAsh", scale: { x: 0.8, y: 0.3, z: 0.8 }, ry: 24 },
-  { kind: "bones", col: 63, row: 54, mat: "boneAsh", scale: { x: 0.85, y: 0.28, z: 0.8 }, ry: -18 },
-  { kind: "bones", col: 64, row: 38, mat: "boneAsh", scale: { x: 0.8, y: 0.3, z: 0.85 }, ry: 12 },
+// Very limited props CLUSTERED at off-lane map edges/corners. Each cluster anchors to a
+// single VERIFIED cell (walkable, off every route, clear ring); sub-boxes spread within
+// the cell via offset so each reads as a real pile/pillar, not a stray cube. They sit on
+// the painted surface and avoid the existing missionArt prop cells.
+const PROP_CLUSTERS = [
+  { kind: "pillar", col: 10, row: 8 },
+  { kind: "pillar", col: 3, row: 35 },
+  { kind: "pillar", col: 64, row: 48 },
+  { kind: "rubble", col: 26, row: 8 },
+  { kind: "rubble", col: 37, row: 38 },
+  { kind: "rubble", col: 64, row: 44 },
+  { kind: "bones", col: 11, row: 35 },
+  { kind: "bones", col: 63, row: 54 },
 ];
 
+function propParts(kind) {
+  if (kind === "pillar") return [
+    { dx: 0, dz: 0, dy: 0, scale: { x: 0.62, y: 3.1, z: 0.62 }, mat: "ruinedStoneMid", ry: 6 },
+    { dx: 0.18, dz: 0.12, dy: 3.1, scale: { x: 0.74, y: 0.55, z: 0.74 }, mat: "ruinedStoneMid", ry: 24 },
+    { dx: 0.82, dz: -0.5, dy: 0, scale: { x: 0.6, y: 0.42, z: 0.95 }, mat: "shadowRubble", ry: -16 },
+  ];
+  if (kind === "rubble") return [
+    { dx: 0, dz: 0, dy: 0, scale: { x: 1.05, y: 0.62, z: 0.95 }, mat: "shadowRubble", ry: 10 },
+    { dx: 0.55, dz: 0.32, dy: 0, scale: { x: 0.7, y: 0.46, z: 0.7 }, mat: "shadowRubble", ry: -22 },
+    { dx: -0.42, dz: 0.46, dy: 0.18, scale: { x: 0.55, y: 0.38, z: 0.6 }, mat: "ruinedStoneMid", ry: 34 },
+  ];
+  return [
+    { dx: 0, dz: 0, dy: 0, scale: { x: 1.0, y: 0.26, z: 0.92 }, mat: "boneAsh", ry: 8 },
+    { dx: 0.34, dz: 0.22, dy: 0, scale: { x: 0.32, y: 0.22, z: 0.72 }, mat: "boneAsh", ry: 46 },
+    { dx: -0.32, dz: -0.2, dy: 0, scale: { x: 0.28, y: 0.2, z: 0.62 }, mat: "boneAsh", ry: -34 },
+  ];
+}
+
 function props(level) {
-  return PROP_SPECS.map((p, i) => piece({
-    id: `edge-prop-${p.kind}-${i}`, key: "gb-wall", type: "prop",
-    cell: { col: p.col, row: p.row }, visualY: surfaceHeightAtCell(p.col, p.row),
-    scale: p.scale, rotation: p.ry || 0, materialToken: p.mat, role: "edge-prop", band: "mid",
-    tags: ["prop", "dress", p.kind],
-  }));
+  const out = [];
+  PROP_CLUSTERS.forEach((c, ci) => {
+    const surf = surfaceHeightAtCell(c.col, c.row);
+    propParts(c.kind).forEach((part, pi) => {
+      out.push(piece({
+        id: `edge-prop-${c.kind}-${ci}-${pi}`, key: "gb-wall", type: "prop",
+        cell: { col: c.col, row: c.row }, offset: { dx: part.dx, dz: part.dz },
+        visualY: surf + (part.dy || 0), scale: part.scale, rotation: part.ry || 0,
+        materialToken: part.mat, role: "edge-prop", band: "mid",
+        tags: ["prop", "dress", c.kind],
+      }));
+    });
+  });
+  return out;
 }
 
 // Surface plan: walkable terrain rects -> their heights (disjoint, so order-free).
@@ -181,7 +206,7 @@ export function firstBreachBlockoutPlan(level = LEVEL) {
     mapId: "first-breach",
     theme: ACTIVE_MAP_THEME_ID,
     elevationPlan: firstBreachBlockoutElevationPlan(level),
-    intent: "Primitive blockout rendered directly from the painted grid (merged terrain boxes at painted heights + shadow gates), dressed v1: crypt materials, wall caps, infected gate thresholds, Ward shrine ring + halo, and a few off-lane edge props. Layout/routes/topology unchanged.",
+    intent: "Primitive blockout rendered directly from the painted grid (merged terrain boxes at painted heights + shadow gates), dressed: crypt materials, wall caps, infected gate thresholds, Ward shrine ring + halo, and clustered off-lane edge props. Layout/routes/topology unchanged.",
     pieces: [...terrainPieces(level), ...wallCaps(level), ...gates(level), ...wardDressing(level), ...props(level)],
   };
 }
