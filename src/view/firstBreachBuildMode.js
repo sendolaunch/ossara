@@ -419,13 +419,25 @@ class FirstBreachBuildMode {
     try {
       const h = document.getElementById("mission-hud");
       if (h) { this._hiddenHud = h; h.style.display = "none"; }
-      // Bulletproof: a persistent !important rule keeps the HUD hidden even if it is
+      // Bulletproof: persistent !important rule keeps the game HUD hidden even if it is
       // (re)created or re-shown after this runs — the editor owns the screen in ?artEdit mode.
       if (!document.getElementById("fbHideHud")) {
         const st = document.createElement("style");
         st.id = "fbHideHud";
         st.textContent = "#mission-hud{display:none!important}";
         (document.head || document.documentElement).appendChild(st);
+      }
+      // Hide the global Inventory/Forge (loot) panel — it lives OUTSIDE #mission-hud.
+      const lp = (typeof window !== "undefined") && window.OSSARA && window.OSSARA.lootSkeletonPanel;
+      if (lp) { if (lp.toggleButton) lp.toggleButton.style.display = "none"; if (lp.root) lp.root.style.display = "none"; }
+      // The game Free Cam button lived inside the now-hidden HUD; give the editor its own.
+      if (!document.getElementById("fbFreeCam")) {
+        const b = document.createElement("button");
+        b.id = "fbFreeCam";
+        b.textContent = "Free Cam: Off";
+        b.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:100000;padding:9px 14px;font:12px ui-monospace,Menlo,Consolas,monospace;background:rgba(10,14,10,.94);color:#cfe0c4;border:1px solid #2c382c;border-radius:6px;cursor:pointer";
+        b.onclick = () => { try { const on = typeof this.r.toggleFreeCam === "function" ? this.r.toggleFreeCam() : false; b.textContent = on ? "Free Cam: On" : "Free Cam: Off"; b.style.borderColor = on ? "#7bd86b" : "#2c382c"; } catch (_) {} };
+        document.body.appendChild(b);
       }
     } catch (_) {}
   }
