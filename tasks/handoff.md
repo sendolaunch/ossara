@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.15 — 2026-06-28 — Hid the primitive perimeter walls; cracked GLB walls now full-height (2 stacked courses) so they ARE the walls; suite + build green |
+| **Last session** | S7.17 — 2026-06-28 — Added wall_pillar buttresses (~17, every ~12 cells) into the wall skin for protruding rhythm; big arched gates + black mist; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -44,6 +44,22 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.17 — 2026-06-28 — wall_pillar buttress rhythm in the wall skin [GATE GREEN; EYEBALL PENDING]
+- Hudson picked `wall_pillar` buttresses for the "well but skinnier" accent. Regenerated the wall skin: still `wall_cracked` in two stacked courses, but every 3rd tile (~12 cells) is a full-height `wall_pillar` whose pillar protrudes into the room — **17 buttress points** ringing the perimeter for a "pattern sticks out + follows along" rhythm. Big arched gates + props + corners kept.
+- Kit = 132 pieces (26 props/gates + cracked skin + 17 buttress×2 courses + 4 corners×2). Record at `tasks/first-breach-kit-hudson.json`; 2D view regenerated.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachKit 163/163, full suite green); clean `/tmp` build ✓ 897 modules. Unverified: in-engine look (buttress spacing/depth + the gate mist density are blind guesses).
+- Commit pending CC: `src/view/firstBreachKit.js`, `src/view/pcRenderer.js`, `tasks/first-breach-kit-hudson.json`, `first-breach-layout-2d.html`, `tasks/handoff.md` → "Wall buttresses + big arched gates + black spawn mist".
+- **In Friendly Words:** the walls now have buttresses — pillars that stick out of the wall every dozen feet or so, all the way around — so the wall has rhythm and depth instead of being one flat cracked surface. Combined with the big arched gates and the black mist, the perimeter should read a lot more like a real crypt. All guesses on spacing until you screenshot it.
+
+### S7.16 — 2026-06-28 — Big arched gates + black spawn mist (game-set) [GATE GREEN; EYEBALL PENDING]
+- Screenshots: the small `wall_doorway` gates read wrong; Hudson wants "big open gates with black mist in front, game-set on every map," plus a "well but skinnier" accent (unclear — asked).
+- Gates (`firstBreachKit.js`): replaced the 5 small doorways with big full-height `wall_arched` (C scale 2.2; A/B/D/E 1.8; y 0).
+- Black mist (`pcRenderer._loadGateMist`): a dark UNLIT translucent veil — 3 softly-layered boxes — drifting just inside each gate, keyed off `level.lanes` spawns so it auto-applies to ANY map. Visual-only, no collision/gameplay.
+- The pack has NO well/fountain; round/vertical candidates are `pillar` / `column` / `barrel_large` / `wall_pillar` (wall with a built-in protruding pillar). Asked Hudson which he means before building the accent.
+- Verified (R5/R6): `npm test` exit 0 (full suite green); clean `/tmp` build ✓ 897 modules. Unverified: in-engine look — the mist density/size + arch scale are blind first guesses.
+- Commit pending CC: `src/view/firstBreachKit.js`, `src/view/pcRenderer.js`, `tasks/handoff.md` → "Big arched gates + black spawn mist".
+- **In Friendly Words:** the doorways are now big stone arches with a dark misty veil hanging in each one (the spot monsters pour out of) — and that mist is wired to drop onto every map's gates automatically. I can't see it, so the size/darkness are first guesses to tune. I still need to know what you mean by the "well but skinnier" piece before I add it.
 
 ### S7.15 — 2026-06-28 — Removed primitive perimeter walls; cracked GLB walls now full-height [GATE GREEN]
 - Screenshot showed the cracked panels sitting in front of the grey primitive perimeter walls (both visible). Hudson: "we have to remove the primitive walls."

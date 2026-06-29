@@ -753,6 +753,7 @@ export class PCRenderer {
     this._loadMapBuilderArt(level);
     this._loadFirstBreachKit(level); // cosmetic GLB skin (?fbKit=0 to disable)
     this._maybeStartFirstBreachBuildMode(level); // ?artEdit=1 -> in-game placement tool
+    this._loadGateMist(level); // black spawn mist at each gate
 
     // Build target marker. Kept disabled in Stage 1 so the hero never reads as
     // the build target; visible feedback is attached to the tower ghost.
@@ -903,6 +904,42 @@ export class PCRenderer {
     import("./firstBreachBuildMode.js")
       .then((m) => { this._fbBuildMode = m.startFirstBreachBuildMode(this, level); })
       .catch((err) => console.warn("[buildMode] load failed:", err));
+  }
+
+  // Black spawn mist — a dark translucent veil in front of each gate. Visual-only, keyed off the
+  // lane spawns so it works on any map (a reusable "game set" element).
+  _loadGateMist(level) {
+    if (this.gateMistRoot) { this.gateMistRoot.destroy(); this.gateMistRoot = null; }
+    if (!level || !level.isFirstBreach) return;
+    const root = new pc.Entity("gate-mist");
+    this.app.root.addChild(root);
+    this.gateMistRoot = root;
+    const m = new pc.StandardMaterial();
+    m.useLighting = false;
+    m.diffuse = new pc.Color(0, 0, 0);
+    m.emissive = new pc.Color(0.012, 0.018, 0.012);
+    m.opacity = 0.66;
+    m.blendType = pc.BLEND_NORMAL;
+    m.depthWrite = false;
+    m.cull = pc.CULLFACE_NONE;
+    m.update();
+    for (const lane of level.lanes || []) {
+      const s = lane.spawn;
+      if (!s) continue;
+      const northWall = s.row <= 8;
+      const w = gridToWorld(s.col, s.row, level);
+      const ox = northWall ? 0 : -1.4, oz = northWall ? 1.4 : 0;
+      const main = lane.id === "northeast-market";
+      for (let i = 0; i < 3; i++) {
+        const wide = (main ? 4.6 : 3.4) - i * 0.7;
+        const tall = (main ? 6.2 : 5.0) - i * 0.7;
+        const e = prim("box", m);
+        e.setLocalScale(northWall ? wide : 0.4, tall, northWall ? 0.4 : wide);
+        e.setPosition(w.x + ox - (northWall ? 0 : i * 0.3), 0.6 + tall / 2, w.z + oz + (northWall ? i * 0.3 : 0));
+        if (e.render) { e.render.castShadows = false; e.render.receiveShadows = false; }
+        root.addChild(e);
+      }
+    }
   }
 
   _mapBuilderFallbackMaterial(materialKey = "stone") {
