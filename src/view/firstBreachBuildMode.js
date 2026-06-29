@@ -16,7 +16,7 @@ import * as pc from "playcanvas";
 import { preloadKit, place } from "./dungeonKit.js";
 import { gridToWorld } from "../sim/pathing.js";
 import { FB_BUILD_PALETTE, FB_PALETTE_ASSET_NAMES, FB_ASSET_CAT } from "./firstBreachKitPalette.js";
-import { firstBreachKitSpecs } from "./firstBreachKit.js";
+import { firstBreachKitSpecs, FIRST_BREACH_KIT_ASSET_NAMES } from "./firstBreachKit.js";
 
 export function startFirstBreachBuildMode(renderer, level) {
   try {
@@ -48,7 +48,7 @@ class FirstBreachBuildMode {
     this._buildUI();
     this._status("Loading models…");
     try {
-      await preloadKit(this.app, FB_PALETTE_ASSET_NAMES);
+      await preloadKit(this.app, [...new Set([...FB_PALETTE_ASSET_NAMES, ...FIRST_BREACH_KIT_ASSET_NAMES])]);
     } catch (e) {
       this._status("⚠ model preload error: " + e.message);
     }
@@ -56,7 +56,7 @@ class FirstBreachBuildMode {
     this._seedFromKit();
     this._wirePointer();
     this._wireKeys();
-    this._status("Ready. Pick a model (left), click the map to place, drag the handles to adjust. E = export.");
+    this._status("Ready. Pick a model + click map to place. Click any placed piece to GRAB it, then Move/Rotate/Scale. E = export.");
     console.log("[buildMode] active — ?artEdit=1. Press E (or the Export button) to copy the kit JSON.");
     return this;
   }
@@ -172,14 +172,39 @@ class FirstBreachBuildMode {
     this._onDown = (e) => { this._down = { x: e.clientX, y: e.clientY }; };
     this._onUp = (e) => {
       const d = this._down; this._down = null;
-      if (!d || !this.brush) return;
-      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return; // drag = orbit, not a place
-      const cell = this.r.pointerToCell ? this.r.pointerToCell(e.clientX, e.clientY, this.level) : null;
-      if (!cell) { this._status("Click on the map floor to place."); return; }
-      this._placeAt(this.brush, cell.col, cell.row, this.placeY);
+      if (!d) return;
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return; // drag = orbit, not a click
+      if (this.brush) {
+        const cell = this.r.pointerToCell ? this.r.pointerToCell(e.clientX, e.clientY, this.level) : null;
+        if (!cell) { this._status("Click on the map floor to place."); return; }
+        this._placeAt(this.brush, cell.col, cell.row, this.placeY);
+        return;
+      }
+      // no brush armed -> click an existing piece to grab + select it
+      const piece = this._pickPiece(e.clientX, e.clientY);
+      if (piece) { this._select(piece); this._status(`Grabbed ${piece.asset} — drag the Move/Rotate/Scale handles, or Delete.`); }
     };
     el.addEventListener("pointerdown", this._onDown);
     el.addEventListener("pointerup", this._onUp);
+  }
+
+  // Click a placed piece to grab it: nearest piece whose centre is under the cursor.
+  _pickPiece(clientX, clientY) {
+    const el = this.r.domElement || this.app.graphicsDevice.canvas;
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const rx = (el.width || rect.width) / rect.width, ryy = (el.height || rect.height) / rect.height;
+    const cx = (clientX - rect.left) * rx, cy = (clientY - rect.top) * ryy;
+    const sp = new pc.Vec3();
+    let best = null, bestD = Infinity;
+    for (const p of this.placed) {
+      if (!p.entity) continue;
+      this.camComp.worldToScreen(p.entity.getPosition(), sp);
+      if (sp.z < 0) continue; // behind the camera
+      const dd = Math.hypot(sp.x - cx, sp.y - cy);
+      if (dd < bestD) { bestD = dd; best = p; }
+    }
+    return bestD < 110 * rx ? best : null; // within ~110 css px of a piece centre
   }
 
   _wireKeys() {

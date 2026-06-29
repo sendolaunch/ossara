@@ -124,3 +124,9 @@ Newest entries first within each section. Sections stay even when empty — they
   **Rule:** place map props by probing `protectedGameplayCellSet(LEVEL)` + `terrainAt` for walkable, ring-clear cells, and assert that in tests (on a walkable surface + off every route/reserved/blocked cell + a clear ring), so dressing can never drift onto a lane.
 
 - **Technique:** dress the blockout WITHOUT touching the auto-derived grid — override per-terrain materials via a small `TERRAIN_MAT` map in `firstBreachBlockout.js`, and add visual-only `gb-*` primitive pieces (`allowOverlapGameplay: true`) for wall caps / gate corruption / Ward ring / props. They ride the existing `buildMapPlacements` → pcRenderer fallback path (`placement.y` = box BASE; renderer adds `scaleY/2`), stay primitive-only (`assetNames` empty, `fallbackPlacements === placements.length`), and never change terrain counts or heights.
+
+
+## Build-mode / kit asset preload mismatch (S7.19)
+- **Symptom:** the map looked correct on `?showcase=first-breach` but had wall gaps ONLY on `?showcase=first-breach&artEdit=1` (build mode) — looked like "the art link isn't updating / is breaking."
+- **Root cause:** `place()` (dungeonKit) only instantiates assets that were **preloaded** (`preloadKit`); it returns null for anything not in the cache. Build mode preloaded the editor PALETTE list, but the baked kit had an asset (`wall_pillar`) that wasn't in the palette → those pieces silently didn't render in build mode. The normal render path preloads the kit's own asset-name list, so it was unaffected.
+- **Rule:** anything that instantiates a saved/baked kit must preload the **union** of (palette ∪ kit asset names), never just one. When you add a new asset to `FIRST_BREACH_KIT`, it loads everywhere because the kit exports `FIRST_BREACH_KIT_ASSET_NAMES` — make sure every consumer preloads from that, not a hand-kept list.

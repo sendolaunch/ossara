@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.18 — 2026-06-28 — FIX: missing-wall gaps — wall skin now tiles the FULL length of every wall run (0 gaps, verified 230/230 cells); 156 pieces; suite + build green |
+| **Last session** | S7.19 — 2026-06-28 — FIX build-mode broken walls (preload full kit, not just palette → wall_pillar buttresses were vanishing on ?artEdit=1) + click-to-grab pieces; suite + build green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.19 — 2026-06-28 — Fix build-mode broken walls + click-to-grab [GATE GREEN]
+- Hudson: the ?artEdit=1 (art) link's walls looked broken/stale while the plain ?showcase link was fine. ROOT CAUSE: the build mode preloaded only `FB_PALETTE_ASSET_NAMES`, but `wall_pillar` (the buttress, added to the kit later) was NOT in the palette → `place()` returns null for un-preloaded assets → ~32 buttress pieces silently failed to render in build mode → gaps. The normal link preloads `FIRST_BREACH_KIT_ASSET_NAMES` so it was fine. (So it WAS updating — the build-mode seed was just dropping the buttresses.)
+- Fix (`firstBreachBuildMode.js`): preload the UNION of palette + kit asset names, so every seeded kit asset loads regardless of the palette. Added `wall_pillar` (Wall buttress) to the palette too.
+- New feature: **click-to-grab**. Clicking any placed piece in the 3D view now selects it (attaches the Move/Rotate/Scale gizmo) — `_pickPiece` = nearest placed-piece centre under the cursor (worldToScreen proximity, ~110px). Placing still works when a model is armed; the list still works as a fallback.
+- Verified (R5/R6): `npm test` exit 0 (firstBreachBuildPalette 49/49, full suite green); clean `/tmp` build ✓ 897 modules (build-mode lazy chunk rebuilt).
+- Commit pending CC: `src/view/firstBreachBuildMode.js`, `src/view/firstBreachKitPalette.js`, `tasks/handoff.md` → "Fix build-mode wall preload + click-to-grab".
+- **In Friendly Words:** the art link wasn't failing to update — the build tool just wasn't loading the buttress walls (a piece I added to the map later but forgot to add to the tool's load list), so they showed up as holes only in build mode. Fixed: the tool now loads the full set. Also: you can now click an object on the map to grab it and move/rotate/scale it, instead of hunting in the side list.
 
 ### S7.18 — 2026-06-28 — FIX missing-wall gaps (full-coverage wall skin) [GATE GREEN]
 - Hudson: "a lot of the walls are missing now, a lot more gaps." Root cause: the renderer hides ALL tall primitive perimeter walls, but the GLB cracked tiling only covered a few long runs — run-ends, short wall segments, and a 5-cell margin around each gate were hidden-but-not-replaced (measured: 38 of 230 wall cells = 17% gaps).

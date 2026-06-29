@@ -12,6 +12,7 @@ export const FB_BUILD_PALETTE = Object.freeze([
   { asset: "wall_cracked", cat: "wall", label: "Wall cracked" },
   { asset: "wall_half", cat: "wall", label: "Wall half" },
   { asset: "wall_endcap", cat: "wall", label: "Wall endcap" },
+  { asset: "wall_pillar", cat: "wall", label: "Wall buttress" },
   // columns
   { asset: "pillar", cat: "pillar", label: "Pillar" },
   { asset: "pillar_decorated", cat: "pillar", label: "Pillar decorated" },
