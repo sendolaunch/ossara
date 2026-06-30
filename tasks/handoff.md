@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.34 — 2026-06-28 — Added editor 'Wrap raised platform faces' generator: lays ~286 stone foundation_front faces around platform edges (walls excluded), undoable, merges with local save. Build 899 + suite green |
+| **Last session** | S7.35 — 2026-06-28 — Added 'Tile floor (KayKit stone)' editor button: lays ~208 floor_tile_large (4x4, varied rotation) over walkable floor+platforms = the real KayKit stone (texture is a flat 17KB palette; look is geometry). Undoable. Build 899 + green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,13 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.35 — 2026-06-28 — Tile-floor generator (real KayKit stone) [GREEN]
+- Hudson wants the best paid-pack texture on the floor. Finding: `dungeon_texture.png` is 1024x1024 but only 17KB = a flat palette, so KayKit's stone look is in the TILE GEOMETRY, not a tiling texture. Best floor = laying actual `floor_tile_large` (4x4, top at +0.05).
+- New Auto-build button **"Tile floor (KayKit stone)"**: 4-cell grid over walkable cells (h 0.5-5, walls excluded), places floor_tile_large at h+0.01 with rotation varied by block to break repetition. Dry-run = 208 tiles (122 @1.3 floor, 72 @2.6 platforms, 10 @1.6 stairs, 4 @3.0 dais). Undoable, merges with local save.
+- Frame-budget note: 208 tiles + Hudson's ~170 = ~378; if he ALSO wraps platforms (286) that's ~664 > the 600 cap -> would need a cap bump or thinning. Flag if he stacks both.
+- Verified: build 899, suite 0 fails. Look = Hudson's eyeball.
+- **In Friendly Words:** The pack's texture file is basically flat color — the nice stone look comes from the tile shapes themselves. So "best floor" = laying the actual KayKit stone tiles. New button "Tile floor (KayKit stone)" drops ~208 real stone tiles across the whole floor in one click (rotated a bit so it doesn't look stamped), and Ctrl+Z undoes it. Click it and see how it reads; if it's too heavy or you want dirt/wood instead of clean stone, say so.
 
 ### S7.34 — 2026-06-28 — Platform-face wrap generator [GREEN]
 - Hudson chose: wrap raised platforms with foundation faces (stone), wood barriers as railing on top.

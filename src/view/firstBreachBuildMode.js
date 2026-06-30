@@ -203,6 +203,25 @@ class FirstBreachBuildMode {
     this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
     this._status("Wrapped " + made.length + " platform edges with stone faces. Ctrl+Z to undo - then tweak/rotate any that face wrong.");
   }
+  _tileFloor() {
+    // Lay KayKit stone floor tiles (4x4) across the walkable floor + platforms (the real KayKit stone look).
+    const cols = this.level.cols, rows = this.level.rows;
+    const H = (c, r) => { if (c < 0 || r < 0 || c >= cols || r >= rows) return 0; let v = 0; try { v = surfaceHeightAtCell(c, r); } catch (_) {} return Number.isFinite(v) ? v : 0; };
+    const specs = [];
+    outer: for (let r = 2; r < rows; r += 4) for (let c = 2; c < cols; c += 4) {
+      const h = H(c, r);
+      if (h < 0.5 || h >= 5) continue; // walkable floor + platforms only (skip void / perimeter walls)
+      const w = gridToWorld(c, r, this.level);
+      const ry = ((Math.floor(c / 4) + Math.floor(r / 4)) % 4) * 90; // vary rotation to break up repetition
+      specs.push({ asset: "floor_tile_large", cat: "floor", x: w.x, y: +(h + 0.01).toFixed(2), z: w.z, ry, scale: 1 });
+      if (specs.length >= 320) break outer;
+    }
+    if (!specs.length) { this._status("No floor area found to tile."); return; }
+    let made = specs.map((sp) => this._spawn(sp)).filter(Boolean);
+    this._selectMany(made);
+    this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
+    this._status("Tiled the floor with " + made.length + " KayKit stone tiles. Ctrl+Z to undo.");
+  }
   _seedFromKit() {
     // Prefer the local in-editor save (survives reloads without re-baking); fall back to the deployed kit.
     let specs = null, fromSave = false;
@@ -647,6 +666,7 @@ class FirstBreachBuildMode {
       '<div class="row"><button id="fbYdn">- lower</button><button id="fbYup">+ raise</button></div>',
       '<div class="sec">Auto-build</div>',
       '<button id="fbWrap">Wrap raised platform faces (stone)</button>',
+      '<button id="fbTile">Tile floor (KayKit stone)</button>',
       '<div class="sec">Overlays</div>',
       '<label><input type="checkbox" id="fbOvRoute"> routes</label>',
       '<label><input type="checkbox" id="fbOvReserve"> ward/gate reserves</label>',
@@ -685,6 +705,7 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbYup").onclick = () => { this.placeY += 0.2; wrap.querySelector("#fbY").textContent = this.placeY.toFixed(1); };
     wrap.querySelector("#fbYdn").onclick = () => { this.placeY = Math.max(0, this.placeY - 0.2); wrap.querySelector("#fbY").textContent = this.placeY.toFixed(1); };
     wrap.querySelector("#fbWrap").onclick = () => this._wrapPlatforms();
+    wrap.querySelector("#fbTile").onclick = () => this._tileFloor();
     wrap.querySelector("#fbOvRoute").onchange = (ev) => this._toggleOverlay("route", new pc.Color(0.2, 0.7, 1.0), ev.target.checked);
     wrap.querySelector("#fbOvReserve").onchange = (ev) => this._toggleOverlay("reserve", new pc.Color(1.0, 0.65, 0.2), ev.target.checked);
     wrap.querySelector("#fbOvProt").onchange = (ev) => this._toggleOverlay("protected", new pc.Color(0.9, 0.25, 0.25), ev.target.checked);
