@@ -180,6 +180,29 @@ class FirstBreachBuildMode {
     this._status("Local save cleared - reloading the deployed map...");
     setTimeout(() => { try { location.reload(); } catch (_) {} }, 400);
   }
+  _wrapPlatforms() {
+    // Auto-lay stone foundation faces around every raised-platform edge (drop >= ~0.6).
+    const cols = this.level.cols, rows = this.level.rows;
+    const H = (c, r) => { if (c < 0 || r < 0 || c >= cols || r >= rows) return 0; let v = 0; try { v = surfaceHeightAtCell(c, r); } catch (_) {} return Number.isFinite(v) ? v : 0; };
+    const dirs = [[0, 1, 0], [0, -1, 180], [1, 0, 90], [-1, 0, 270]]; // [dc, dr, ry] -> face points at the drop
+    const specs = [];
+    outer: for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const h = H(c, r);
+      if (h < 2 || h >= 5) continue; // only raised PLATFORMS (~2.6 / dais 3) - exclude the base floor (1.3) AND the perimeter walls (7.2)
+      for (const [dc, dr, ry] of dirs) {
+        if (H(c + dc, r + dr) < h - 0.6) {
+          const w = gridToWorld(c, r, this.level);
+          specs.push({ asset: "floor_foundation_front", cat: "wall", x: w.x, y: +(h - 2).toFixed(2), z: w.z, ry, scale: 1 });
+          if (specs.length >= 320) break outer;
+        }
+      }
+    }
+    if (!specs.length) { this._status("No raised platform edges found to wrap."); return; }
+    let made = specs.map((sp) => this._spawn(sp)).filter(Boolean);
+    this._selectMany(made);
+    this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
+    this._status("Wrapped " + made.length + " platform edges with stone faces. Ctrl+Z to undo - then tweak/rotate any that face wrong.");
+  }
   _seedFromKit() {
     // Prefer the local in-editor save (survives reloads without re-baking); fall back to the deployed kit.
     let specs = null, fromSave = false;
@@ -622,6 +645,8 @@ class FirstBreachBuildMode {
       '<button id="fbFloor">Snap selected to floor (F)</button>',
       '<div class="sec">Place height <span id="fbY">1.3</span></div>',
       '<div class="row"><button id="fbYdn">- lower</button><button id="fbYup">+ raise</button></div>',
+      '<div class="sec">Auto-build</div>',
+      '<button id="fbWrap">Wrap raised platform faces (stone)</button>',
       '<div class="sec">Overlays</div>',
       '<label><input type="checkbox" id="fbOvRoute"> routes</label>',
       '<label><input type="checkbox" id="fbOvReserve"> ward/gate reserves</label>',
@@ -659,6 +684,7 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbFloor").onclick = () => this._snapToFloor();
     wrap.querySelector("#fbYup").onclick = () => { this.placeY += 0.2; wrap.querySelector("#fbY").textContent = this.placeY.toFixed(1); };
     wrap.querySelector("#fbYdn").onclick = () => { this.placeY = Math.max(0, this.placeY - 0.2); wrap.querySelector("#fbY").textContent = this.placeY.toFixed(1); };
+    wrap.querySelector("#fbWrap").onclick = () => this._wrapPlatforms();
     wrap.querySelector("#fbOvRoute").onchange = (ev) => this._toggleOverlay("route", new pc.Color(0.2, 0.7, 1.0), ev.target.checked);
     wrap.querySelector("#fbOvReserve").onchange = (ev) => this._toggleOverlay("reserve", new pc.Color(1.0, 0.65, 0.2), ev.target.checked);
     wrap.querySelector("#fbOvProt").onchange = (ev) => this._toggleOverlay("protected", new pc.Color(0.9, 0.25, 0.25), ev.target.checked);

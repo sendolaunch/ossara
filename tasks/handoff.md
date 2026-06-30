@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.32 — 2026-06-28 — Verified live = Hudson's 170-pc layout (badge 36cfad6) — work WAS deployed (his upload == baked; likely his cache). Added editor localStorage AUTO-SAVE so work survives reload between bakes. Build 899 + suite green |
+| **Last session** | S7.34 — 2026-06-28 — Added editor 'Wrap raised platform faces' generator: lays ~286 stone foundation_front faces around platform edges (walls excluded), undoable, merges with local save. Build 899 + suite green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,20 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.34 — 2026-06-28 — Platform-face wrap generator [GREEN]
+- Hudson chose: wrap raised platforms with foundation faces (stone), wood barriers as railing on top.
+- Built it as an editor BUTTON (not a bake) because the localStorage auto-save would hide a bake. "Wrap raised platform faces (stone)" under a new Auto-build section: scans `surfaceHeightAtCell`, finds raised-platform edges (drop >= 0.6), lays `floor_foundation_front` oriented at the drop (face = +Z at ry0; dirs map drop->ry), seated so its top meets the platform height (y = h-2). Adds to the current layout, one-undo for the whole batch, auto-saved.
+- **Bug caught in dry-run:** first pass placed 758 faces incl. 472 on the PERIMETER WALLS (surfaceHeightAtCell returns wall height 7.2). Added `h >= 5` exclude -> now 286 (platforms only).
+- Verified: build 899, suite 0 fails. Orientation/height = Hudson's eyeball (first-pass auto-wrap; undoable).
+- Railings (wood barriers on top) deferred to a follow-up button once the faces look right.
+- **In Friendly Words:** Added a one-click "Wrap raised platform faces" button in the editor's Auto-build section. Click it and it lines the raised areas with stone faces so the edges look solid instead of flat. It's ~286 pieces so it might be a touch heavy — Ctrl+Z undoes the whole thing in one go. It's a first pass, so some faces might point the wrong way; tell me if a whole side is backwards and I'll flip it, then we'll add the wood railings on top.
+
+### S7.33 — 2026-06-28 — Rock + wood retaining-wall pieces [GREEN]
+- Added 11 palette pieces for the platform/elevation edges: **rock** = `floor_foundation_front` / `_corner` / `_front_and_sides` / `_diagonal_corner` (the stone faces that hold a raised platform); **wood** = `barrier` / `barrier_half` / `barrier_corner` / `barrier_column` (wooden barriers/railings), `scaffold_beam_corner`, `stairs_wood`, `floor_wood_large_dark`.
+- Note on workflow now that localStorage auto-save is live: new PALETTE pieces ship in the code bundle (appear after deploy + hard-refresh) and do NOT conflict with the local save (which only holds placed pieces). So Hudson keeps his work AND gets the new buttons.
+- Verified: palette 95/95 (all resolve), build 899, suite 0 fails.
+- **In Friendly Words:** Added the retaining-wall pieces — stone foundation edges to face the raised platforms, and wooden barriers/railings for the balcony and ledge edges, plus wood stairs. Place a foundation edge along a platform rim and hold V to line it up with the height; run wood barriers along balcony edges as railings. Your saved work stays put; the new buttons show up after this deploys.
 
 ### S7.32 — 2026-06-28 — "didn't bring over the save" -> it WAS live; added auto-save [GREEN]
 - Hudson's new upload (`export-6`) is **byte-identical** to the baked kit (export-5). Verified the LIVE site via Chrome: badge `36cfad6` (current), editor seeds **170 pieces = his exact layout**. So his work WAS deployed — the recurring "lost my save" is (a) browser cache, and (b) the deeper gap: the editor reseeds from the DEPLOYED kit on every reload, so anything done between exports vanishes.

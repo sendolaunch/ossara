@@ -44,6 +44,19 @@ export const FB_BUILD_PALETTE = Object.freeze([
   { asset: "scaffold_frame_large", cat: "balcony", label: "Scaffold frame" },
   { asset: "scaffold_pillars_connected", cat: "balcony", label: "Scaffold pillars" },
   { asset: "scaffold_pillar_wall_torch", cat: "balcony", label: "Scaffold + torch" },
+  // rock retaining walls (raised-platform foundation edges)
+  { asset: "floor_foundation_front", cat: "wall", label: "Foundation edge" },
+  { asset: "floor_foundation_corner", cat: "wall", label: "Foundation corner" },
+  { asset: "floor_foundation_front_and_sides", cat: "wall", label: "Foundation U" },
+  { asset: "floor_foundation_diagonal_corner", cat: "wall", label: "Foundation diag" },
+  // wood retaining / railings (barriers) + wood trim
+  { asset: "barrier", cat: "balcony", label: "Wood barrier" },
+  { asset: "barrier_half", cat: "balcony", label: "Wood barrier half" },
+  { asset: "barrier_corner", cat: "balcony", label: "Wood barrier corner" },
+  { asset: "barrier_column", cat: "balcony", label: "Wood barrier post" },
+  { asset: "scaffold_beam_corner", cat: "balcony", label: "Scaffold beam corner" },
+  { asset: "stairs_wood", cat: "stair", label: "Stairs wood" },
+  { asset: "floor_wood_large_dark", cat: "floor", label: "Floor wood dark" },
   // ward
   { asset: "resource/Gems_Pile_Large", cat: "ward", label: "Gem pile" },
 ]);
