@@ -301,7 +301,7 @@ export class PCRenderer {
       color: col(colorValue(lighting.sunColor || 0xdfeac6)),
       intensity: lighting.sunIntensity ?? 1.0,
       castShadows: true,
-      shadowResolution: 1024,
+      shadowResolution: 2048,
       shadowBias: 0.2,
     });
     const sunEuler = lighting.sunEuler || { x: 50, y: 35, z: 0 };

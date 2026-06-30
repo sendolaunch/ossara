@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.35 — 2026-06-28 — Added 'Tile floor (KayKit stone)' editor button: lays ~208 floor_tile_large (4x4, varied rotation) over walkable floor+platforms = the real KayKit stone (texture is a flat 17KB palette; look is geometry). Undoable. Build 899 + green |
+| **Last session** | S7.36 — 2026-06-28 — Un-square pass: lighting/atmosphere (raked sun x50->36, warm key+cool ambient, fog pulled in, shadows 2048) + editor 'Scatter clutter' button (rocks/rubble/barrels along wall bases, random angle+jitter, off-lane, undoable). Build 899 + green |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.36 — 2026-06-28 — Un-square the grid: lighting + scatter clutter [GREEN]
+- Hudson: how to beat the kit squareness. Answer: don't fix the grid, bury it under shadow/clutter/broken edges. Built the two biggest levers.
+- **Lighting/atmosphere** (mapThemes + pcRenderer, affects play + editor, deploy-clean no localStorage conflict): sun raked x50->36 / y35->44 (long shadows across flat tiles), sunIntensity 0.98->1.15, sunColor warmer (#ecdfc0) vs cooler ambient (#3c3c46) for warm/cool contrast, fog pulled in (start 24->16, end 84->74, color #14151c haze), shadowResolution 1024->2048.
+- **Scatter clutter button** (Auto-build): rocks_small/rubble/barrels along wall bases + map edges, ~32% sparse, random ry + ~0.25 jitter + 0.8-1.3 scale, SKIPS protected+route cells (lanes stay clear; export stays off-protected so kit test passes), cap 160, undoable/re-rollable.
+- Auto-build now has 3 buttons: Wrap platform faces, Tile floor, Scatter clutter.
+- Verified: build 899, suite 0 fails. Look = Hudson's eyeball; lighting may need a brightness nudge.
+- **In Friendly Words:** Did the two biggest things to kill the square look. (1) Relit the whole map: the sun now comes in low and warm so walls/pillars throw long shadows across the floor and the far end hazes into fog - that alone stops your eye reading it as a grid. (2) A "Scatter clutter" button that tosses rocks, rubble and barrels along the wall bases at random angles (never on the lanes), so the clean tile seams get broken up. Click it, undo and click again for a different scatter. If the new lighting is too dark, say so and I'll lift it.
 
 ### S7.35 — 2026-06-28 — Tile-floor generator (real KayKit stone) [GREEN]
 - Hudson wants the best paid-pack texture on the floor. Finding: `dungeon_texture.png` is 1024x1024 but only 17KB = a flat palette, so KayKit's stone look is in the TILE GEOMETRY, not a tiling texture. Best floor = laying actual `floor_tile_large` (4x4, top at +0.05).
