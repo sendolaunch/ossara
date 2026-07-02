@@ -885,7 +885,7 @@ export class PCRenderer {
           ent.name = `fbkit-${spec.id}`;
           for (const render of ent.findComponents("render")) {
             for (const mesh of render.meshInstances || []) {
-              mesh.castShadow = spec.cat !== "light";
+              mesh.castShadow = spec.cat !== "light" && spec.cat !== "floor" && spec.cat !== "wrap";
               mesh.receiveShadow = true;
             }
           }

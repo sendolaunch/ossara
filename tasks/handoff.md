@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.36 — 2026-06-28 — Un-square pass: lighting/atmosphere (raked sun x50->36, warm key+cool ambient, fog pulled in, shadows 2048) + editor 'Scatter clutter' button (rocks/rubble/barrels along wall bases, random angle+jitter, off-lane, undoable). Build 899 + green |
+| **Last session** | S7.37 — 2026-07-01 — FABLE FULL ART PASS: fresh 630-piece generated map (scripts/generateFirstBreachFableKit.mjs, deterministic) — ruin with a held heart. Build 899 + suite green; eyeball pending |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,16 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.37 — 2026-07-01 — Fable full art pass: generated 630-piece map [BUILD+TEST GREEN, VISUAL UNVERIFIED]
+- Hudson: "build the map for me and place the objects — i want to see what fable five can do." Chose via questions: FRESH design (not on top of his 170), FULL pass, theme "ruin with a held heart."
+- **New generator** `scripts/generateFirstBreachFableKit.mjs` (seeded, deterministic — two runs hash-identical): perimeter wall skin (2 courses, buttress rhythm, broken-shelf/candle inset variety, corners NW90/NE0/SW180/SE270), Hudson's 5 tuned gate arches kept VERBATIM (proven in-engine), inner low-wall wall_half skin, 231 floors (large+small tiles, rocky/broken/dirt variants, 6% deliberate holes, clean in the heart), platform wraps + wood railings (tidy in heart, gap-toothed elsewhere), 8-cell torch rhythm (dead torch_mounted brackets in the ruin, torch_lit near the heart), 107 scatter, and authored set dressing: 10 tattered red necro banners at the gates, defenders' camp at the Ward (blue banners, gold chest, gem pile, table w/ journal+lantern, bed rolls, supply crates, weapon rack), ruined market in gate C's room (broken stall, looted crates, coins, textiles), pit-rim broken walls + collapsed planks, a chest_mimic hoard easter egg NE of the pit, battle-debris swords, choke sentinel pillars.
+- All volume props auto-validated: walkable, >=2 cells off every lane, off protected/reserved/buildable cells (script fails loudly otherwise). Old kit backed up: `tasks/first-breach-kit-hudson-pre-fable-backup.json` (170 pcs); kit JSON at `tasks/first-breach-kit-fable-1.json`.
+- Existing-file edits (NUL-scanned, 0 NUL bytes): baked `src/view/firstBreachKit.js` (630 pcs); `test/firstBreachKit.test.mjs` cap 600->1200; `src/view/pcRenderer.js` fbKit loader — floor/wrap cats no longer cast shadows (231 floors skip the shadow pass, R17).
+- 2D view regenerated: `first-breach-layout-2d.html` (all 630 dots + lane/zone overlays).
+- Verified (R5/R6): `npm test` exit 0, **0 fails** (firstBreachKit 811/811); clean /tmp build **899 modules** (fresh linux node_modules — mount's is Windows-native; public/ copy skipped via publicDir:false override, models covered by the test's existsSync). **Unverified: the look** — sandbox can't render; wall_half course height, foundation-corner facings and wrap coverage are first-pass guesses to eyeball.
+- **EDITOR GOTCHA:** ?artEdit=1 seeds from localStorage first — Hudson must click **"Reset to deployed map"** (or play normally, no editor) to see the Fable kit; his local 170-piece save otherwise masks it.
+- **In Friendly Words:** I designed and placed the whole map this time — every wall, floor tile, torch, banner and prop, 630 pieces. The story it tells: the crypt is long dead (broken tiles, cold torch brackets, red enemy banners hanging at every breach gate), but your corner by the Ward is still alive — lit torches, blue banners, a little camp with beds, supplies and a gold chest. There's even a treasure-chest mimic hiding near the pit. Your old hand-built map is safely backed up in a file. After this deploys, open the game normally to see it — and in the editor click "Reset to deployed map" first, or you'll still see your old layout.
 
 ### S7.36 — 2026-06-28 — Un-square the grid: lighting + scatter clutter [GREEN]
 - Hudson: how to beat the kit squareness. Answer: don't fix the grid, bury it under shadow/clutter/broken edges. Built the two biggest levers.

@@ -130,3 +130,12 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Symptom:** the map looked correct on `?showcase=first-breach` but had wall gaps ONLY on `?showcase=first-breach&artEdit=1` (build mode) — looked like "the art link isn't updating / is breaking."
 - **Root cause:** `place()` (dungeonKit) only instantiates assets that were **preloaded** (`preloadKit`); it returns null for anything not in the cache. Build mode preloaded the editor PALETTE list, but the baked kit had an asset (`wall_pillar`) that wasn't in the palette → those pieces silently didn't render in build mode. The normal render path preloads the kit's own asset-name list, so it was unaffected.
 - **Rule:** anything that instantiates a saved/baked kit must preload the **union** of (palette ∪ kit asset names), never just one. When you add a new asset to `FIRST_BREACH_KIT`, it loads everywhere because the kit exports `FIRST_BREACH_KIT_ASSET_NAMES` — make sure every consumer preloads from that, not a hand-kept list.
+
+
+## Sandbox builds vs the OneDrive mount (S7.37)
+
+- **Symptom:** `vite build` on the mount died in rollup's native loader; a backgrounded `npm install` produced an empty log and silently vanished.
+  **Root cause:** the mount's `node_modules` was installed on WINDOWS — rollup/esbuild ship per-platform native binaries, so a Linux sandbox can't reuse it. And a plain `&` background job is reaped when the bash call exits, killing the install mid-flight.
+  **Rule:** build in `/tmp` with a fresh `npm install` (drop heavy dev deps like playwright first via `npm pkg delete`), started with `setsid nohup ... & disown`, then poll. `publicDir:false` in a temp vite config skips the 500MB models copy — module count (899) is the build signal, models are covered by the test's existsSync.
+
+- **Technique (map generation):** when regenerating a kit from scratch, keep any spec values a human already eyeballed in-engine (Hudson's 5 stretched gate arches, the S7.23 corner rotations) VERBATIM instead of re-deriving them — they are verified constants, everything else is a guess until the next eyeball.
