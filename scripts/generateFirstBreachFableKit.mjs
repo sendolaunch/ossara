@@ -1,4 +1,4 @@
-// FIRST BREACH — "Fable" full art pass generator (S7.37).
+// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 — dividers/railings rebuilt from REAL GLTF dims: wall sy0.65 dividers, run-based non-overlapping railings).
 // Fresh full-map dressing: perimeter + inner wall skin, gates, floors, platform wraps,
 // railings, scatter, and authored set dressing. Theme: RUIN WITH A HELD HEART —
 // the crypt is long dead (rubble, broken tiles, dead torches, red necro banners at the
@@ -118,14 +118,17 @@ for (const [c, r, ry] of BANNERS) add("banner_patternB_red", "prop", c, r, 3.9, 
 // ============================================================
 // B3. INNER LOW-WALL SKIN — wall_half along the 2.6 divider runs
 // ============================================================
-const innerRuns = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.height === 2.6 && (z.w >= 3 || z.h >= 3) && !(z.w > 1 && z.h > 1));
+// Real GLTF dims: wall = 4 long x 4 tall -> sy 0.65 crowns at the 2.6 ridge; wall_half = 2 long (full height) for remainders.
+const innerRuns = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.height === 2.6 && !(z.w > 1 && z.h > 1));
 for (const z of innerRuns) {
   const vert = z.h >= z.w;
   const from = vert ? z.row : z.col, to = vert ? z.row + z.h - 1 : z.col + z.w - 1;
-  for (let t = from + 1.5; t <= to - 0.5; t += 4) {
-    const c = vert ? z.col : t, r = vert ? t : z.row;
-    add("wall_half", "wall", c, r, 0, vert ? 90 : 0, 1);
-  }
+  const len = to - from + 1, ry = vert ? 90 : 0;
+  let t = from + 1.5;
+  if (len <= 2) { add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, 0, ry, 1, { sy: 0.65 }); continue; }
+  for (; t <= to - 1.5; t += 4) add("wall", "wall", vert ? z.col : t, vert ? t : z.row, 0, ry, 1, { sy: 0.65 });
+  const rem = to + 1 - (t - 0.5);
+  if (rem >= 1) add("wall_half", "wall", vert ? z.col : to - 0.5, vert ? to - 0.5 : z.row, 0, ry, 1, { sy: 0.65 });
 }
 
 // ============================================================
@@ -190,22 +193,50 @@ for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
 // C3. RAILINGS — wood barriers on platform rims: tidy + continuous in the heart,
 // gap-toothed and broken elsewhere. Kept >=1 cell off lanes (they ride some platforms).
 // ============================================================
+// Collect rim cells per drop-direction, then rail only CONTIGUOUS runs >= 4 cells (kills orphans).
+// Real GLTF dims: barrier & barrier_column are both 4 long (column = fence WITH posts) -> step 4, alternate; barrier_half (2 long) caps tails.
+const rims = { N: new Map(), S: new Map(), E: new Map(), W: new Map() }; // dir -> Map(lineKey -> Set(along))
 for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
   const h = H(c, r);
   if (!WALK(c, r) || h < 2 || h >= 5 || T(c, r) === 7) continue;
   if (prot.has(cellKey(c, r)) || routeDist(c, r) < 2) continue;
   for (const [dc, dr, , name] of DIRS) {
     if (!(H(c + dc, r + dr) < h - 0.9)) continue;
-    const heart = inHeart(c, r);
-    const along = name === "N" || name === "S" ? c : r;
-    if (along % 2 !== 0) continue;
-    if (!heart && rnd() < 0.34) continue;                                  // ruin: collapsed stretches
-    const broken = !heart && rnd() < 0.14;
-    const off = 0.34;
-    const cc = c + (name === "E" ? off : name === "W" ? -off : 0);
-    const rr2 = r + (name === "S" ? off : name === "N" ? -off : 0);
-    add(broken ? "barrier_half" : "barrier", "balcony", cc, rr2, h, name === "N" || name === "S" ? 0 : 90, 1);
-    if (along % 6 === 0) add("barrier_column", "balcony", cc, rr2, h, 0, 1);
+    const horiz = name === "N" || name === "S";
+    const line = horiz ? r : c, along = horiz ? c : r;
+    if (!rims[name].has(line)) rims[name].set(line, new Set());
+    rims[name].get(line).add(along);
+  }
+}
+for (const name of ["N", "S", "E", "W"]) {
+  const horiz = name === "N" || name === "S", off = 0.34;
+  for (const [line, set] of rims[name]) {
+    const cells = [...set].sort((a, b) => a - b);
+    let run = [];
+    const flush = () => {
+      if (run.length >= 4) {
+        const heart = horiz ? inHeart(run[0], line) : inHeart(line, run[0]);
+        if (heart || rnd() > 0.3) {                                        // ruin: some whole runs collapsed
+          const from = run[0], to = run[run.length - 1];
+          let t = from + 1.5, i = 0;
+          for (; t <= to - 1.5; t += 4, i++) {
+            if (!heart && rnd() < 0.12) continue;                          // ruin: a missing span
+            const asset = i % 2 ? "barrier_column" : "barrier";
+            const c2 = horiz ? t : line + (name === "E" ? off : -off);
+            const r2 = horiz ? line + (name === "S" ? off : -off) : t;
+            add(asset, "balcony", c2, r2, horiz ? H(Math.round(t), line) : H(line, Math.round(t)), horiz ? 0 : 90, 1);
+          }
+          if (to + 1 - (t - 0.5) >= 1) {
+            const c2 = horiz ? to - 0.5 : line + (name === "E" ? off : -off);
+            const r2 = horiz ? line + (name === "S" ? off : -off) : to - 0.5;
+            add("barrier_half", "balcony", c2, r2, horiz ? H(Math.round(to - 1), line) : H(line, Math.round(to - 1)), horiz ? 0 : 90, 1);
+          }
+        }
+      }
+      run = [];
+    };
+    for (const a of cells) { if (run.length && a !== run[run.length - 1] + 1) flush(); run.push(a); }
+    flush();
   }
 }
 
@@ -232,20 +263,20 @@ for (const [c, r, ry, lit] of torchSpots) add(lit ? "torch_lit" : "torch_mounted
 const heartPieces = [
   ["pillar_decorated", "ward", 5, 48.6, 3.0, 0, 0.62], ["pillar_decorated", "ward", 12, 48.6, 3.0, 0, 0.62], ["pillar_decorated", "ward", 12.4, 53.4, 3.0, 0, 0.62],
   ["torch_lit", "light", 4.6, 49, 3.0, 0, 0.5], ["torch_lit", "light", 12.4, 49.4, 3.0, 0, 0.5], ["torch_lit", "light", 12.4, 52, 3.0, 0, 0.5], ["torch_lit", "light", 6, 54.6, 3.0, 0, 0.5],
-  ["candle_triple", "ward", 8, 49.5, 3.0, 15, 0.8], ["candle_triple", "ward", 10.2, 52.6, 3.0, 290, 0.8],
+  ["candle_triple", "ward", 8, 49.5, 3.0, 15, 0.6], ["candle_triple", "ward", 10.2, 52.6, 3.0, 290, 0.6],
   ["chest_gold", "ward", 4.4, 48.5, 3.0, 25, 0.55],
   ["resource/Gems_Pile_Large", "ward", 11, 51, 3.0, 20, 0.5], ["resource/Gems_Sack", "ward", 11.7, 50.3, 3.0, 130, 0.55],
   ["banner_shield_blue", "prop", 1.6, 47, 3.9, 90, 1.05], ["banner_shield_blue", "prop", 1.6, 51.5, 3.9, 90, 1.05], ["banner_shield_blue", "prop", 10, 55.55, 3.9, 180, 1.05],
   // the camp (east of the dais, tucked south of lane E's corridor)
-  ["table_medium_decorated_A", "prop", 13.2, 54.6, 2.6, 95, 0.8],
-  ["rpgtools/journal_open", "prop", 13.2, 54.4, 3.42, 200, 0.9], ["plate_food_A", "prop", 13.5, 54.9, 3.42, 40, 0.9], ["bottle_A_labeled_green", "prop", 12.9, 54.75, 3.42, 0, 0.9],
-  ["stool_round", "prop", 12.3, 54.2, 2.6, 210, 0.85],
-  ["bed_floor", "prop", 16, 54.7, 2.6, 10, 0.9], ["bed_floor", "prop", 17.6, 54.3, 2.6, 350, 0.9],
-  ["bookcase_single_decoratedA", "prop", 19.2, 55.4, 2.6, 180, 0.85],
-  ["crates_stacked", "prop", 20.6, 54.8, 2.6, 15, 0.9], ["box_stacked", "prop", 19.8, 54.1, 2.6, 65, 0.85],
-  ["barrel_small_stack", "prop", 21.7, 55.1, 2.6, 40, 0.9], ["keg", "prop", 22.4, 54.5, 2.6, 75, 0.9],
-  ["sword_shield", "prop", 21.2, 53.9, 2.6, 75, 0.9],
-  ["rpgtools/lantern", "prop", 13.55, 54.15, 3.42, 0, 0.9], ["rpgtools/lantern", "prop", 20.6, 56.0 - 1.3, 4.55, 30, 0.9],
+  ["table_medium_decorated_A", "prop", 13.2, 54.6, 2.6, 95, 0.65],
+  ["rpgtools/journal_open", "prop", 13.2, 54.4, 3.1, 200, 0.6], ["plate_food_A", "prop", 13.5, 54.9, 3.1, 40, 0.6], ["bottle_A_labeled_green", "prop", 12.9, 54.75, 3.1, 0, 0.6],
+  ["stool_round", "prop", 12.3, 54.2, 2.6, 210, 0.6],
+  ["bed_floor", "prop", 16, 54.7, 2.6, 10, 0.65], ["bed_floor", "prop", 17.6, 54.3, 2.6, 350, 0.65],
+  ["bookcase_single_decoratedA", "prop", 19.2, 55.4, 2.6, 180, 0.65],
+  ["crates_stacked", "prop", 20.6, 54.8, 2.6, 15, 0.6], ["box_stacked", "prop", 19.8, 54.1, 2.6, 65, 0.6],
+  ["barrel_small_stack", "prop", 21.7, 55.1, 2.6, 40, 0.6], ["keg", "prop", 22.4, 54.5, 2.6, 75, 0.6],
+  ["sword_shield", "prop", 21.2, 53.9, 2.6, 75, 0.5],
+  ["rpgtools/lantern", "prop", 13.55, 54.15, 3.1, 0, 0.6], ["rpgtools/lantern", "prop", 20.6, 56.0 - 1.3, 3.95, 30, 0.6],
 ];
 for (const [asset, cat, c, r, y, ry, s] of heartPieces) add(asset, cat, c, r, y, ry, s);
 
@@ -253,11 +284,11 @@ for (const [asset, cat, c, r, y, ry, s] of heartPieces) add(asset, cat, c, r, y,
 // D3. RUINED MARKET (NE, gate C's room) — the lane C name made flesh, long looted
 // ============================================================
 const marketPieces = [
-  ["table_long_broken", 63, 14, 15, 0.95], ["crate_large", 63.6, 15.8, 5, 0.95], ["keg_decorated", 62.2, 16.9, 80, 0.95],
-  ["resource/Food_Crate_Large_Empty", 64.2, 17.4, 30, 0.95], ["barrel_large_decorated", 61.2, 17.8, 55, 0.95],
-  ["resource/Textiles_Stack_Large", 63.2, 18.6, 15, 0.95], ["bucket", 61.6, 13.4, 0, 0.9],
-  ["coin_stack_small", 62.4, 15.1, 0, 0.9], ["coin_stack_small", 63.8, 14.5, 0, 0.9], ["coin_stack_medium", 62.9, 16.3, 0, 0.9],
-  ["scaffold_frame_large", 63, 12.4, 90, 1],
+  ["table_long_broken", 63, 14, 15, 0.65], ["crate_large", 63.6, 15.8, 5, 0.6], ["keg_decorated", 62.2, 16.9, 80, 0.6],
+  ["resource/Food_Crate_Large_Empty", 64.2, 17.4, 30, 0.6], ["barrel_large_decorated", 61.2, 17.8, 55, 0.6],
+  ["resource/Textiles_Stack_Large", 63.2, 18.6, 15, 0.6], ["bucket", 61.6, 13.4, 0, 0.55],
+  ["coin_stack_small", 62.4, 15.1, 0, 0.6], ["coin_stack_small", 63.8, 14.5, 0, 0.6], ["coin_stack_medium", 62.9, 16.3, 0, 0.6],
+  ["scaffold_frame_large", 63, 12.4, 90, 0.8],
 ];
 for (const [asset, c, r, ry, s] of marketPieces) { if (propOK(c, r)) add(asset, "prop", c, r, H(Math.round(c), Math.round(r)), ry, s); }
 
@@ -273,17 +304,17 @@ for (let r = PIT.r0; r <= PIT.r1 && rimN < 10; r++) for (let c = PIT.c0; c <= PI
   add("wall_broken", "wall", c, r, H(c, r) - 1.3, voidDir[2], 0.9);
   rimN++;
 }
-if (propOK(39.2, 11.3)) add("floor_wood_small", "prop", 39.2, 11.3, H(39, 11) + 0.05, 37, 0.95);
-if (propOK(44.6, 13.6)) add("floor_wood_small", "prop", 44.6, 13.6, H(45, 14) + 0.05, 160, 0.9);
+if (propOK(39.2, 11.3)) add("floor_wood_small", "prop", 39.2, 11.3, H(39, 11) + 0.05, 37, 0.6);
+if (propOK(44.6, 13.6)) add("floor_wood_small", "prop", 44.6, 13.6, H(45, 14) + 0.05, 160, 0.55);
 
 // ============================================================
 // D5. STORY BEATS — mimic hoard, real chests, battle debris, choke sentinels
 // ============================================================
-if (propOK(46, 10.5)) { add("chest_mimic", "prop", 46, 10.5, H(46, 11), 200, 0.9); add("coin_stack_large", "prop", 45.3, 10.2, H(45, 10), 0, 0.9); add("coin_stack_small", "prop", 46.6, 11.1, H(47, 11), 0, 1); add("resource/Gem_Small", "prop", 45.8, 11.3, H(46, 11), 0, 0.8); }
-if (propOK(2.6, 8.6)) add("chest", "prop", 2.6, 8.6, H(3, 9), 135, 0.9);
-if (propOK(63.5, 54.6)) add("chest", "prop", 63.5, 54.6, H(63, 55), 315, 0.9);
+if (propOK(46, 10.5)) { add("chest_mimic", "prop", 46, 10.5, H(46, 11), 200, 0.55); add("coin_stack_large", "prop", 45.3, 10.2, H(45, 10), 0, 0.6); add("coin_stack_small", "prop", 46.6, 11.1, H(47, 11), 0, 0.6); add("resource/Gem_Small", "prop", 45.8, 11.3, H(46, 11), 0, 0.6); }
+if (propOK(2.6, 8.6)) add("chest", "prop", 2.6, 8.6, H(3, 9), 135, 0.55);
+if (propOK(63.5, 54.6)) add("chest", "prop", 63.5, 54.6, H(63, 55), 315, 0.55);
 const debris = [[26, 33], [38, 41], [50, 33], [20, 30], [58, 42], [33, 44], [44, 40], [56, 12]];
-for (const [c, r] of debris) if (propOK(c, r)) add("sword_shield_broken", "prop", c + rnd() * 0.6 - 0.3, r + rnd() * 0.6 - 0.3, H(c, r) - 0.04, rnd() * 360, 0.95);
+for (const [c, r] of debris) if (propOK(c, r)) add("sword_shield_broken", "prop", c + rnd() * 0.6 - 0.3, r + rnd() * 0.6 - 0.3, H(c, r) - 0.04, rnd() * 360, 0.5);
 const sentinels = [[27, 36.6], [22.6, 37], [42, 26.6], [37.4, 26.8]];
 for (const [c, r] of sentinels) if (propOK(c, r)) add("pillar", "pillar", c, r, H(Math.round(c), Math.round(r)), 0, 0.6);
 
@@ -300,7 +331,7 @@ for (let r = 6; r < ROWS && scatterN < 150; r++) for (let c = 0; c <= 66 && scat
   let edge = false;
   for (const [dc, dr] of DIRS) { const nh = H(c + dc, r + dr); if (nh > h + 1 || T(c + dc, r + dr) === 0) { edge = true; break; } }
   if (!edge || rnd() > 0.3) continue;
-  add(pick(pool), "rubble", c + rnd() * 0.7 - 0.35, r + rnd() * 0.7 - 0.35, h, rnd() * 360, 0.8 + rnd() * 0.5);
+  add(pick(pool), "rubble", c + rnd() * 0.7 - 0.35, r + rnd() * 0.7 - 0.35, h, rnd() * 360, 0.4 + rnd() * 0.22);
   scatterN++;
 }
 

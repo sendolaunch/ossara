@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.37 — 2026-07-01 — FABLE FULL ART PASS: fresh 630-piece generated map (scripts/generateFirstBreachFableKit.mjs, deterministic) — ruin with a held heart. Build 899 + suite green; eyeball pending |
+| **Last session** | S7.39 — 2026-07-01 — Hudson: barrier walls messed up -> read REAL GLTF dims (wall_half=2x4, barrier_column=4-long fence!) -> v3: wall sy0.65 dividers + run-based railings (631 pcs). Gate green; push pending |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,22 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.39 — 2026-07-01 — "barrier walls are messed up" -> v3 rebuilt from real GLTF dims [GATE GREEN; PUSH PENDING]
+- Hudson: "the barrier walls for each level are all kinds of messed up." Confirmed on the live site (still v1, badge `904367e`): orphaned fence bits floating in open floor, overlapping rails, and the inner dividers reading as gappy too-tall blocks.
+- **Root cause — I had never read the pieces' actual sizes.** Parsed the GLTF POSITION accessors: `wall_half` = 2 wide x **4 TALL** (half-LENGTH, not half-height!); `barrier` = **4 long**; `barrier_column` = a **4-long fence WITH posts** (not a post!); `floor_foundation_front` = 2 wide. So v1/v2 railings were 4-long fences placed every 2 cells (50% overlap) with more full-length fences stacked on top as "posts," plus isolated singles wherever one cell passed the filters. The dividers were full-height wall chunks with gaps.
+- **v3 (generator rebuild of B3+C3):** inner dividers = `wall` **sy 0.65** every 4 cells (crowns exactly at the 2.6 ridge, continuous; `wall_half` sy 0.65 caps 2-cell tails/stubs) — Hudson's own hand-technique, systematized. Railings = collect rim cells per drop-direction, keep only **contiguous runs >= 4 cells**, then tile step-4 alternating barrier / barrier_column (posts appear naturally, zero overlap), barrier_half on tails, whole-run collapse + per-span breakage for ruin flavor. Orphans impossible by construction.
+- Kit v3 = **631 pieces** (dividers 46->57 wall pieces w/ sy, railings 17 messy -> 6 clean; few genuine open rims exist off-lane — most edges on this map are low walls or stairs, correctly so).
+- Verified (R5/R6): regen deterministic (`eab94ee3...` twice); `npm test` exit 0, 0 fails (firstBreachKit 813/813); /tmp build **899 modules**; 0 NUL bytes. v2+v3 are BOTH unpushed — one commit ships them together. Hudson's remaining eyeball: v3 in-game after push.
+- **In Friendly Words:** You were right — the fences were a mess. The real problem: I'd never checked the actual size of the fence pieces. The "post" piece turned out to be a whole fence section with posts built in, so I was piling fences on top of fences. And the low-wall piece is actually a full-height wall, which is why the inner walls looked like tall gappy blocks. I've now measured every piece from the model files and rebuilt both: low walls are squashed to exactly the right height and run continuously, and fences only appear in clean connected stretches with no overlaps. Push the block below and take a look.
+
+### S7.38 — 2026-07-01 — First live eyeball (Chrome MCP) -> kit v2 scale pass [GATE GREEN; v2 DEPLOY PENDING]
+- Picked up from the handoff doc at HEAD `904367e` (= origin/main, tree clean apart from known phantoms). S7.37's open item was the visual check.
+- **Deploy R26-verified end-to-end for the first time:** drove the live site via Chrome MCP (`?showcase=first-breach`) — badge `OSSARA · 904367e` = pushed HEAD; `[dungeonKit] loaded 65/65`; `[fbKit] placed 630/630`; console clean (no errors/warnings/missing). Screenshotted the map from 3 vantage points using the renderer's own `camTarget`/`camDist`/`camPitch`/`camYaw` (setting camera.setPosition directly gets re-locked every frame; free-cam + camTarget is the way).
+- **What the eyeball found:** the design reads — heart camp + blue banners + ward glow + continuous buttressed perimeter all good. Two systemic misses: (1) props/rubble at scale 0.8-1.3 render ~2x too big (KayKit props are sized for 4u walls; Hudson's proven range is 0.45-0.65 — the rubble piles looked like boulders taller than the shrine); (2) `wall_half` is only ~2 cells wide, so 4-cell spacing tiled the inner walls as dashes.
+- **Kit v2** (24 exact-string patches to `scripts/generateFirstBreachFableKit.mjs`, MISS-checked): all scatter/furniture/story props down to 0.4-0.65, tabletop item heights recomputed for the smaller table (3.42->3.1), wall_half every 2 cells (46->80 pieces). Kit 630->664 pieces; banners stay 1.05 by design (wall-scale, verified good in the screenshot).
+- Verified (R5/R6): regen deterministic (2 runs hash-identical `6974bcf0...`); `npm test` exit 0, 0 fails (firstBreachKit **845/845**); clean /tmp build **899 modules** (recreate `vite.config.fable.js` after rsync --delete — it lives only in /tmp); kit js 0 NUL bytes. Remaining eyeball for Hudson: v2 sizes in-game after push (my screenshots were of v1).
+- **In Friendly Words:** I finally got eyes on the live game myself — I flew the camera around your actual deployed map and it works: the camp, the banners, the glowing Ward, the cracked walls all look right. Two things were off: my props were about twice too big (rock piles like boulders), and the inner walls had gaps like dashes. Both fixed and re-verified; the fixed map just needs Claude Code to push it. Then the boulders become rocks and the dashed walls become solid.
 
 ### S7.37 — 2026-07-01 — Fable full art pass: generated 630-piece map [BUILD+TEST GREEN, VISUAL UNVERIFIED]
 - Hudson: "build the map for me and place the objects — i want to see what fable five can do." Chose via questions: FRESH design (not on top of his 170), FULL pass, theme "ruin with a held heart."

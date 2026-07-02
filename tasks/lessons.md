@@ -139,3 +139,11 @@ Newest entries first within each section. Sections stay even when empty — they
   **Rule:** build in `/tmp` with a fresh `npm install` (drop heavy dev deps like playwright first via `npm pkg delete`), started with `setsid nohup ... & disown`, then poll. `publicDir:false` in a temp vite config skips the 500MB models copy — module count (899) is the build signal, models are covered by the test's existsSync.
 
 - **Technique (map generation):** when regenerating a kit from scratch, keep any spec values a human already eyeballed in-engine (Hudson's 5 stretched gate arches, the S7.23 corner rotations) VERBATIM instead of re-deriving them — they are verified constants, everything else is a guess until the next eyeball.
+
+
+## Live eyeball via Chrome MCP + KayKit prop scale (S7.38)
+
+- **Technique (the eyeball, finally self-serve):** `?showcase=first-breach` boots a mission; `window.OSSARA.mission.renderer.app` is the PlayCanvas app. Count kit pieces: walk `app.root` for `fbkit-*` names. Move the camera via the renderer's OWN state — `R.camTarget.set(x,y,z); R.camDist=22; R.camPitch=0.9; R.camYaw=2.2` (a raw `camera.setPosition` is re-locked next frame). World coords: x=col-36, z=row-28. Console via read_console_messages pattern `error|missing|fbKit`.
+- **Rule (prop scale):** KayKit DUNGEON-PACK PROPS (furniture, rubble, containers, trophies) want scale **0.4-0.65** in this 1-unit-cell world — grid-modular pieces (walls, floors, foundations, barriers, arches, wall-mounted banners) stay ~1. Anything authored above 0.72 that is not a grid piece is almost certainly 2x too big. `wall_half` is ~2 cells wide -> tile every 2 cells, not 4.
+
+- **Rule (measure, don't guess):** before tiling/stacking ANY kit piece, read its true bounds from the .gltf (`accessors[primitives.attributes.POSITION].min/max` — they're plain JSON). Traps already hit: `wall_half` = half-LENGTH (2x4x1, full height); `barrier_column` = a 4-long fence WITH posts, not a post; `floor_foundation_front` = 2 wide. Spacing/scale derived from measured W/H/D; `sy` squashes height (e.g. wall sy 0.65 -> 2.6 divider).
