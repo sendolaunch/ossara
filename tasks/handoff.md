@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.52 — 2026-07-05 — Hudson's export BAKED VERBATIM (831 pcs, kit is HUDSON-CANONICAL now — do not regen over it) + SELECT-ALL tooling (outliner button + Ctrl+A, filter-aware, glow cap 120). His plan: finish top floor -> art -> floor 2 -> floor-3 drop. Suite 0 fails (kit 1012/1012); build 900. PUSH PENDING |
+| **Last session** | S7.53 — 2026-07-05 — Ctrl+CLICK grabs carpet pieces (floors + the jump-off lips he couldn't select; plain click still orbits), Keys help updated; floor-texture contact sheet delivered (rocky = floor_dirt_large_rocky / floor_tile_large_rocks + 18 more, all in the floors tab). Suite 0 fails; build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,13 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.53 — 2026-07-05 — Ctrl+click carpet picking + floor-texture menu [GATE GREEN; PUSH PENDING]
+- Hudson clarified "select everything": he could not GRAB the drop-gap lip platforms (cat `wrap`) or floors in the viewport — my S7.48 unpickable-carpet rule blocked his editing of exactly those. Fix: `_pickPiece(..., allowCarpet)` — **Ctrl+left-click picks ANY piece including floor/wrap**; plain click keeps ignoring the carpet so camera drags stay smooth. Both viewport pick callsites pass `e.ctrlKey`; Keys help updated.
+- Floor textures question answered with a generated CONTACT SHEET from the thumbnail library (`outputs/floor-options.png`): ~20 floor pieces in the pack — for his "rocky" goal: **floor_dirt_large_rocky** and **floor_tile_large_rocks** (+ dirt/broken/weeds/grates/spikes/wood variants). All placeable from the browser's "floors" tab.
+- OneDrive rollback hazard again mitigated with idempotent check-then-apply + post-sync re-verify (markers still present after settle).
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**.
+- **In Friendly Words:** Hold Ctrl when you click and you can now grab ANYTHING — the little jump-off platforms, floor tiles, all of it; without Ctrl, clicking the ground still just moves your camera like before. And you have about twenty floor styles, not one — check the picture I sent: the two rocky ones you want are "dirt large rocky" and "tile large rocks", both sitting in the floors tab of your browser with thumbnails.
 
 ### S7.52 — 2026-07-05 — His export baked verbatim + Select-all [GATE GREEN; PUSH PENDING]
 - Hudson uploaded `first-breach-kit.json` (831 pcs; fractional positions confirm the export fix works). Content-diff vs kit: 246 paired moves (whole wall runs shifted — his rework, e.g. the south wall re-aligned) -> the HUDSON_EDITS-append pattern no longer fits. **Baked his export VERBATIM as `FIRST_BREACH_KIT` (831, ids normalized, redundant sy/sz stripped). The kit is HUDSON-CANONICAL from now on:** the generator is a scratch tool only — regenerating would overwrite his work (file header says so). All guards passed untouched: firstBreachKit **1012/1012** (his moves stayed off every protected cell).

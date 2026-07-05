@@ -552,7 +552,7 @@ class FirstBreachBuildMode {
     this._onDown = (e) => {
       this._down = { x: e.clientX, y: e.clientY, shift: e.shiftKey };
       if (this.brush) return; // placing handled on up
-      const piece = this._pickPiece(e.clientX, e.clientY);
+      const piece = this._pickPiece(e.clientX, e.clientY, e.ctrlKey);
       if (piece && this.mode === "move") {
         if (e.shiftKey) { this._toggleSel(piece); e.stopPropagation(); e.preventDefault(); return; } // shift-click = add/remove
         if (!this.sel.includes(piece)) this._select(piece); // clicked outside the group -> select just this one
@@ -607,7 +607,7 @@ class FirstBreachBuildMode {
         this._placeAt(this.brush, cell.col, cell.row, this.placeY);
         return;
       }
-      const piece = this._pickPiece(e.clientX, e.clientY);
+      const piece = this._pickPiece(e.clientX, e.clientY, e.ctrlKey);
       if (piece) {
         if (d.shift) { this._toggleSel(piece); }
         else { this._select(piece); this._status("Grabbed " + piece.asset + ". Shift-click adds, Ctrl+C/V copy-paste, Q/R rotate, Del."); }
@@ -637,14 +637,14 @@ class FirstBreachBuildMode {
     }
     return aabb;
   }
-  _pickPiece(clientX, clientY) {
+  _pickPiece(clientX, clientY, allowCarpet = false) {
     const ray = this._screenRay(clientX, clientY);
     if (!ray) return null;
     const hit = new pc.Vec3();
     let best = null, bestT = Infinity;
     for (const p of this.placed) {
       if (!p.entity) continue;
-      if (p.cat === "floor" || p.cat === "wrap") continue; // ground carpet: select via the Scene list, so drags orbit the camera
+      if (!allowCarpet && (p.cat === "floor" || p.cat === "wrap")) continue; // plain click ignores the ground carpet (drags orbit); Ctrl+click grabs EVERYTHING
       const aabb = this._entAabb(p.entity);
       if (aabb && aabb.intersectsRay(ray, hit)) { const t = hit.distance(ray.origin); if (t < bestT) { bestT = t; best = p; } }
     }
@@ -894,7 +894,7 @@ class FirstBreachBuildMode {
       "<b>Camera</b> &mdash; W/A/S/D move &middot; Space up &middot; Alt down &middot; right or middle-drag orbit &middot; scroll zoom",
       "<b>Move piece</b> &mdash; left-drag (flat) &middot; <b>hold V + drag = vertical</b> &middot; Arrows nudge &middot; PgUp/PgDn raise/lower &middot; F to floor",
       "<b>Rotate</b> &mdash; Q / R (a group spins around its centre) &middot; hold X or Z to lock an axis",
-      "<b>Select</b> &mdash; click &middot; Shift-click adds &middot; double-click a Scene row = fly to it &middot; Esc deselect",
+      "<b>Select</b> &mdash; click &middot; <b>Ctrl+click grabs floors/lips too</b> &middot; Shift-click adds &middot; double-click a Scene row = fly to it &middot; Esc deselect",
       "<b>Copy</b> &mdash; Ctrl+C copy &middot; Ctrl+V paste &middot; Ctrl+D duplicate &middot; Del delete",
       "<b>History</b> &mdash; Ctrl+Z undo &middot; Ctrl+Y redo &middot; E export",
     ].join("<br>");
