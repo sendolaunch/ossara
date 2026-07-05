@@ -12,7 +12,7 @@ import * as G from "../src/config/firstBreachGrid.js";
 
 const ALREADY = G.FB_HEIGHT[3] === 3.6;
 const MAP = ALREADY
-  ? new Map([[0.06, 0.06], [1.3, 1.3], [2.2, 2.2], [2.8, 2.8], [3.6, 3.6], [4, 4], [5.6, 5.6], [8.6, 8.6]])
+  ? new Map([[0.06, 0.06], [1.3, 1.3], [1.65, 1.65], [2.05, 2.05], [2.2, 2.2], [2.4, 2.4], [2.8, 2.8], [3.6, 3.6], [4, 4], [5.6, 5.6], [8.6, 8.6]])
   : new Map([[0.06, 0.06], [1.3, 1.3], [1.6, 2.2], [1.9, 2.8], [2.6, 3.6], [3, 4], [4.3, 5.6], [7.2, 8.6]]);
 const remap = (h) => { if (h == null) return null; if (!MAP.has(h)) throw new Error("unmapped height: " + h); return MAP.get(h); };
 
@@ -26,6 +26,19 @@ const WALKABLE_T = new Set([1, 2, 3, 4, 5, 7]);
 const tGrid = G.FB_CELLS.map((row) => row.split("").map(Number));
 const hGrid = [];
 for (let r = 0; r < G.FB_GRID.rows; r++) { hGrid.push([]); for (let c = 0; c < G.FB_GRID.cols; c++) hGrid[r].push(G.surfaceHeightAtCell(c, r)); }
+// ---- THIRD TIER (S7.43): the mid band (terrain-2 floor, rows 37-46) becomes floor 2 at 2.4,
+// so "floor two" really drops to "floor one" (courtyard 1.3). Lane B (col 22) gets a painted
+// stair ramp at cols 21-23 rows 36-37 so enemies + hero climb it; everything else is a cliff
+// governed by the one-way rule. The SW/central fans already bridge 2.4 -> 3.6.
+const MID_BAND = { r0: 37, r1: 46, h: 2.4 };
+const RAMP = { c0: 21, c1: 23, rows: [[36, 1.65], [37, 2.05]] };
+for (let r = MID_BAND.r0; r <= MID_BAND.r1; r++) for (let c = 1; c < G.FB_GRID.cols - 1; c++) {
+  if (tGrid[r][c] === 2) hGrid[r][c] = MID_BAND.h;
+}
+for (const [rr, rh] of RAMP.rows) for (let c = RAMP.c0; c <= RAMP.c1; c++) {
+  if (tGrid[rr][c] === 2 || tGrid[rr][c] === 7) { tGrid[rr][c] = 7; hGrid[rr][c] = rh; }
+}
+
 const DROP_GAPS = [];
 const gapTerrain = new Map();
 let changed = true;
@@ -52,46 +65,41 @@ const gapSet = new Set(DROP_GAPS.map(([c, r]) => c + "," + r));
 
 const TERRAIN = {}; for (const [k, v] of Object.entries(G.FB_TERRAIN)) TERRAIN[k] = { ...v, h: remap(v.h) };
 const HEIGHT = {}; for (const [k, v] of Object.entries(G.FB_HEIGHT)) HEIGHT[k] = remap(v);
-const CELLS = G.FB_CELLS.map((row, r) => row.split("").map((ch, c) => (gapSet.has(c + "," + r) ? String(gapTerrain.get(c + "," + r) ?? 3) : ch)).join(""));
-const CELLS_H = G.FB_CELL_HEIGHTS.map((row, r) => row.map((h, c) => (gapSet.has(c + "," + r) ? null : remap(h))));
+const CELLS = tGrid.map((row) => row.join(""));
+// per-cell heights: keep an override wherever the mutated height differs from the terrain default
+const CELLS_H = tGrid.map((row, r) => row.map((tid, c) => {
+  const def = HEIGHT[tid] ?? 0;
+  return Math.abs(hGrid[r][c] - def) > 1e-9 ? hGrid[r][c] : null;
+}));
 
-// subtract gap cells from a rect list (splits rects; drops emptied ones)
-function subtractGaps(rects) {
-  const out = [];
-  for (const z of rects) {
-    const hits = DROP_GAPS.filter(([c, r]) => c >= z.col && r >= z.row && c < z.col + z.w && r < z.row + z.h);
-    if (!hits.length) { out.push({ ...z }); continue; }
-    const cells = [];
-    for (let r = z.row; r < z.row + z.h; r++) for (let c = z.col; c < z.col + z.w; c++) if (!gapSet.has(c + "," + r)) cells.push([c, r]);
-    // greedy re-merge: horizontal runs per row, then vertical merge of identical runs
-    const byRow = new Map();
-    for (const [c, r] of cells) { if (!byRow.has(r)) byRow.set(r, []); byRow.get(r).push(c); }
-    const runs = [];
-    for (const [r, cols] of [...byRow.entries()].sort((a, b) => a[0] - b[0])) {
-      cols.sort((a, b) => a - b);
-      let s = cols[0], p = cols[0];
-      for (let i = 1; i <= cols.length; i++) { if (cols[i] !== p + 1) { runs.push({ col: s, row: r, w: p - s + 1, h: 1 }); s = cols[i]; } p = cols[i]; }
-    }
-    for (const run of runs) {
-      const prev = out.find((o) => o._grp === z && o.col === run.col && o.w === run.w && o.row + o.h === run.row);
-      if (prev) prev.h += 1; else out.push({ ...z, col: run.col, row: run.row, w: run.w, h: run.h, _grp: z });
+// Rebuild ALL rect exports from the MUTATED grids (single source of truth). Greedy merge:
+// horizontal runs per row keyed by (terrain,height), then vertical merge of identical runs.
+function mergeRects(cellsOf) {
+  const runs = [];
+  for (let r = 0; r < G.FB_GRID.rows; r++) {
+    let c = 0;
+    while (c < G.FB_GRID.cols) {
+      const key = cellsOf(c, r);
+      if (key == null) { c++; continue; }
+      let c2 = c;
+      while (c2 + 1 < G.FB_GRID.cols && cellsOf(c2 + 1, r) === key) c2++;
+      runs.push({ col: c, row: r, w: c2 - c + 1, h: 1, key });
+      c = c2 + 1;
     }
   }
-  return out.map(({ _grp, ...z }) => z);
+  const out = [];
+  for (const run of runs) {
+    const prev = out.find((o) => o.key === run.key && o.col === run.col && o.w === run.w && o.row + o.h === run.row);
+    if (prev) prev.h += 1; else out.push({ ...run });
+  }
+  return out;
 }
-const RECTS = subtractGaps(G.FB_TERRAIN_RECTS.map((r) => ({ ...r, height: remap(r.height) })));
-// gap cells render as platform ground (merge vertical/horizontal pairs)
-const gapRects = [];
-for (const [c, r] of DROP_GAPS) {
-  const tid = gapTerrain.get(c + "," + r) ?? 3;
-  const prev = gapRects.find((g) => g.terrain === tid && ((g.col === c && g.row + g.h === r && g.w === 1) || (g.row === r && g.col + g.w === c && g.h === 1)));
-  if (prev) { if (prev.col === c && g_w1(prev)) prev.h += 1; else prev.w += 1; }
-  else gapRects.push({ col: c, row: r, w: 1, h: 1, terrain: tid, height: HEIGHT[tid] });
-}
-function g_w1(g) { return g.w === 1; }
-RECTS.push(...gapRects);
-const BLOCKED = subtractGaps(G.FB_BLOCKED_RECTS).map((z, i) => ({ id: "blk-" + i, col: z.col, row: z.row, w: z.w, h: z.h }));
-const PLATFORM = [...G.FB_PLATFORM_RECTS, ...gapRects.filter((g) => g.terrain === 3).map(({ col, row, w, h }) => ({ col, row, w, h }))];
+const RECTS = mergeRects((c, r) => (tGrid[r][c] === 0 ? null : tGrid[r][c] + "@" + hGrid[r][c]))
+  .map(({ col, row, w, h, key }) => { const [tid, hh] = key.split("@"); return { col, row, w, h, terrain: +tid, height: +hh }; });
+const BLOCKED = mergeRects((c, r) => (tGrid[r][c] === 0 || tGrid[r][c] === 6 ? "b" : null))
+  .map(({ col, row, w, h }, i) => ({ id: "blk-" + i, col, row, w, h }));
+const PLATFORM = mergeRects((c, r) => (tGrid[r][c] === 3 ? "p" : null))
+  .map(({ col, row, w, h }) => ({ col, row, w, h }));
 
 const out = `// AUTO-DERIVED from the painted grid (tasks/first-breach-grid.json), height-aware.
 // Per-cell heights (cellHeights) override the terrain default — e.g. outer-border walls

@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.42 — 2026-07-05 — OPEN LEDGES: all 56 rim-wall cells removed (jump down anywhere, stairs up — Hudson's call), stairs v2 (dedupe + sz 0.5, no z-fight), 1x1 floor filler = full coverage (kit 1092), heart-only railings. Suite 0 fails; build 899. PUSH PENDING. Perf watch: 1092 pcs |
+| **Last session** | S7.43 — 2026-07-05 — THIRD TIER: mid band raised to 2.4 (real floor2->floor1 drop), lane-B stair ramp, rects now REBUILT from mutated grid (fixed 431 stale-height rects), kit 1071. Suite exit 0; build 899. PUSH PENDING (S7.42 WAS pushed pre-crash = 1fea9f4; only S7.43 ships now) |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.43 — 2026-07-05 — Third tier: the mid band really drops now [GATE GREEN; PUSH PENDING]
+- Hudson (2 annotated screenshots, still on the S7.41 deploy — his PC crashed before pushing S7.42): (1) "weird line" on the top floor + (2) fall-through when your foot touches the grey rim -> BOTH already fixed in unpushed S7.42 (1x1 filler + open ledges). (3) NEW: "floor two and floor one are the same level — it didn't even drop": both floors were 1.3.
+- **Third tier (retier v4):** terrain-2 cells rows 37-46 raised to **2.4** per-cell (courtyard stays 1.3) -> the row-36/37 line is now a real 1.1 cliff: jump down anywhere (one-way rule), climb back via a painted 3-wide **stair ramp at cols 21-23 rows 36-37** (1.65/2.05 — also carries lane B's enemies, no floating pop) or the central fan (2.2/2.8 bridges 1.3 -> 2.4 -> 3.6). South band (3.6) -> mid (2.4) rims auto-opened by the fixpoint (26 rim cells this pass).
+- **Pipeline fix:** the emitted CELLS/CELL_HEIGHTS now come from the MUTATED grids, and ALL rect exports (FB_TERRAIN_RECTS / FB_BLOCKED_RECTS / FB_PLATFORM_RECTS) are REBUILT from that grid by greedy merge — the old subtract-only path left **431 rects at stale heights** (map would RENDER at 1.3 under a hero standing at 2.4). Audits now: coverage 0 missing / 0 double, height disagreements 0, terrain disagreements 0, idempotent (run2 = +0 cells).
+- Kit v6 = **1071 pieces** (stairs 39 -> 18 — correct: the new tier turned many cliffs into walkable steps; wraps 91 face the new rims). Deterministic (`499885e1...` twice).
+- Verified (R5/R6): FULL suite exit 0 (44 test files); oneWayLedges 17/17; /tmp build **899 modules** (tmp recycled again mid-session — second rebuild); NUL 0 x4.
+- **NOTE:** git shows S7.42 WAS pushed before the crash (`1fea9f4` = origin/main) — Hudson's screenshots predate that deploy (hard-refresh needed). Only S7.43 ships in this close-prompt.
+- **In Friendly Words:** now there really are three floors: the courtyard at the bottom, the middle floor a real ledge above it, and the platforms on top. Step off any edge and you drop for real; the way back up is the new stair ramp (which the monsters also use) or the big central stairs. I also caught a nasty one where the ground would have been DRAWN lower than where you stand — fixed before you ever saw it. Everything tested and built clean.
 
 ### S7.42 — 2026-07-05 — Open ledges everywhere + stairs v2 + full floor coverage [GATE GREEN; PUSH PENDING]
 - Hudson playtested S7.41: fall-through FIXED ("I can walk on that piece now"), but (1) he now wants to jump down ANYWHERE along a ledge, not just at cut gaps; (2) my mini-stairs z-fight ("flipping through each other") — the sz 0.25 squish made steps so shallow they shimmer; (3) floors still show the base layer (1-wide strips never met the tile passes' uniformity rule); (4) bare "second floor" walls.
