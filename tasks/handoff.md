@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.39 — 2026-07-01 — Hudson: barrier walls messed up -> read REAL GLTF dims (wall_half=2x4, barrier_column=4-long fence!) -> v3: wall sy0.65 dividers + run-based railings (631 pcs). Gate green; push pending |
+| **Last session** | S7.40 — 2026-07-04 — TIER REBUILD: heights raised (floor 1.3 / stairs 2.2-2.8 / plats+ward 3.6 / dais 4.0 / walls 8.6), 10 drop-gap cells cut, one-way ledge rule in the sim (drop yes, climb via stairs only), kit regen 661. Suite 0 fails incl new oneWayLedges 17/17; build 899. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,18 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.40 — 2026-07-04 — Raised tiers + one-way drops (jump down, stairs back up) [GATE GREEN; PUSH PENDING]
+- Hudson (after seeing v3 live): floors patchy over the base layer, pit a mess, props now MINIATURIZED (v2 over-corrected), and the big one: tiers should be higher with one-way verticality — jump down, but climb back only via the stairs. Chose (AskUser): dev-server QA loop + HEIGHTS FIRST. Art-look fixes (floors/pit/per-asset size table) are next session, via the localhost loop.
+- **Discovery:** the sim is pure 2D; `ledgeBlockedSet` was DEAD CODE (gated on an old core 16,49 — current core is 9,51), so the hero climbed every ledge freely. And the map had ZERO walkable non-stair edges with rise > 0.5 — every tier change went through walls or stairs, so a ledge rule alone would govern nothing.
+- **Re-tier** (`scripts/retierFirstBreachHeights.mjs`, deterministic + idempotent re-emit of `firstBreachGrid.js`): floor 1.3 | stairs 2.2/2.8 | platform+ward 3.6 | dais 4.0 | inner walls 5.6 | low dividers 3.6 | perimeter 8.6. Ward->dais step stays 0.4 (walkable).
+- **Drop gaps:** 10 wall cells cut at 5 openings (NW platform east rim 12,12-13 + 12,20-21; south band north rim 33-34,46 + 49-50,46 + 57-58,47), all off-lane. Gap cells become platform terrain; FB_TERRAIN_RECTS/FB_BLOCKED_RECTS get exact rect subtraction (greedy re-merge), FB_PLATFORM_RECTS gains the gaps.
+- **One-way rule (sim):** `level.js` now exposes `surfaceHeightAt`/`terrainKindAt`/`stairTerrain` (pure data lookups — engine-agnostic, works for every future map). `World._moveBlocked(fromXZ, toXZ)`: walls absolute; with `walkableElevation` a rise > 0.5 is blocked unless entering/leaving stair terrain; drops always allowed. Hero per-axis moves + dash use it; enemies (lane-driven) untouched. Dead ledgeBlockedSet + its import removed. mission.js already passed `walkableElevation: true` — the intent existed, the gate was stale.
+- **New test** `test/oneWayLedges.test.mjs` (in the npm chain): 17/17 — tier sanity, climb blocked / drop allowed at a real gap, stairs exempt both ends, ward->dais walkable, walls absolute, and an integration run driving the hero at the ledge with real `world.update()` both directions.
+- **Kit regen for new heights** (661 pcs): divider `sy` now derived per-ridge (z.height/4), perimeter course-2 sy 1.25 crowns the 8.6 wall, heart-camp piece heights computed from the grid (DAIS_H/WARD_H/TABLE_TOP) instead of hardcoded.
+- Verified (R5/R6): FULL suite exit 0, 0 fails (incl. blockout 970 + surface heights — they read FB_HEIGHT dynamically and adapted); oneWayLedges **17/17**; /tmp build **899 modules** (tmp env was recycled over the break — rebuilt per lesson); NUL scans 0 on all touched files. **Unverified:** in-game feel of the drops + how the taller tiers read — that is the point of the dev-server loop next.
+- **NEXT SESSION (already agreed):** Hudson runs `npm run dev` and leaves it open; I drive localhost via Chrome and do the section-by-section screenshot QA (floors full-coverage + base-tint match, pit chasm treatment, per-asset size table from measured GLTF dims). The per-asset target-size table is the engine piece that makes every future map cheap.
+- **In Friendly Words:** The map now has real floors-above-floors: the platforms sit properly high, and I cut five broken openings in their walls where you can jump DOWN — but you cannot climb back up; you have to go around to the stairs, exactly like you wanted. A new automatic test proves it: push the hero at a ledge and he stays put; walk him off it and he drops. Everything passes. Push the block below, then whenever you start the dev server I will go stare at every corner of the map and fix the floors, the pit and the tiny-barrel problem until it looks like a real game.
 
 ### S7.39 — 2026-07-01 — "barrier walls are messed up" -> v3 rebuilt from real GLTF dims [GATE GREEN; PUSH PENDING]
 - Hudson: "the barrier walls for each level are all kinds of messed up." Confirmed on the live site (still v1, badge `904367e`): orphaned fence bits floating in open floor, overlapping rails, and the inner dividers reading as gappy too-tall blocks.
