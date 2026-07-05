@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.51 — 2026-07-05 — Hudson's wall fix captured from his browser save (content-diff vs live kit = exactly 1 true edit) and BAKED via new HUDSON_EDITS block; export ROUNDING bug fixed (saves corrupted fractional positions); 19 sunk torches + stool re-seated ground-relative. Kit 830, 0 sunk. Suite 0 fails; build 900. PUSH PENDING |
+| **Last session** | S7.52 — 2026-07-05 — Hudson's export BAKED VERBATIM (831 pcs, kit is HUDSON-CANONICAL now — do not regen over it) + SELECT-ALL tooling (outliner button + Ctrl+A, filter-aware, glow cap 120). His plan: finish top floor -> art -> floor 2 -> floor-3 drop. Suite 0 fails (kit 1012/1012); build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.52 — 2026-07-05 — His export baked verbatim + Select-all [GATE GREEN; PUSH PENDING]
+- Hudson uploaded `first-breach-kit.json` (831 pcs; fractional positions confirm the export fix works). Content-diff vs kit: 246 paired moves (whole wall runs shifted — his rework, e.g. the south wall re-aligned) -> the HUDSON_EDITS-append pattern no longer fits. **Baked his export VERBATIM as `FIRST_BREACH_KIT` (831, ids normalized, redundant sy/sz stripped). The kit is HUDSON-CANONICAL from now on:** the generator is a scratch tool only — regenerating would overwrite his work (file header says so). All guards passed untouched: firstBreachKit **1012/1012** (his moves stayed off every protected cell).
+- **Select-all tooling** (his ask — "I need to select everything... redo the floors and the barrier walls"): outliner **"Select all shown (Ctrl+A)"** — selects every placed piece matching the filter box (empty = everything). Filter "floor" -> Ctrl+A -> Del clears all 403 floors in two keys; same for "barrier"/"wall". Selection glow capped at 120 boxes so huge selections don't drown the scene; group nudge/rotate/delete/undo all operate on the full selection.
+- Sandbox hazard escalated: the OneDrive mount ROLLED BACK a freshly-patched file mid-burst (writes vanished between calls; a later patch applied onto the older version, leaving a dangling reference). Recovery pattern now in use: idempotent check-then-apply patches + re-verify markers AFTER a sync pause. (Existing lessons entry extended by this: verify after settling, not just after writing.)
+- His roadmap (recorded): 1) finish TOP floor layout+art with the editor, 2) then floor 2, 3) then "fix the third floor drop". Cowork's job: bake his exports fast, keep tools sharp, rig-verify.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**; bake audited (1012/1012 kit checks incl. his layout).
+- **In Friendly Words:** Your new layout is the official map now, exactly as you exported it — and from here on, your exports simply become the map, no translation. The editor also got the bulk tool you wanted: type "floor" in the Scene filter and press Ctrl+A — all four hundred floor tiles selected at once, ready to delete or shove around; same trick for the inner walls. Send me an export whenever a floor is done and I'll bake it same-day.
 
 ### S7.51 — 2026-07-05 — Bake Hudson's wall + kill the save-rounding bug [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson: fix it so he doesn't redo his wall, and make the map "spawn in as it is now" with no buttons. Read his `fbBuildSave` from his browser (829 pcs after his Reset), content-diffed against the LIVE kit entities in-page: 359 mismatches -> all but ONE were a systemic bug — **`_specsForExport` ROUNDED col/row to integers**, so the auto-save silently snapped every fractional kit piece (banners, wall offsets, jittered rubble) to the grid. His ONE true edit: a diagonal `wall` @26,55 ry45 sy1.255 by the camp.

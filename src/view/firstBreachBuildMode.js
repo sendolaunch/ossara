@@ -228,6 +228,13 @@ class FirstBreachBuildMode {
     this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
     this._status("Tiled the floor with " + made.length + " KayKit stone tiles. Ctrl+Z to undo.");
   }
+  _selectAllShown() {
+    const q = (this._ui.wrap.querySelector("#fbFilter")?.value || "").trim().toLowerCase();
+    const list = this.placed.filter((p) => p.entity && (!q || p.asset.toLowerCase().includes(q)));
+    if (!list.length) { this._status("Nothing matches the filter."); return; }
+    this._selectMany(list);
+    this._status("Selected " + list.length + " pieces" + (q ? " matching \'" + q + "\'" : "") + ". Del deletes, arrows nudge, Q/R rotate the group, Ctrl+Z undoes.");
+  }
   _fixSavedHeights() {
     // After a map re-tier, pieces saved against the OLD ground sit buried inside the new,
     // taller terrain. Re-seat them: pieces that stood ON a raised surface rise with it;
@@ -650,6 +657,7 @@ class FirstBreachBuildMode {
       const k = e.key, ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && (k === "z" || k === "Z") && !e.shiftKey) { e.preventDefault(); this._doUndo(); }
       else if (ctrl && ((k === "y" || k === "Y") || (e.shiftKey && (k === "z" || k === "Z")))) { e.preventDefault(); this._doRedo(); }
+      else if (ctrl && (k === "a" || k === "A")) { e.preventDefault(); this._selectAllShown(); }
       else if (ctrl && (k === "d" || k === "D")) { e.preventDefault(); this._duplicate(); }
       else if (ctrl && (k === "c" || k === "C")) { e.preventDefault(); this._copy(); }
       else if (ctrl && (k === "v" || k === "V")) { e.preventDefault(); this._paste(); }
@@ -724,7 +732,8 @@ class FirstBreachBuildMode {
   }
   _updateHighlight() {
     if (!this._hlMat) return;
-    const list = (this.sel && this.sel.length) ? this.sel : (this.selected ? [this.selected] : []);
+    const list0 = (this.sel && this.sel.length) ? this.sel : (this.selected ? [this.selected] : []);
+    const list = list0.length > 120 ? list0.slice(0, 120) : list0; // cap glow boxes on huge selections
     let n = 0;
     for (const p of list) {
       if (!p || !p.entity) continue;
@@ -812,7 +821,8 @@ class FirstBreachBuildMode {
       '</div>',
       // ---------- left outliner ----------
       '<div id="fbLeft"><h4>Scene &middot; <span id="fbCount">0</span> pieces</h4>',
-      '<input id="fbFilter" placeholder="filter placed...">',
+      '<input id="fbFilter" placeholder="filter placed... (e.g. floor, wall, barrier)">',
+      '<button id="fbSelAll" style="margin:0 8px 6px;background:#1e2126;color:#c8cdd4;border:1px solid #2c3038;border-radius:4px;padding:4px;cursor:pointer;font:inherit">Select all shown (Ctrl+A)</button>',
       '<div id="fbList"></div></div>',
       // ---------- right inspector ----------
       '<div id="fbRight"><h4>Inspector</h4><div class="bd">',
@@ -856,6 +866,7 @@ class FirstBreachBuildMode {
 
     // outliner filter
     wrap.querySelector("#fbFilter").oninput = () => this._refreshList();
+    wrap.querySelector("#fbSelAll").onclick = () => this._selectAllShown();
 
     wrap.querySelectorAll("#fbModes button").forEach((b) => { b.onclick = () => this._setMode(b.dataset.m); });
     wrap.querySelector("#fbUndo").onclick = () => this._doUndo();
