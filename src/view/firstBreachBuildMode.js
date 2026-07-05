@@ -453,7 +453,7 @@ class FirstBreachBuildMode {
     const cx = (this.level.cols - 1) / 2, cz = (this.level.rows - 1) / 2;
     return this.placed.map((p, i) => {
       const w = p.entity.getPosition(), e = p.entity.getLocalEulerAngles(), s = p.entity.getLocalScale();
-      const o = { id: p.cat + "-" + i, asset: p.asset, col: Math.round(w.x + cx), row: Math.round(w.z + cz), y: +w.y.toFixed(2), ry: Math.round(((e.y % 360) + 360) % 360), scale: +s.x.toFixed(3), cat: p.cat };
+      const o = { id: p.cat + "-" + i, asset: p.asset, col: +(w.x + cx).toFixed(2), row: +(w.z + cz).toFixed(2), y: +w.y.toFixed(2), ry: Math.round(((e.y % 360) + 360) % 360), scale: +s.x.toFixed(3), cat: p.cat };
       if (Math.abs(s.y - s.x) > 1e-3) o.sy = +s.y.toFixed(3);
       if (Math.abs(s.z - s.x) > 1e-3) o.sz = +s.z.toFixed(3);
       return o;

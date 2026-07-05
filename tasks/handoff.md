@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.50 — 2026-07-05 — VISUAL VERIFY of 05f7c3c per Hudson: baked map is CORRECT (829/829, heart intact, tiers probe clean) — 'deleted stuff' = his 378-piece editor SAVE buried under the raised terrain (y vs new surfaces confirmed via his localStorage). Fix = 'Fix piece heights (after map re-tier)' editor button. Suite 0 fails; build 900. PUSH PENDING |
+| **Last session** | S7.51 — 2026-07-05 — Hudson's wall fix captured from his browser save (content-diff vs live kit = exactly 1 true edit) and BAKED via new HUDSON_EDITS block; export ROUNDING bug fixed (saves corrupted fractional positions); 19 sunk torches + stool re-seated ground-relative. Kit 830, 0 sunk. Suite 0 fails; build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.51 — 2026-07-05 — Bake Hudson's wall + kill the save-rounding bug [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: fix it so he doesn't redo his wall, and make the map "spawn in as it is now" with no buttons. Read his `fbBuildSave` from his browser (829 pcs after his Reset), content-diffed against the LIVE kit entities in-page: 359 mismatches -> all but ONE were a systemic bug — **`_specsForExport` ROUNDED col/row to integers**, so the auto-save silently snapped every fractional kit piece (banners, wall offsets, jittered rubble) to the grid. His ONE true edit: a diagonal `wall` @26,55 ry45 sy1.255 by the camp.
+- **Fixes:** (1) export keeps 2-decimal col/row — saves can never drift again; (2) new **HUDSON_EDITS** block in the generator — his wall is baked permanently and survives every regen (the pattern for preserving his hand work going forward); (3) torch brackets now seat ground-relative (`H(cell)+1.9` — 18 were 0.4 under the raised platforms) and the camp stool sits on the dais (DAIS_H). Audit: **0 pieces sunk below their ground** (was 19).
+- Kit = **830 pieces** (829 + his wall), deterministic (`a3a27f03` twice). RIG-verified: south perimeter full-height skin, no bare band (`outputs/hudson-wall-baked.png`).
+- **Hudson's one manual step after deploy:** open the editor and click **"Reset to deployed map"** ONCE — that discards the rounding-corrupted save and re-seeds from the pristine bake (his wall included). From then on his saves stay exact.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**; rig shot; sunk-piece audit 0.
+- **In Friendly Words:** Your wall is saved forever — I pulled it straight out of your browser and made it part of the real map, so it spawns in automatically like everything else. I also found why things kept shifting when you saved: the editor was rounding every piece to the nearest whole tile behind your back — fixed for good. And those torches half-buried in the floor are seated properly now. One thing to do after this goes live: in the editor, hit "Reset to deployed map" once so your local copy matches the clean version — after that, what you build is exactly what gets saved, down to the millimeter.
 
 ### S7.50 — 2026-07-05 — "You made it worse / deleted a lot" -> his editor save was buried, not deleted [GATE GREEN; PUSH PENDING]
 - Hudson demanded a visual verify of the S7.49 deploy. Did the full circuit on live `05f7c3c`: 829/829 pieces placed, NW top platform matches the rig shot, heart camp intact, south-band terrain probes uniform 3.6 (the "dark channel" he might see = the lane-E overlay strip, pre-existing, opacity-visual only).

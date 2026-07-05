@@ -304,7 +304,7 @@ for (const [wall, fixed, from, to] of RUNS) {
     torchSpots.push([cc, rr2, RY[wall], inHeart(c, r) || (wall === "S" && t < 30) || (wall === "W" && t > 40)]);
   }
 }
-for (const [c, r, ry, lit] of torchSpots) add(lit ? "torch_lit" : "torch_mounted", "light", c, r, 3.2, ry, lit ? 0.5 : 1);
+for (const [c, r, ry, lit] of torchSpots) add(lit ? "torch_lit" : "torch_mounted", "light", c, r, +(H(Math.round(c), Math.round(r)) + 1.9).toFixed(2), ry, lit ? 0.5 : 1);
 
 // ============================================================
 // D2. THE HELD HEART — Ward dais + defenders' camp (lit, blue, stocked)
@@ -320,7 +320,7 @@ const heartPieces = [
   // the camp (east of the dais, tucked south of lane E's corridor)
   ["table_medium_decorated_A", "prop", 13.2, 54.6, WARD_H, 95, 0.65],
   ["rpgtools/journal_open", "prop", 13.2, 54.4, TABLE_TOP, 200, 0.6], ["plate_food_A", "prop", 13.5, 54.9, TABLE_TOP, 40, 0.6], ["bottle_A_labeled_green", "prop", 12.9, 54.75, TABLE_TOP, 0, 0.6],
-  ["stool_round", "prop", 12.3, 54.2, WARD_H, 210, 0.6],
+  ["stool_round", "prop", 12.3, 54.2, DAIS_H, 210, 0.6],
   ["bed_floor", "prop", 16, 54.7, WARD_H, 10, 0.65], ["bed_floor", "prop", 17.6, 54.3, WARD_H, 350, 0.65],
   ["bookcase_single_decoratedA", "prop", 19.2, 55.4, WARD_H, 180, 0.65],
   ["crates_stacked", "prop", 20.6, 54.8, WARD_H, 15, 0.6], ["box_stacked", "prop", 19.8, 54.1, WARD_H, 65, 0.6],
@@ -384,6 +384,15 @@ for (let r = 6; r < ROWS && scatterN < 150; r++) for (let c = 0; c <= 66 && scat
   add(pick(pool), "rubble", c + rnd() * 0.7 - 0.35, r + rnd() * 0.7 - 0.35, h, rnd() * 360, 0.4 + rnd() * 0.22);
   scatterN++;
 }
+
+// ============================================================
+// HUDSON'S HAND EDITS — baked in permanently; survive every regeneration.
+// (S7.51: his fixed diagonal wall by the camp, captured from his editor save.)
+// ============================================================
+const HUDSON_EDITS = [
+  { asset: "wall", cat: "wall", col: 26, row: 55, y: 3.6, ry: 45, scale: 1, sy: 1.255 },
+];
+for (const e of HUDSON_EDITS) add(e.asset, e.cat, e.col, e.row, e.y, e.ry, e.scale, e.sy != null || e.sz != null ? { ...(e.sy != null ? { sy: e.sy } : {}), ...(e.sz != null ? { sz: e.sz } : {}) } : {});
 
 // ============================================================
 // E. VALIDATE + EMIT
