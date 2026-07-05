@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.43 — 2026-07-05 — THIRD TIER: mid band raised to 2.4 (real floor2->floor1 drop), lane-B stair ramp, rects now REBUILT from mutated grid (fixed 431 stale-height rects), kit 1071. Suite exit 0; build 899. PUSH PENDING (S7.42 WAS pushed pre-crash = 1fea9f4; only S7.43 ships now) |
+| **Last session** | S7.44 — 2026-07-05 — THE RIG: headless in-sandbox game screenshots (scripts/rigShot.mjs) = verify-before-ship is real (R27). Fan plateaus floored, run-based rim wraps, block skin — all RIG-VERIFIED pre-push. New noSoftLock test (0 traps). Kit 1211/cap 1300. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,16 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.44 — 2026-07-05 — The rig: verify-before-ship becomes real [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson (rightly): "come up with a plan that lets you be a real dev — actually test fixes and see if they worked." Delivered the plan AND the infrastructure in one session.
+- **Diagnosis first (live d69dc0e):** in-page walk-test proved ALL S7.43 mechanics correct (7 tier probes sim==view; climb blocked / drop ok / ramp climbs) — the damage was visual: bare untextured stair-fan mesas (I excluded terrain 7 from every tile pass), patchy rim facings (along%2 gaps), bare wall-block slabs.
+- **THE RIG (`scripts/rigShot.mjs` + R27 in CLAUDE.md):** headless Chromium IN the sandbox rendering the REAL game off a local vite dev server -> probes + PNG screenshots to outputs, which Cowork then READS. Recipe: `npm i playwright-core @sparticuz/chromium` (both via allowed npm registry — playwright's own CDN is allowlist-blocked), swiftshader WebGL via sparticuz args + `--enable-unsafe-swiftshader`, screenshots via CDP `Page.captureScreenshot` (element/page screenshots hang forever on the always-animating canvas), public/ symlinked into the /tmp build dir. Sandbox kills background processes BETWEEN bash calls -> vite + rigShot must run inside ONE call (fits the 45s cap once chromium is extracted + vite cache warm).
+- **Fixes, RIG-verified from the same vantage as the broken shot:** fan plateaus fully tiled (1x1 filler no longer skips terrain 7); wraps rebuilt run-based (exact coverage, no every-other-cell stripes; 92 wraps); wall blocks (area >= 6) get perimeter cracked-wall skin + roof debris (cat prop — the generator's own guards caught my first attempt putting cat-rubble on protected cells + a cap overflow, pre-ship, as designed).
+- **New `test/noSoftLock.test.mjs`** (in npm chain): directional BFS over the one-way graph — hero-reachable area (>500 cells) has ZERO cells that cannot return to the Ward, and >=20 genuine one-way drop edges exist. Soft-locks can never ship silently again.
+- Kit v7 = **1211 pieces**, cap lifted 1200 -> 1300 with a hard note: next lift requires the static-batching backlog item FIRST (R17).
+- Verified (R5/R6): rig shots before/after (`rig-fan.png` / `rig-fan-v7.png`); suite exit 0 incl. oneWayLedges 17/17 + noSoftLock 4/4; /tmp build **899 modules**; deterministic (`e7bd3339` twice); NUL 0.
+- **In Friendly Words:** You asked me to become a tester, not just a builder — done. I built a robot browser inside my workspace that runs the actual game, walks around, and takes screenshots I look at BEFORE anything reaches you. Today it already caught and confirmed the fixes for the bald hill in the middle of the map, the stripey cliff edges, and the bare stone blocks. There's also a new automatic test that makes soft-locks impossible — if any future map change lets you jump somewhere you can't escape, the tests fail before it ships. From now on: one fix, one screenshot-proof, one push, and every push comes with a one-line undo.
 
 ### S7.43 — 2026-07-05 — Third tier: the mid band really drops now [GATE GREEN; PUSH PENDING]
 - Hudson (2 annotated screenshots, still on the S7.41 deploy — his PC crashed before pushing S7.42): (1) "weird line" on the top floor + (2) fall-through when your foot touches the grey rim -> BOTH already fixed in unpushed S7.42 (1x1 filler + open ledges). (3) NEW: "floor two and floor one are the same level — it didn't even drop": both floors were 1.3.

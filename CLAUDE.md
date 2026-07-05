@@ -147,4 +147,11 @@ npm run dev            # then EYEBALL: console clean (F12), and the loop works:
 the build passes, the sim test passes, and (for any visible change, R20) the eyeball smoke run
 is clean. If a step couldn't be run, the recap says which one and why (R5/R6).
 
+**R27. Visual/feel changes verify on the RIG before any close-prompt.** The sandbox renders
+the real game headless: `scripts/rigShot.mjs` boots the game on a local dev server in headless
+Chromium (playwright-core + @sparticuz/chromium, both npm-installable in-sandbox), probes game
+state, and screenshots to the outputs folder — Cowork then LOOKS at the PNG. No map/art/movement
+change ships on build+test green alone; the recap references the rig shot (or says exactly why
+the rig could not run). One fix per commit; every close-prompt carries its revert line.
+
 **R26. A deploy isn't done until the live URL renders the new commit.** Not "Ready", not an HTML-shell fetch — confirm the live page boots (PlayCanvas up, loop reachable) AND the version badge SHA (bottom-right "OSSARA · <sha>") matches the shipped commit. Can't see the page? Say "deploy unverified" and hand the eyeball to the user (R5/R6).

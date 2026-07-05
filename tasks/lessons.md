@@ -154,3 +154,10 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Symptom:** hero "falls straight through" a 1-cell walkway into the wall and pops out a floor below; movement stutters everywhere after tiers got taller.
   **Root cause:** `getSurfaceHeightAtWorld` converted world->fractional cell WITHOUT +0.5: grid cell c is CENTRED at world (c-(cols-1)/2)*tile (spans [c-0.5,c+0.5)), but zone bounds are cell-indexed [col,col+w). Every boundary therefore read half a cell early; on narrow walkable strips the lookup missed ALL zones and returned defaultHeight 0.
   **Rule:** any world->cell-fraction conversion that will be compared against CELL-INDEXED bounds needs the +0.5 centre shift; and no visual height resolver may ever return a default that differs wildly from its surroundings — fall back to the painted grid (`surfaceHeightAtCell(round,round)`), not to 0. Wide rects hide this bias; 1-cell strips expose it.
+
+
+## The rig: headless in-sandbox game rendering (S7.44)
+
+- **Recipe:** `npm i playwright-core @sparticuz/chromium --no-save` (playwright's browser CDN is allowlist-blocked; sparticuz ships chromium INSIDE the npm package + swiftshader for software WebGL). Launch with sparticuz args + `--enable-unsafe-swiftshader`. Screenshot via CDP `Page.captureScreenshot` — playwright's page/element screenshot waits for "stability" and hangs forever on a game canvas that redraws every frame. Symlink `public/` into the /tmp build dir so models serve.
+- **Sandbox process rules:** background processes are killed BETWEEN bash calls (setsid/nohup/disown do not save them), but files persist. So: server + client must run inside ONE call (vite boot ~3s + chromium extract ~10s first-run + game boot ~10s fits 45s once warm); `npm i` with --no-save PRUNES other --no-save packages (install them together); a call that times out may leave its processes holding ports -> pkill first.
+- **Process rule (now R27):** no visual/feel change ships on build+test green alone — rig shot, look at it, then close-prompt. One fix per commit, revert line included.

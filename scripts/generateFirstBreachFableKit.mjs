@@ -1,4 +1,4 @@
-// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 dividers/railings from real dims; v4 S7.41 tall-wall skin/fan stairs; v5 S7.42 — open ledges everywhere, stairs run-fix (sz 0.5 + dedupe), 1x1 floor filler, heart-only railings).
+// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 dividers/railings from real dims; v4 S7.41 tall-wall skin/fan stairs; v5 S7.42 open ledges; v7 S7.44 — fan plateaus floored, run-based exact rim wraps, wall-block perimeter skin (RIG-verified).
 // Fresh full-map dressing: perimeter + inner wall skin, gates, floors, platform wraps,
 // railings, scatter, and authored set dressing. Theme: RUIN WITH A HELD HEART —
 // the crypt is long dead (rubble, broken tiles, dead torches, red necro banners at the
@@ -151,6 +151,17 @@ for (const z of tallRuns) {
   }
 }
 
+// B3c. WALL BLOCKS (w>1 && h>1, e.g. the old crypt block): ring their perimeter with
+// cracked-wall skin at the block's own height and drop a little rubble on the roof.
+const blocks = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.w > 1 && z.h > 1 && z.height < 8 && z.w * z.h >= 6);
+for (const z of blocks) {
+  const bsy = +(z.height / 4).toFixed(3);
+  for (let c = z.col + 1.5; c <= z.col + z.w - 1.5 || z.w <= 3; c += 4) { add("wall_cracked", "wall", Math.min(c, z.col + z.w - 1.5), z.row, 0, 0, 1, { sy: bsy }); add("wall_cracked", "wall", Math.min(c, z.col + z.w - 1.5), z.row + z.h - 1, 0, 180, 1, { sy: bsy }); if (z.w <= 3) break; }
+  for (let r = z.row + 1.5; r <= z.row + z.h - 1.5 || z.h <= 3; r += 4) { add("wall_cracked", "wall", z.col, Math.min(r, z.row + z.h - 1.5), 0, 90, 1, { sy: bsy }); add("wall_cracked", "wall", z.col + z.w - 1, Math.min(r, z.row + z.h - 1.5), 0, 270, 1, { sy: bsy }); if (z.h <= 3) break; }
+  add("rubble_half", "prop", z.col + z.w / 2 - 0.5 + rnd() - 0.5, z.row + z.h / 2 - 0.5 + rnd() - 0.5, z.height, rnd() * 360, 0.5);
+  add("rocks_small", "prop", z.col + 1 + rnd() * (z.w - 2), z.row + 1 + rnd() * (z.h - 2), z.height, rnd() * 360, 0.5);
+}
+
 // ============================================================
 // C1. FLOORS — large stone tiles on uniform 4x4 patches, small tiles as filler.
 // Ruin zones get rocky/dirt variants + deliberate holes; the heart stays clean.
@@ -191,7 +202,7 @@ for (let r = 1; r < ROWS; r += 2) for (let c = 1; c < COLS; c += 2) {
 // 1x1 filler: every remaining walkable cell (rim walkways, strips, odd corners) gets a
 // quarter-scale small tile so the placeholder base layer can never show through.
 for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
-  if (covered.has(cellKey(c, r)) || !inPlay(c, r) || !WALK(c, r) || T(c, r) === 7 || gateMouth(c, r)) continue;
+  if (covered.has(cellKey(c, r)) || !inPlay(c, r) || !WALK(c, r) || gateMouth(c, r)) continue;
   const h = H(c, r);
   if (h < 0.5 || h >= 5) continue;
   const broken = !inHeart(c, r) && rnd() < 0.18;
@@ -206,6 +217,7 @@ for (const [c, r] of [[14, 54], [18, 54], [21.6, 54]]) add("floor_wood_large", "
 // ============================================================
 const DIRS = [[0, 1, 0, "S"], [0, -1, 180, "N"], [1, 0, 90, "E"], [-1, 0, 270, "W"]];
 const CORNER_RY = { SE: 0, SW: 90, NW: 180, NE: 270 };
+const wrapRuns = { N: new Map(), S: new Map(), E: new Map(), W: new Map() };
 for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
   const h = H(c, r);
   if (!WALK(c, r) || h < 2 || h >= 5) continue;
@@ -214,9 +226,34 @@ for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
   const names = drops.map((d) => d[3]).join("");
   const pair = ["SE", "SW", "NW", "NE"].find((p) => names.includes(p[0]) && names.includes(p[1]));
   if (pair && drops.length >= 2) { add("floor_foundation_corner", "wrap", c, r, h - 2, CORNER_RY[pair], 1); continue; }
-  const [, , ry] = drops[0];
-  const along = drops[0][3] === "N" || drops[0][3] === "S" ? c : r;
-  if (along % 2 === 0) add("floor_foundation_front", "wrap", c, r, h - 2, ry, 1);
+  const [, , , name] = drops[0];
+  const horiz = name === "N" || name === "S";
+  const line = horiz ? r : c, along = horiz ? c : r;
+  if (!wrapRuns[name].has(line)) wrapRuns[name].set(line, []);
+  wrapRuns[name].get(line).push(along);
+}
+for (const name of ["N", "S", "E", "W"]) {
+  const horiz = name === "N" || name === "S";
+  const ry = { S: 0, N: 180, E: 90, W: 270 }[name];
+  for (const [line, alongs] of wrapRuns[name]) {
+    alongs.sort((a, b) => a - b);
+    let run = [];
+    const flush = () => {
+      if (run.length) {
+        const from = run[0], to = run[run.length - 1];
+        for (let t2 = from + 0.5; t2 <= to - 0.5 || (run.length === 1 && t2 === from + 0.5); t2 += 2) {
+          const tt = Math.min(t2, to - 0.5);
+          const c2 = horiz ? tt : line, r2 = horiz ? line : tt;
+          const h2 = horiz ? H(Math.round(tt), line) : H(line, Math.round(tt));
+          add("floor_foundation_front", "wrap", c2, r2, h2 - 2, ry, 1);
+          if (run.length === 1) break;
+        }
+      }
+      run = [];
+    };
+    for (const a of alongs) { if (run.length && a !== run[run.length - 1] + 1) flush(); run.push(a); }
+    flush();
+  }
 }
 
 // ============================================================
@@ -395,7 +432,7 @@ for (let r = 6; r < ROWS && scatterN < 150; r++) for (let c = 0; c <= 66 && scat
 // ============================================================
 // E. VALIDATE + EMIT
 // ============================================================
-const CAP = 1200;
+const CAP = 1300; // lifted for full coverage (S7.44). DO NOT lift again without implementing the static-batching backlog item first (R17).
 const errs = [];
 if (kit.length >= CAP) errs.push(`kit too big: ${kit.length} >= ${CAP}`);
 const ids = new Set(kit.map((s) => s.id));
