@@ -1,4 +1,4 @@
-// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 dividers/railings from real dims; v4 S7.41 — tall-wall skin, real fan stairs, drop-gap dressing, grid-derived heights).
+// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 dividers/railings from real dims; v4 S7.41 tall-wall skin/fan stairs; v5 S7.42 — open ledges everywhere, stairs run-fix (sz 0.5 + dedupe), 1x1 floor filler, heart-only railings).
 // Fresh full-map dressing: perimeter + inner wall skin, gates, floors, platform wraps,
 // railings, scatter, and authored set dressing. Theme: RUIN WITH A HELD HEART —
 // the crypt is long dead (rubble, broken tiles, dead torches, red necro banners at the
@@ -186,6 +186,16 @@ for (let r = 1; r < ROWS; r += 2) for (let c = 1; c < COLS; c += 2) {
   const broken = !inHeart(c, r) && rnd() < 0.22;
   const asset = broken ? pick(["floor_tile_small_broken_A", "floor_tile_small_broken_B", "floor_tile_small_weeds_A"]) : "floor_tile_small";
   add(asset, "floor", c - 0.5, r - 0.5, h + 0.012, pick([0, 90, 180, 270]), 1);
+  for (let rr = r - 1; rr <= r; rr++) for (let cc = c - 1; cc <= c; cc++) covered.add(cellKey(cc, rr));
+}
+// 1x1 filler: every remaining walkable cell (rim walkways, strips, odd corners) gets a
+// quarter-scale small tile so the placeholder base layer can never show through.
+for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
+  if (covered.has(cellKey(c, r)) || !inPlay(c, r) || !WALK(c, r) || T(c, r) === 7 || gateMouth(c, r)) continue;
+  const h = H(c, r);
+  if (h < 0.5 || h >= 5) continue;
+  const broken = !inHeart(c, r) && rnd() < 0.18;
+  add(broken ? pick(["floor_tile_small_broken_A", "floor_tile_small_broken_B"]) : "floor_tile_small", "floor", c, r, h + 0.014, pick([0, 90, 180, 270]), 0.5);
 }
 // warm wood decking under the defenders' camp (heart, east of the dais)
 for (const [c, r] of [[14, 54], [18, 54], [21.6, 54]]) add("floor_wood_large", "floor", c, r, H(Math.round(c), r) + 0.03, 0, 1);
@@ -236,7 +246,7 @@ for (const name of ["N", "S", "E", "W"]) {
     const flush = () => {
       if (run.length >= 4) {
         const heart = horiz ? inHeart(run[0], line) : inHeart(line, run[0]);
-        if (heart || rnd() > 0.3) {                                        // ruin: some whole runs collapsed
+        if (heart) {                                        // ruin: some whole runs collapsed
           const from = run[0], to = run[run.length - 1];
           let t = from + 1.5, i = 0;
           for (; t <= to - 1.5; t += 4, i++) {
@@ -266,35 +276,23 @@ for (const name of ["N", "S", "E", "W"]) {
 // sz 0.25 compresses the run into the boundary cell. Faces the ascent.
 // ============================================================
 const ASCENT_RY = { N: 180, S: 0, E: 90, W: 270 }; // ry so the steps climb toward the higher cell (first-pass guess)
+const stairUsed = new Set();
 let stairN = 0;
 for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
-  if (T(c, r) !== 7) continue;
+  if (T(c, r) !== 7 || stairUsed.has(cellKey(c, r))) continue;
   const h = H(c, r);
   for (const [dc, dr, , name] of DIRS) {
     const nc = c + dc, nr = r + dr;
-    if (!WALK(nc, nr) || T(nc, nr) === 7) continue;
+    if (!WALK(nc, nr) || T(nc, nr) === 7 || stairUsed.has(cellKey(nc, nr))) continue;
     const nh = H(nc, nr);
     const rise = h - nh;
-    if (rise < 0.5 || rise > 1.3) continue; // the fan edge cells that actually step up onto this stair cell
-    add("stairs_modular_center", "stair", c + dc * 0.5, r + dr * 0.5, nh, ASCENT_RY[name], 0.5, { sy: +(rise / 4).toFixed(3), sz: 0.25 });
+    if (rise < 0.5 || rise > 1.3) continue;
+    // one piece per stair cell, centred on the boundary, half a cell into each side:
+    // native 2W x 4H x 4D -> sx 0.5 (one cell wide), sy rise/4, sz 0.5 (2-unit run = readable steps, no z-fight)
+    add("stairs_modular_center", "stair", c + dc * 0.5, r + dr * 0.5, nh, ASCENT_RY[name], 0.5, { sy: +(rise / 4).toFixed(3), sz: 0.5 });
+    stairUsed.add(cellKey(c, r));
     stairN++;
-  }
-}
-
-// C5. DROP-GAP DRESSING — auto-detect the cut openings (platform cell flanked by walls
-// on opposite sides) and make them read as deliberate: a stone lip + landing rubble.
-for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
-  if (!WALK(c, r) || H(c, r) < 2) continue;
-  const flankNS = T(c, r - 1) === 6 && T(c, r + 1) === 6;
-  const flankEW = T(c - 1, r) === 6 && T(c + 1, r) === 6;
-  if (!flankNS && !flankEW) continue;
-  const h = H(c, r);
-  for (const [dc, dr, ry] of DIRS) {
-    const nh = H(c + dc, r + dr);
-    if (WALK(c + dc, r + dr) && h - nh > 1) {
-      add("floor_foundation_front", "wrap", c, r, h - 2, ry, 1);                                  // lip under the jump edge
-      add("rubble_half", "rubble", c + dc * 1.4 + rnd() * 0.4 - 0.2, r + dr * 1.4 + rnd() * 0.4 - 0.2, nh, rnd() * 360, 0.42); // landing debris
-    }
+    break;
   }
 }
 

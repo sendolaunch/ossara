@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.41 — 2026-07-05 — Hudson playtested b98c480: fall-through at gaps + stutter -> ROOT CAUSE half-cell offset in getSurfaceHeightAtWorld (fixed + grid fallback). Real KayKit stairs on fan edges (57), tall-wall skin, gap dressing, +2 gaps (719 pcs). Suite 0 fails; build 899. PUSH PENDING |
+| **Last session** | S7.42 — 2026-07-05 — OPEN LEDGES: all 56 rim-wall cells removed (jump down anywhere, stairs up — Hudson's call), stairs v2 (dedupe + sz 0.5, no z-fight), 1x1 floor filler = full coverage (kit 1092), heart-only railings. Suite 0 fails; build 899. PUSH PENDING. Perf watch: 1092 pcs |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,17 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.42 — 2026-07-05 — Open ledges everywhere + stairs v2 + full floor coverage [GATE GREEN; PUSH PENDING]
+- Hudson playtested S7.41: fall-through FIXED ("I can walk on that piece now"), but (1) he now wants to jump down ANYWHERE along a ledge, not just at cut gaps; (2) my mini-stairs z-fight ("flipping through each other") — the sz 0.25 squish made steps so shallow they shimmer; (3) floors still show the base layer (1-wide strips never met the tile passes' uniformity rule); (4) bare "second floor" walls.
+- **Open ledges (retier v3):** the DROP_GAPS list is gone — a FIXPOINT rule removes every non-perimeter rim wall (wall cell whose opposite neighbours are both walkable with >=1 drop; double-thickness walls peel in one run, so the script stays idempotent — verified: run1 opened 56 cells, run2 opened 0). Removed cells become the HIGH tier, extending platforms to their rims. The one-way sim rule (S7.40) then governs every rim: drop anywhere, climb only via stairs. Coverage audit after mass removal: 0 missing / 0 double. Most "terrible second-floor walls" ceased to exist; the exposed platform fronts are auto-faced by the C2 wrap pass (85 wraps).
+- **Stairs v2 (C4):** one piece per stair-edge cell (Set dedupe, first direction wins), sz 0.5 = readable 2-unit step run straddling the boundary, base at the LOW tier. 57 overlapping -> 39 clean. Facing map still first-pass (eyeball).
+- **Full floor coverage (C1):** the 2x2 pass now records coverage, and a new 1x1 filler pass (floor_tile_small at scale 0.5) tiles every remaining walkable cell — rim walkways, strips, odd corners. The placeholder base can no longer show through. floor 231 -> 607 pieces.
+- **Railings heart-only** (rims are for jumping now): balcony 17 -> 1.
+- Kit v5 = **1092 pieces** (cap 1200). Deterministic (`25d4b0be...` twice). oneWayLedges 17/17; FULL suite exit 0, 0 fails; /tmp build **899 modules**; NUL 0 x4 files.
+- **PERF WATCH (R17):** 1092 pieces is the heaviest kit yet. Floors/wraps skip the shadow pass (pcRenderer), but if Hudson reports fps dips the next lever is the batching backlog item (batchGroupId on static kit pieces -> ~10 draw calls). Don't add more per-cell passes without batching first.
+- Sandbox note: one bash call hit the 45s cap mid-suite ("process already running" on retry) — split the gate into smaller calls; all passed.
+- **In Friendly Words:** Done like you asked — the edges are open now. Walk off any platform rim anywhere and you drop; the only way back up is the stairs, and those are now proper staircases that don't flicker into each other. The whole ground is tiled edge to edge so that placeholder floor can't peek through anymore, and most of those ugly bare walls simply don't exist now — the platform edges got stone facing instead. One heads-up: the map is at its heaviest piece count yet, so tell me if it ever feels less smooth and I'll turn on the draw-call batching next.
 
 ### S7.41 — 2026-07-05 — Playtest bugs: half-cell surface offset (fall-through + stutter) fixed; real stairs [GATE GREEN; PUSH PENDING]
 - Hudson playtested the S7.40 deploy (badge `b98c480`, ~12:15AM screenshot): (1) walking the drop-gap seam DROPS the hero inside the wall, who then walks out on the lower floor; (2) movement "stuttering all over the place"; (3) wants REAL stairs from the pack, not painted ramps; (4) the bare grey walls on the bottom floor are "terrible"; (5) wants more one-way drop-offs to the bottom floor.
