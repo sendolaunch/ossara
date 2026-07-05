@@ -20,19 +20,23 @@ const remap = (h) => { if (h == null) return null; if (!MAP.has(h)) throw new Er
 // low tier directly. All off-lane (hero-only edges; enemies keep their lanes).
 const DROP_GAPS = [
   [12, 12], [12, 13],   // NW platform east rim -> courtyard
-  [12, 20], [12, 21],   // NW platform east rim (south opening)
+  // (12,20)/(12,21) REMOVED S7.54 — they sit between a DOUBLE wall layer; as floor-level
+  // openings they were an inescapable pit (caught by noSoftLock). Restored to wall below.
   [13, 34], [13, 35],   // west platform strip -> south courtyard
   [33, 46], [34, 46],   // south band north rim -> mid floor (west opening)
   [49, 46], [50, 46],   // south band north rim (center opening)
   [57, 47], [58, 47],   // south band north rim (east opening)
 ];
 const gapSet = new Set(DROP_GAPS.map(([c, r]) => c + "," + r));
-for (const [c, r] of DROP_GAPS) if (G.terrainAt(c, r) !== 6 && G.terrainAt(c, r) !== 3) throw new Error(`gap ${c},${r} expected wall/platform, got terrain ${G.terrainAt(c, r)}`);
+// cells to restore to solid low wall (bad gaps cut in earlier passes)
+const WALL_RESTORE = [[12, 20], [12, 21]];
+const wallRestoreSet = new Set(WALL_RESTORE.map(([c, r]) => c + "," + r));
+for (const [c, r] of DROP_GAPS) if (G.terrainAt(c, r) !== 6 && G.terrainAt(c, r) !== 3 && G.terrainAt(c, r) !== 2) throw new Error(`gap ${c},${r} expected wall/platform/floor, got terrain ${G.terrainAt(c, r)}`);
 
 const TERRAIN = {}; for (const [k, v] of Object.entries(G.FB_TERRAIN)) TERRAIN[k] = { ...v, h: remap(v.h) };
 const HEIGHT = {}; for (const [k, v] of Object.entries(G.FB_HEIGHT)) HEIGHT[k] = remap(v);
-const CELLS = G.FB_CELLS.map((row, r) => row.split("").map((ch, c) => (gapSet.has(c + "," + r) ? "3" : ch)).join(""));
-const CELLS_H = G.FB_CELL_HEIGHTS.map((row, r) => row.map((h, c) => (gapSet.has(c + "," + r) ? null : remap(h))));
+const CELLS = G.FB_CELLS.map((row, r) => row.split("").map((ch, c) => (wallRestoreSet.has(c + "," + r) ? "6" : gapSet.has(c + "," + r) ? "2" : ch)).join(""));
+const CELLS_H = G.FB_CELL_HEIGHTS.map((row, r) => row.map((h, c) => (wallRestoreSet.has(c + "," + r) ? 3.6 : gapSet.has(c + "," + r) ? null : remap(h))));
 
 // subtract gap cells from a rect list (splits rects; drops emptied ones)
 function subtractGaps(rects) {
@@ -64,11 +68,11 @@ const gapRects = [];
 for (const [c, r] of DROP_GAPS) {
   const prev = gapRects.find((g) => (g.col === c && g.row + g.h === r) || (g.row === r && g.col + g.w === c));
   if (prev) { if (prev.col === c) prev.h += 1; else prev.w += 1; }
-  else gapRects.push({ col: c, row: r, w: 1, h: 1, terrain: 3, height: HEIGHT[3] });
+  else gapRects.push({ col: c, row: r, w: 1, h: 1, terrain: 2, height: HEIGHT[2] });
 }
 RECTS.push(...gapRects);
 const BLOCKED = subtractGaps(G.FB_BLOCKED_RECTS).map((z, i) => ({ id: "blk-" + i, col: z.col, row: z.row, w: z.w, h: z.h }));
-const PLATFORM = [...G.FB_PLATFORM_RECTS, ...gapRects.map(({ col, row, w, h }) => ({ col, row, w, h }))];
+const PLATFORM = [...G.FB_PLATFORM_RECTS]; // gap openings are floor now, not platforms (S7.54)
 
 const out = `// AUTO-DERIVED from the painted grid (tasks/first-breach-grid.json), height-aware.
 // Per-cell heights (cellHeights) override the terrain default — e.g. outer-border walls

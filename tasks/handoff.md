@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.53 — 2026-07-05 — Ctrl+CLICK grabs carpet pieces (floors + the jump-off lips he couldn't select; plain click still orbits), Keys help updated; floor-texture contact sheet delivered (rocky = floor_dirt_large_rocky / floor_tile_large_rocks + 18 more, all in the floors tab). Suite 0 fails; build 900. PUSH PENDING |
+| **Last session** | S7.54 — 2026-07-05 — Gap MONOLITHS removed per Hudson (openings now ground-level floor; he dresses them with walls himself). noSoftLock CAUGHT a real trap — the (12,20)/(12,21) double-wall pair would've been an inescapable pit -> restored to wall (10 openings remain). Auto-lips removed from his canonical kit (826). Suite 0 fails; build 900; rig-verified. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.54 — 2026-07-05 — Gap blocks removed; noSoftLock catches its first real trap [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: "remove the block, I'll add the walls" — the drop-gap TERRAIN cubes (platform-height cells poking through the wall lines) read as ungrabbable monoliths. Retier now makes gap cells **ground-level floor (terrain 2, 1.3)**: the opening is a hole in the wall line — jump down through it, no climbing back, nothing sticking up. He dresses the openings with wall pieces himself.
+- **noSoftLock earned its keep:** converting (12,20)/(12,21) to floor exposed them as an INESCAPABLE PIT — they sit between a DOUBLE wall layer (col 12 run + col 13 run), a dead decorative gap since S7.40. The test failed the build BEFORE it shipped. Fix: WALL_RESTORE list returns that pair to solid low wall (3.6). **10 openings remain at 4 spots**, all escape-verified (4/4).
+- His canonical kit: removed MY 5 auto-generated stone lips at the openings (he owns their look now) -> **826 pieces**; landing rubble kept.
+- Retier guard widened to accept already-converted floor cells (idempotent x2 verified).
+- Verified (R5/R6): coverage 0/0; oneWayLedges 17/17; noSoftLock 4/4; suite exit 0; /tmp build **900 modules**; rig shot `outputs/gap-open.png` = clean wall-line opening, monolith gone.
+- **In Friendly Words:** The dark cubes are gone — each jump-down spot is now just an open gap in the wall you fall through, with the floor running flat underneath. Build whatever wall trim you like around them. Bonus: our automatic trap-checker caught that one of the old openings would have been a hole you could never climb out of — it is a solid wall again. Ten openings remain and every one has a way home.
 
 ### S7.53 — 2026-07-05 — Ctrl+click carpet picking + floor-texture menu [GATE GREEN; PUSH PENDING]
 - Hudson clarified "select everything": he could not GRAB the drop-gap lip platforms (cat `wrap`) or floors in the viewport — my S7.48 unpickable-carpet rule blocked his editing of exactly those. Fix: `_pickPiece(..., allowCarpet)` — **Ctrl+left-click picks ANY piece including floor/wrap**; plain click keeps ignoring the carpet so camera drags stay smooth. Both viewport pick callsites pass `e.ctrlKey`; Keys help updated.

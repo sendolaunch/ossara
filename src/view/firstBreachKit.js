@@ -1,6 +1,5 @@
-// FIRST BREACH — ART PACK KIT (HUDSON-CANONICAL: baked faithfully from his editor export, S7.52).
-// His layout IS the map. Do NOT regenerate over this with scripts/generateFirstBreachFableKit.mjs
-// without re-extracting his work first — the generator is a tool now, not the source of truth.
+// FIRST BREACH — ART PACK KIT (HUDSON-CANONICAL: his editor export, S7.52; S7.54 removed auto-lips at gap openings).
+// His layout IS the map. Do NOT regenerate over this — the generator is a tool, not the source of truth.
 import { gridToWorld } from "../sim/pathing.js";
 
 export const FIRST_BREACH_KIT = Object.freeze([
@@ -586,7 +585,6 @@ export const FIRST_BREACH_KIT = Object.freeze([
   {"id":"wrap-1","asset":"floor_foundation_corner","col":0,"row":9,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
   {"id":"wrap-2","asset":"floor_foundation_front","col":0,"row":10,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-3","asset":"floor_foundation_front","col":0,"row":12,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
-  {"id":"wrap-4","asset":"floor_foundation_front","col":12,"row":12,"y":1.6,"ry":90,"scale":1,"cat":"wrap"},
   {"id":"wrap-5","asset":"floor_foundation_front","col":0,"row":14,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-6","asset":"floor_foundation_front","col":0,"row":16,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-7","asset":"floor_foundation_front","col":0,"row":18,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
@@ -604,7 +602,6 @@ export const FIRST_BREACH_KIT = Object.freeze([
   {"id":"wrap-19","asset":"floor_foundation_corner","col":36,"row":32,"y":0.2,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-20","asset":"floor_foundation_corner","col":37,"row":33,"y":0.2,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-21","asset":"floor_foundation_front","col":0,"row":34,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
-  {"id":"wrap-22","asset":"floor_foundation_front","col":13,"row":34,"y":1.6,"ry":90,"scale":1,"cat":"wrap"},
   {"id":"wrap-23","asset":"floor_foundation_front","col":29,"row":34,"y":0.2,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-24","asset":"floor_foundation_corner","col":38,"row":34,"y":0.2,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-25","asset":"floor_foundation_corner","col":29,"row":35,"y":0.2,"ry":90,"scale":1,"cat":"wrap"},
@@ -631,11 +628,8 @@ export const FIRST_BREACH_KIT = Object.freeze([
   {"id":"wrap-46","asset":"floor_foundation_corner","col":16,"row":45,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-47","asset":"floor_foundation_corner","col":24,"row":45,"y":0.2,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-48","asset":"floor_foundation_corner","col":17,"row":46,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
-  {"id":"wrap-49","asset":"floor_foundation_front","col":34,"row":46,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
-  {"id":"wrap-50","asset":"floor_foundation_front","col":50,"row":46,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
   {"id":"wrap-51","asset":"floor_foundation_corner","col":18,"row":47,"y":1.6,"ry":270,"scale":1,"cat":"wrap"},
   {"id":"wrap-52","asset":"floor_foundation_corner","col":24,"row":47,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
-  {"id":"wrap-53","asset":"floor_foundation_front","col":58,"row":47,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
   {"id":"wrap-54","asset":"floor_foundation_front","col":20,"row":48,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
   {"id":"wrap-55","asset":"floor_foundation_front","col":22,"row":48,"y":1.6,"ry":0,"scale":1,"cat":"wrap"},
   {"id":"balcony-1","asset":"barrier","col":20.5,"row":47.66,"y":3.6,"ry":0,"scale":1,"cat":"balcony"},
