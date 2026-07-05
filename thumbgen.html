@@ -1,0 +1,39 @@
+<!doctype html><meta charset="utf-8"><title>thumbgen (dev only)</title>
+<body style="margin:0;background:#202226">
+<canvas id="c" width="1250" height="1250" style="display:block"></canvas>
+<script type="module">
+import * as pc from "playcanvas";
+const canvas = document.getElementById("c");
+const app = new pc.Application(canvas, {});
+app.setCanvasFillMode(pc.FILLMODE_NONE); app.setCanvasResolution(pc.RESOLUTION_FIXED, 1250, 1250);
+app.scene.ambientLight = new pc.Color(0.62, 0.62, 0.66);
+const sun = new pc.Entity(); sun.addComponent("light", { type: "directional", intensity: 1.15, color: new pc.Color(1, 0.96, 0.88) });
+sun.setEulerAngles(50, 30, 0); app.root.addChild(sun);
+const cam = new pc.Entity(); cam.addComponent("camera", { projection: pc.PROJECTION_ORTHOGRAPHIC, orthoHeight: 10, clearColor: new pc.Color(0.125, 0.13, 0.15) });
+cam.setPosition(0, 0, 40); app.root.addChild(cam);
+const names = new URLSearchParams(location.search).get("batch")?.split(",") ?? [];
+const urlFor = (n) => { const i = n.indexOf("/"); const pack = i >= 0 ? n.slice(0, i) : "dungeon"; const f = i >= 0 ? n.slice(i + 1) : n; return `models/${pack}/${f}.gltf`; };
+let done = 0;
+names.forEach((name, i) => {
+  app.assets.loadFromUrl(urlFor(name), "container", (err, asset) => {
+    done++;
+    if (!err && asset?.resource) {
+      const e = asset.resource.instantiateRenderEntity();
+      app.root.addChild(e);
+      e.setEulerAngles(0, 32, 0);
+      let aabb = null;
+      for (const r of e.findComponents("render")) for (const mi of r.meshInstances) { if (!aabb) aabb = mi.aabb.clone(); else aabb.add(mi.aabb); }
+      const col = i % 5, row = (i / 5) | 0;
+      const cx = (col - 2) * 4, cy = (2 - row) * 4;
+      if (aabb) {
+        const maxDim = Math.max(aabb.halfExtents.x, aabb.halfExtents.y, aabb.halfExtents.z) * 2 || 1;
+        const s = 3.0 / maxDim;
+        e.setLocalScale(s, s, s);
+        e.setPosition(cx - aabb.center.x * s, cy - aabb.center.y * s, -aabb.center.z * s);
+      } else e.setPosition(cx, cy, 0);
+    }
+    if (done === names.length) setTimeout(() => { window.THUMBS_READY = true; }, 400);
+  });
+});
+app.start();
+</script></body>

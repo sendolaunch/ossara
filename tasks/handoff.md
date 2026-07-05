@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.46 — 2026-07-05 — RESTORE by Hudson's call: map data back to 0806079 (kit v3, original heights — no tiers/stairs/gaps/tints, 'those are ass') while KEEPING the half-cell fix, the rig, R27, prop scales. Rig-verified restored look. Suite 0 fails; build 899. PUSH PENDING |
+| **Last session** | S7.47 — 2026-07-05 — BUILD LAB v3: pro docked editor (toolbar / scene outliner / inspector / bottom asset browser with SEARCH + 484 THUMBNAILS auto-photographed by the rig). New deal: Hudson = artist, Cowork = toolsmith. Suite 0 fails; build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,17 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.47 — 2026-07-05 — Build Lab v3: the pro editor shell [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Post-revert discussion: WHY is map-making hard? Honest answer given: maps are an eyes job; AI is systems-strong/taste-blind; the Build Lab is the right investment (Hudson: "i kinda like our build engine but it needs a complete rework... like unreal engine's or playcanvas"). New working deal: Hudson = artist (eyes, placement, judgment), Cowork = toolsmith (editor, generators, tests, rig). Chose: pro layout + full asset browser first; prefabs/grouping = phase 2.
+- **Asset manifest** (`scripts/genAssetManifest.mjs` -> `src/view/fbAssetManifest.js`): all 484 placeable models cataloged into 12 categories by name rules.
+- **Thumbnail factory:** `thumbgen.html` (dev-only) renders 25 models per 5x5 ortho grid; the rig screenshotted 20 grids (3 sandbox calls); PIL sliced them -> `public/thumbs/<name>.png` x484 (~6KB each, 128px, LFS via *.png). Recipe reusable for any future pack.
+- **Build Lab v3 shell** (firstBreachBuildMode.js): docked layout — top toolbar (modes, snap, undo/redo, height, Auto-build menu, Overlays menu, Export/Import/Reset, Keys popover, autosave note), LEFT scene outliner (live piece list + filter, click select, dbl-click flies the camera to the piece), RIGHT inspector (typed X/Y/Z/RotY + per-axis Scale X/Y/Z, size readout, warnings), BOTTOM asset browser (search all 484, category tabs, lazy thumbnails, click = arm brush with ON-DEMAND model loading via kitReady/preloadKit). Placed-piece kit-categories now derive from the manifest (kitCatFor) so ALL 484 pieces place with sane shadow/test behavior. All prior hotkeys/gizmos/undo/autosave/generators preserved.
+- **RIG-verified** (`outputs/editor-v3.png`, ?artEdit=1 headless): all four panels render, 631 scene rows, thumbnails live in the browser grid. Interaction feel = Hudson's eyeball on deploy.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules** (manifest is the +1); NUL 0.
+- Files for CC: NEW scripts/genAssetManifest.mjs, src/view/fbAssetManifest.js, thumbgen.html, public/thumbs/ (484 pngs, LFS); MODIFIED src/view/firstBreachBuildMode.js, scripts/rigShot.mjs (RIG_URL override), tasks/handoff.md.
+- **Phase 2 backlog:** grouping + named prefabs (stamp saved chunks across maps), outliner multi-select, viewport-hole pointer polish if any panel steals clicks.
+- **In Friendly Words:** Your editor grew up. Top toolbar like a real tool, your whole scene listed on the left (double-click any row and the camera flies to it), exact numbers on the right, and the whole 484-piece collection along the bottom with little photos, search and categories — I had my robot photograph every single piece for the catalog. Same controls you already know. Push it, open the art link, and start placing from pictures instead of a text list.
 
 ### S7.46 — 2026-07-05 — Restore to the pre-tier map (keep the fixes) [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson: revert to "before the floor height and whatever made you change the layout on the middle floor like the stairs and everything too bc those are ass." Chose: keep the non-map fixes.

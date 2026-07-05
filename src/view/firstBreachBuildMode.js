@@ -9,11 +9,17 @@
 // ============================================================================
 
 import * as pc from "playcanvas";
-import { preloadKit, place } from "./dungeonKit.js";
+import { preloadKit, place, kitReady } from "./dungeonKit.js";
 import { gridToWorld, pathCellSet, expandRects } from "../sim/pathing.js";
 import { surfaceHeightAtCell } from "../config/firstBreachGrid.js";
 import { protectedGameplayCellSet } from "../mapbuilder/mapValidation.js";
 import { FB_BUILD_PALETTE, FB_PALETTE_ASSET_NAMES, FB_ASSET_CAT } from "./firstBreachKitPalette.js";
+import { FB_ASSET_MANIFEST, FB_ASSET_CATEGORIES } from "./fbAssetManifest.js";
+
+// manifest category -> kit category (drives shadows + test guards for placed pieces)
+const MCAT_TO_KIT = { walls: "wall", floors: "floor", stairs: "stair", lights: "light", rubble: "rubble", pillars: "pillar", wood: "balcony" };
+const MANIFEST_BY_NAME = new Map(FB_ASSET_MANIFEST.map((e) => [e.name, e]));
+const kitCatFor = (asset) => FB_ASSET_CAT[asset] || MCAT_TO_KIT[MANIFEST_BY_NAME.get(asset)?.cat] || "prop";
 import { firstBreachKitSpecs, FIRST_BREACH_KIT_ASSET_NAMES } from "./firstBreachKit.js";
 import { rotateGroup } from "./buildGroupMath.js";
 
@@ -154,7 +160,7 @@ class FirstBreachBuildMode {
     const ent = place(this.app, this.root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale, sy: spec.sy, sz: spec.sz });
     if (!ent) return null;
     ent.name = "build-" + this.placed.length;
-    const piece = { entity: ent, asset: spec.asset, cat: spec.cat || FB_ASSET_CAT[spec.asset] || "prop" };
+    const piece = { entity: ent, asset: spec.asset, cat: spec.cat || kitCatFor(spec.asset) };
     this.placed.push(piece);
     this._refreshList();
     return piece;
@@ -172,7 +178,7 @@ class FirstBreachBuildMode {
   }
   _markSaved() {
     if (!this._ui) return;
-    const el = this._ui.wrap.querySelector("#fbSaved");
+    const el = this._ui.wrap.querySelector("#fbSavedTop");
     if (el) el.textContent = "saved locally " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
   _resetToMap() {
@@ -259,7 +265,7 @@ class FirstBreachBuildMode {
       const ent = place(this.app, this.root, s.asset, { x: s.x, y: s.y, z: s.z, ry: s.ry, scale: s.scale, sy: s.sy, sz: s.sz });
       if (!ent) continue;
       ent.name = "build-" + s.id;
-      this.placed.push({ entity: ent, asset: s.asset, cat: s.cat || FB_ASSET_CAT[s.asset] || "prop" });
+      this.placed.push({ entity: ent, asset: s.asset, cat: s.cat || kitCatFor(s.asset) });
     }
     this._refreshList();
     this._status(fromSave ? ("Restored your local save: " + this.placed.length + " pieces. ('Reset to deployed map' to discard.)") : ("Loaded " + this.placed.length + " pieces from the deployed map."));
@@ -267,7 +273,7 @@ class FirstBreachBuildMode {
 
   _placeAt(asset, col, row, y) {
     const w = gridToWorld(col, row, this.level);
-    const piece = this._spawn({ asset, cat: FB_ASSET_CAT[asset] || "prop", x: w.x, y, z: w.z, ry: 0, scale: 1 });
+    const piece = this._spawn({ asset, cat: kitCatFor(asset), x: w.x, y, z: w.z, ry: 0, scale: 1 });
     if (!piece) { this._status("couldn't load " + asset); return; }
     this.brush = null; this._syncBrushButtons();
     this._select(piece);
@@ -657,61 +663,87 @@ class FirstBreachBuildMode {
     if (document.getElementById("fb-build-style")) return;
     const s = document.createElement("style"); s.id = "fb-build-style";
     s.textContent = [
-      "#fbBuild{position:fixed;top:0;left:0;width:230px;max-height:100vh;overflow:auto;z-index:99999;background:rgba(10,14,10,.94);color:#cfe0c4;font:12px ui-monospace,Menlo,Consolas,monospace;border-right:1px solid #2c382c;padding:8px}",
-      "#fbBuild h3{margin:2px 0 6px;color:#7bd86b;font-size:12px}",
-      "#fbBuild .sec{color:#c9a24a;text-transform:uppercase;font-size:10px;margin:10px 0 4px;letter-spacing:.08em}",
-      "#fbBuild .hint{color:#8aa185;font-size:10px;line-height:1.35;margin:2px 0}",
-      "#fbBuild button{display:block;width:100%;text-align:left;margin:2px 0;background:#1b231b;color:#cfe0c4;border:1px solid #2c382c;border-radius:5px;padding:5px 7px;cursor:pointer;font:inherit}",
-      "#fbBuild button:hover{border-color:#7bd86b}#fbBuild button.on{background:#26331f;border-color:#7bd86b;color:#7bd86b}#fbBuild button:disabled{opacity:.4;cursor:default}",
-      "#fbBuild .row{display:flex;gap:4px}#fbBuild .row button{width:auto;flex:1;text-align:center}",
-      "#fbBuild label{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:11px}",
-      "#fbBuild input[type=number]{width:58px;background:#0a0d0a;border:1px solid #2c382c;color:#cfe0c4;border-radius:4px;padding:2px 4px;font:inherit}",
-      "#fbBuild .insp label span{width:34px;color:#8aa185}",
-      "#fbList{max-height:130px;overflow:auto;border:1px solid #2c382c;border-radius:5px;padding:3px;margin-top:3px}",
-      "#fbList .it{display:flex;gap:3px;align-items:center;font-size:11px}#fbList .it span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-      "#fbList .it.sel{color:#c9a24a}#fbList .it button{width:auto;margin:0;padding:1px 5px}",
-      "#fbWarn{color:#d8736b;font-size:11px;min-height:14px;margin:3px 0}",
-      "#fbStatus{position:fixed;bottom:0;left:0;right:0;z-index:99999;background:rgba(10,14,10,.94);color:#7bd86b;font:12px ui-monospace,monospace;padding:5px 10px;border-top:1px solid #2c382c}",
-      "#fbBuild .exp{background:#2a3a22;border-color:#7bd86b;color:#a7f08b;text-align:center}",
+      // ---- pro docked shell (Build Lab v3) ----
+      "#fbTop{position:fixed;top:0;left:0;right:0;height:38px;z-index:99999;background:#16181c;border-bottom:1px solid #2a2d33;display:flex;align-items:center;gap:6px;padding:0 8px;color:#c8cdd4;font:12px ui-monospace,Menlo,Consolas,monospace;overflow:visible}",
+      "#fbTop .grp{display:flex;gap:3px;align-items:center;padding:0 6px;border-right:1px solid #24272d;position:relative}",
+      "#fbTop button{background:#1e2126;color:#c8cdd4;border:1px solid #2c3038;border-radius:4px;padding:4px 8px;cursor:pointer;font:inherit;white-space:nowrap}",
+      "#fbTop button:hover{border-color:#7bd86b}#fbTop button.on{background:#26331f;border-color:#7bd86b;color:#7bd86b}",
+      "#fbTop .menu{display:none;position:absolute;top:34px;left:0;background:#1a1d22;border:1px solid #2c3038;border-radius:6px;padding:6px;min-width:230px;z-index:100000;box-shadow:0 8px 22px rgba(0,0,0,.5)}",
+      "#fbTop .menu.open{display:block}#fbTop .menu button{display:block;width:100%;text-align:left;margin:2px 0}",
+      "#fbTop .menu label{display:flex;gap:6px;align-items:center;margin:3px 2px;font-size:11px;color:#aab2bc}",
+      "#fbTop .brand{color:#7bd86b;font-weight:bold;letter-spacing:.06em;padding-right:8px}",
+      "#fbSavedTop{color:#6f7a86;font-size:10px;margin-left:auto;padding-right:6px}",
+      "#fbLeft{position:fixed;top:38px;left:0;bottom:210px;width:212px;z-index:99998;background:rgba(18,20,24,.96);border-right:1px solid #2a2d33;color:#c8cdd4;font:11px ui-monospace,monospace;display:flex;flex-direction:column}",
+      "#fbLeft h4,#fbRight h4{margin:0;padding:7px 9px 5px;font-size:10px;letter-spacing:.1em;color:#8b95a1;text-transform:uppercase;border-bottom:1px solid #23262c}",
+      "#fbFilter{margin:6px 8px;background:#101216;border:1px solid #2c3038;color:#c8cdd4;border-radius:4px;padding:4px 6px;font:inherit}",
+      "#fbList{flex:1;overflow-y:auto;padding:2px 4px}",
+      "#fbList .it{display:flex;gap:4px;align-items:center;padding:2px 5px;border-radius:4px;cursor:pointer}",
+      "#fbList .it:hover{background:#1d2026}#fbList .it.sel{background:#22301c;color:#8fe07b}",
+      "#fbList .it span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      "#fbList .it b{color:#5b636d;font-weight:normal;width:26px}",
+      "#fbRight{position:fixed;top:38px;right:0;bottom:210px;width:246px;z-index:99998;background:rgba(18,20,24,.96);border-left:1px solid #2a2d33;color:#c8cdd4;font:12px ui-monospace,monospace;overflow-y:auto}",
+      "#fbRight .bd{padding:8px 10px}",
+      "#fbRight label{display:flex;align-items:center;gap:6px;margin:4px 0;font-size:11px}",
+      "#fbRight label span{width:44px;color:#8b95a1}",
+      "#fbRight input[type=number]{width:64px;background:#101216;border:1px solid #2c3038;color:#c8cdd4;border-radius:4px;padding:3px 5px;font:inherit}",
+      "#fbRight .aname{color:#7bd86b;margin-bottom:6px;word-break:break-all}",
+      "#fbRight .dim{color:#6f7a86;font-size:10px}",
+      "#fbWarn{color:#e07b72;font-size:11px;min-height:14px;margin-top:4px}",
+      "#fbBottom{position:fixed;left:0;right:0;bottom:22px;height:188px;z-index:99998;background:rgba(16,18,21,.97);border-top:1px solid #2a2d33;display:flex;flex-direction:column;font:11px ui-monospace,monospace;color:#c8cdd4}",
+      "#fbBrowseBar{display:flex;gap:6px;align-items:center;padding:6px 10px 2px}",
+      "#fbSearch{background:#101216;border:1px solid #2c3038;color:#c8cdd4;border-radius:4px;padding:4px 8px;font:inherit;width:220px}",
+      "#fbTabs{display:flex;gap:2px;overflow-x:auto;flex:1}",
+      "#fbTabs button{background:transparent;border:none;border-bottom:2px solid transparent;color:#8b95a1;padding:4px 8px;cursor:pointer;font:inherit;white-space:nowrap}",
+      "#fbTabs button:hover{color:#c8cdd4}#fbTabs button.on{color:#7bd86b;border-bottom-color:#7bd86b}",
+      "#fbAssets{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,86px);gap:6px;padding:6px 10px;align-content:start}",
+      "#fbAssets button{background:#191c21;border:1px solid #262a31;border-radius:6px;padding:4px 3px 3px;cursor:pointer;color:#aab2bc;font:10px ui-monospace,monospace;display:flex;flex-direction:column;align-items:center;gap:2px}",
+      "#fbAssets button:hover{border-color:#7bd86b;color:#dfe5ea}#fbAssets button.on{border-color:#7bd86b;background:#1d2a18;color:#8fe07b}",
+      "#fbAssets img{width:62px;height:62px;border-radius:4px;background:#202226;image-rendering:auto}",
+      "#fbAssets span{max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      "#fbStatus{position:fixed;bottom:0;left:0;right:0;height:22px;z-index:99999;background:#131519;color:#7bd86b;font:11px ui-monospace,monospace;padding:4px 10px;border-top:1px solid #24272d}",
     ].join("\n");
     document.head.appendChild(s);
   }
 
   _buildUI() {
-    const wrap = document.createElement("div"); wrap.id = "fbBuild";
+    const wrap = document.createElement("div"); wrap.id = "fbShell";
     wrap.innerHTML = [
-      '<h3>BUILD LAB &middot; 3D editor</h3>',
-      '<div class="row"><button id="fbUndo">Undo</button><button id="fbRedo">Redo</button></div>',
-      '<button id="fbKeys">&#9000; Keys / Controls</button>',
-      '<div id="fbKeyHelp" style="display:none;font-size:10px;color:#8aa185;line-height:1.5;border:1px solid #2c382c;border-radius:5px;padding:6px;margin:3px 0"></div>',
-      '<div class="sec">Tool</div>',
-      '<div class="row" id="fbModes"><button data-m="move" class="on">Move(drag)</button><button data-m="rotate">Rotate</button><button data-m="scale">Scale</button></div>',
-      '<div class="hint">Move = drag across the map &middot; <b>hold V + drag = up/down</b> &middot; Q/R rotate &middot; arrows nudge &middot; F to floor &middot; hold X/Z lock axis.</div>',
-      '<div class="sec">Soft snap (optional)</div>',
-      '<div class="row"><button id="fbSnapPos">pos: off</button><button id="fbSnapRot">rot: off</button></div>',
-      '<button id="fbFloor">Snap selected to floor (F)</button>',
-      '<div class="sec">Place height <span id="fbY">1.3</span></div>',
-      '<div class="row"><button id="fbYdn">- lower</button><button id="fbYup">+ raise</button></div>',
-      '<div class="sec">Auto-build</div>',
+      // ---------- top toolbar ----------
+      '<div id="fbTop">',
+      '<span class="brand">BUILD LAB</span>',
+      '<div class="grp" id="fbModes"><button data-m="move" class="on">Move</button><button data-m="rotate">Rotate</button><button data-m="scale">Scale</button></div>',
+      '<div class="grp"><button id="fbUndo">&#8630; Undo</button><button id="fbRedo">&#8631; Redo</button></div>',
+      '<div class="grp"><button id="fbSnapPos">pos: off</button><button id="fbSnapRot">rot: off</button><button id="fbFloor" title="Snap selected to floor (F)">to floor</button></div>',
+      '<div class="grp"><button id="fbYdn">&minus;</button><span>h <b id="fbY">1.3</b></span><button id="fbYup">+</button></div>',
+      '<div class="grp"><button id="fbAutoBtn">Auto-build &#9662;</button><div class="menu" id="fbAutoMenu">',
       '<button id="fbWrap">Wrap raised platform faces (stone)</button>',
       '<button id="fbTile">Tile floor (KayKit stone)</button>',
-      '<button id="fbClutter">Scatter clutter (un-square)</button>',
-      '<div class="sec">Overlays</div>',
-      '<label><input type="checkbox" id="fbOvRoute"> routes</label>',
+      '<button id="fbClutter">Scatter clutter (un-square)</button></div></div>',
+      '<div class="grp"><button id="fbOvBtn">Overlays &#9662;</button><div class="menu" id="fbOvMenu">',
+      '<label><input type="checkbox" id="fbOvRoute"> enemy routes</label>',
       '<label><input type="checkbox" id="fbOvReserve"> ward/gate reserves</label>',
-      '<label><input type="checkbox" id="fbOvProt"> protected (no-prop)</label>',
-      '<div class="sec">Inspector</div><div class="insp" id="fbInsp">- nothing selected -</div>',
-      '<div class="sec">Size W&times;H&times;D</div><div id="fbSize">-</div>',
+      '<label><input type="checkbox" id="fbOvProt"> protected (no-prop)</label></div></div>',
+      '<div class="grp"><button id="fbExport" title="E">Export</button><button id="fbImport">Import</button><button id="fbReset">Reset to deployed</button></div>',
+      '<div class="grp"><button id="fbKeys">Keys &#9662;</button><div class="menu" id="fbKeyHelp" style="min-width:340px;font-size:10px;color:#8b95a1;line-height:1.55"></div></div>',
+      '<span id="fbSavedTop">auto-saves locally</span>',
+      '</div>',
+      // ---------- left outliner ----------
+      '<div id="fbLeft"><h4>Scene &middot; <span id="fbCount">0</span> pieces</h4>',
+      '<input id="fbFilter" placeholder="filter placed...">',
+      '<div id="fbList"></div></div>',
+      // ---------- right inspector ----------
+      '<div id="fbRight"><h4>Inspector</h4><div class="bd">',
+      '<div id="fbInsp">- nothing selected -</div>',
+      '<div class="dim" style="margin-top:8px">Size W&times;H&times;D</div><div id="fbSize" class="dim">-</div>',
       '<div id="fbWarn"></div>',
-      '<button id="fbCopySel">Copy placement JSON</button>',
-      '<button id="fbDel">Delete selected (Del)</button>',
-      '<div class="sec">Models</div><div id="fbPalette"></div>',
-      '<div class="sec">Placed (<span id="fbCount">0</span>)</div><div id="fbList"></div>',
-      '<div class="sec">Save / load</div>',
-      '<div id="fbSaved" style="font-size:10px;color:#7bd86b;text-align:center;margin:1px 0 3px">auto-saves locally</div>',
-      '<button id="fbExport" class="exp">Export kit JSON (E)</button>',
-      '<button id="fbImport">Import kit JSON...</button>',
-      '<button id="fbReset">Reset to deployed map</button>',
+      '<button id="fbCopySel" style="margin-top:8px;width:100%;background:#1e2126;color:#c8cdd4;border:1px solid #2c3038;border-radius:4px;padding:5px;cursor:pointer;font:inherit">Copy placement JSON</button>',
+      '<button id="fbDel" style="margin-top:4px;width:100%;background:#2a1c1c;color:#e0a49e;border:1px solid #3d2a28;border-radius:4px;padding:5px;cursor:pointer;font:inherit">Delete selected (Del)</button>',
+      '</div></div>',
+      // ---------- bottom asset browser ----------
+      '<div id="fbBottom"><div id="fbBrowseBar">',
+      '<input id="fbSearch" placeholder="Search ' + FB_ASSET_MANIFEST.length + ' pieces...">',
+      '<div id="fbTabs"></div></div>',
+      '<div id="fbAssets"></div></div>',
       '<input type="file" id="fbImportFile" accept="application/json" style="display:none">',
     ].join("");
     document.body.appendChild(wrap);
@@ -719,12 +751,29 @@ class FirstBreachBuildMode {
     document.body.appendChild(status);
     this._ui = { wrap, status };
 
-    const pal = wrap.querySelector("#fbPalette");
-    for (const p of FB_BUILD_PALETTE) {
-      const b = document.createElement("button"); b.textContent = p.label; b.dataset.asset = p.asset;
-      b.onclick = () => { this.brush = p.asset; this._select(null); this._syncBrushButtons(); this._status("Click the map to place: " + p.label + ". (Esc to cancel)"); };
-      pal.appendChild(b);
+    // toolbar dropdown behaviour
+    const menus = [["fbAutoBtn", "fbAutoMenu"], ["fbOvBtn", "fbOvMenu"], ["fbKeys", "fbKeyHelp"]];
+    for (const [btnId, menuId] of menus) {
+      const btn = wrap.querySelector("#" + btnId), menu = wrap.querySelector("#" + menuId);
+      btn.onclick = (ev) => { ev.stopPropagation(); const was = menu.classList.contains("open"); wrap.querySelectorAll("#fbTop .menu").forEach((m) => m.classList.remove("open")); if (!was) menu.classList.add("open"); };
     }
+    document.addEventListener("pointerdown", (ev) => { if (!ev.target.closest("#fbTop .menu") && !ev.target.closest("#fbTop .grp button")) wrap.querySelectorAll("#fbTop .menu").forEach((m) => m.classList.remove("open")); });
+
+    // ---------- asset browser ----------
+    this._browse = { cat: "All", q: "" };
+    const tabs = wrap.querySelector("#fbTabs");
+    for (const c of ["All", ...FB_ASSET_CATEGORIES]) {
+      const b = document.createElement("button"); b.textContent = c; b.dataset.cat = c;
+      if (c === "All") b.classList.add("on");
+      b.onclick = () => { this._browse.cat = c; tabs.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); this._renderAssets(); };
+      tabs.appendChild(b);
+    }
+    wrap.querySelector("#fbSearch").oninput = (ev) => { this._browse.q = ev.target.value.trim().toLowerCase(); this._renderAssets(); };
+    this._renderAssets();
+
+    // outliner filter
+    wrap.querySelector("#fbFilter").oninput = () => this._refreshList();
+
     wrap.querySelectorAll("#fbModes button").forEach((b) => { b.onclick = () => this._setMode(b.dataset.m); });
     wrap.querySelector("#fbUndo").onclick = () => this._doUndo();
     wrap.querySelector("#fbRedo").onclick = () => this._doRedo();
@@ -745,17 +794,42 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbImport").onclick = () => wrap.querySelector("#fbImportFile").click();
     wrap.querySelector("#fbImportFile").onchange = (ev) => { const f = ev.target.files && ev.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => this._import(String(rd.result)); rd.readAsText(f); ev.target.value = ""; };
     wrap.querySelector("#fbReset").onclick = () => this._resetToMap();
-    const keyHelp = wrap.querySelector("#fbKeyHelp");
-    keyHelp.innerHTML = [
+    wrap.querySelector("#fbKeyHelp").innerHTML = [
       "<b>Camera</b> &mdash; W/A/S/D move &middot; Space up &middot; Alt down &middot; right or middle-drag orbit &middot; scroll zoom",
       "<b>Move piece</b> &mdash; left-drag (flat) &middot; <b>hold V + drag = vertical</b> &middot; Arrows nudge &middot; PgUp/PgDn raise/lower &middot; F to floor",
-      "<b>Rotate</b> &mdash; Q / R (a group spins around its center) &middot; hold X or Z to lock an axis",
-      "<b>Select</b> &mdash; click &middot; Shift-click adds to the group &middot; Esc deselect",
+      "<b>Rotate</b> &mdash; Q / R (a group spins around its centre) &middot; hold X or Z to lock an axis",
+      "<b>Select</b> &mdash; click &middot; Shift-click adds &middot; double-click a Scene row = fly to it &middot; Esc deselect",
       "<b>Copy</b> &mdash; Ctrl+C copy &middot; Ctrl+V paste &middot; Ctrl+D duplicate &middot; Del delete",
       "<b>History</b> &mdash; Ctrl+Z undo &middot; Ctrl+Y redo &middot; E export",
     ].join("<br>");
-    wrap.querySelector("#fbKeys").onclick = () => { keyHelp.style.display = keyHelp.style.display === "none" ? "block" : "none"; };
     this._syncHistButtons();
+  }
+
+  _renderAssets() {
+    const grid = this._ui.wrap.querySelector("#fbAssets");
+    const { cat, q } = this._browse;
+    grid.innerHTML = "";
+    let shown = 0;
+    for (const e of FB_ASSET_MANIFEST) {
+      if (cat !== "All" && e.cat !== cat) continue;
+      if (q && !e.name.toLowerCase().includes(q)) continue;
+      if (++shown > 400) break;
+      const b = document.createElement("button"); b.dataset.asset = e.name; b.title = e.name + "  (" + e.cat + ")";
+      const img = document.createElement("img"); img.loading = "lazy"; img.src = "thumbs/" + e.name.replace("/", "__") + ".png"; img.onerror = () => { img.style.display = "none"; };
+      const label = document.createElement("span"); label.textContent = e.name.split("/").pop();
+      b.appendChild(img); b.appendChild(label);
+      b.onclick = () => this._armBrush(e.name);
+      grid.appendChild(b);
+    }
+    if (!shown) grid.innerHTML = '<div style="color:#6f7a86;padding:10px">no pieces match</div>';
+  }
+
+  _armBrush(name) {
+    const label = name.split("/").pop();
+    const arm = () => { this.brush = name; this._select(null); this._syncBrushButtons(); this._status("Place: " + label + " — click the map. (Esc cancels)"); };
+    if (kitReady(this.app, name)) return arm();
+    this._status("Loading " + label + "...");
+    preloadKit(this.app, [name]).then((ok) => { if (ok.has(name)) arm(); else this._status("FAILED to load " + name); });
   }
 
   _refreshInspector() {
@@ -768,18 +842,21 @@ class FirstBreachBuildMode {
     const e = p.entity, pos = e.getPosition(), rot = e.getLocalEulerAngles(), sc = e.getLocalScale();
     const f = (n) => (Math.round(n * 100) / 100);
     el.innerHTML = [
-      '<div style="color:#8aa185;margin-bottom:3px">' + p.asset + '</div>',
+      '<div class="aname">' + p.asset + '</div>',
       '<label><span>X</span><input type="number" step="0.25" id="ipx" value="' + f(pos.x) + '"></label>',
       '<label><span>Y</span><input type="number" step="0.1" id="ipy" value="' + f(pos.y) + '"></label>',
       '<label><span>Z</span><input type="number" step="0.25" id="ipz" value="' + f(pos.z) + '"></label>',
       '<label><span>RotY</span><input type="number" step="15" id="ipr" value="' + Math.round(rot.y) + '"></label>',
-      '<label><span>Scale</span><input type="number" step="0.05" id="ips" value="' + f(sc.x) + '"></label>',
+      '<label><span>Scl X</span><input type="number" step="0.05" id="ips" value="' + f(sc.x) + '"></label>',
+      '<label><span>Scl Y</span><input type="number" step="0.05" id="ipsy" value="' + f(sc.y) + '"></label>',
+      '<label><span>Scl Z</span><input type="number" step="0.05" id="ipsz" value="' + f(sc.z) + '"></label>',
     ].join("");
     const apply = () => {
       const before = this._snapshot(p);
       const nx = +el.querySelector("#ipx").value, ny = +el.querySelector("#ipy").value, nz = +el.querySelector("#ipz").value;
       const nr = +el.querySelector("#ipr").value, ns = Math.max(0.05, +el.querySelector("#ips").value);
-      e.setPosition(nx, ny, nz); e.setLocalEulerAngles(0, nr, 0); e.setLocalScale(ns, ns, ns);
+      const nsy = Math.max(0.05, +el.querySelector("#ipsy").value), nsz = Math.max(0.05, +el.querySelector("#ipsz").value);
+      e.setPosition(nx, ny, nz); e.setLocalEulerAngles(0, nr, 0); e.setLocalScale(ns, nsy, nsz);
       const after = this._snapshot(p);
       if (!this._sameSnap(before, after)) this._pushUndo({ undo: () => { this._applySnap(p, before); this._select(p); }, redo: () => { this._applySnap(p, after); this._select(p); } });
       this._updateHighlight();
@@ -814,20 +891,25 @@ class FirstBreachBuildMode {
     this._pushUndo({ undo: () => { ref.forEach((b) => this._applySnap(b.piece, b.snap)); this._updateHighlight(); this._refreshInspector(); }, redo: () => { ref.forEach((b, i) => this._applySnap(b.piece, after[i])); this._updateHighlight(); this._refreshInspector(); } });
     this._updateHighlight(); this._refreshInspector();
   }
-  _syncBrushButtons() { if (this._ui) this._ui.wrap.querySelectorAll("#fbPalette button").forEach((b) => b.classList.toggle("on", b.dataset.asset === this.brush)); }
+  _syncBrushButtons() { if (this._ui) this._ui.wrap.querySelectorAll("#fbAssets button").forEach((b) => b.classList.toggle("on", b.dataset.asset === this.brush)); }
   _syncModeButtons() { if (this._ui) this._ui.wrap.querySelectorAll("#fbModes button").forEach((b) => b.classList.toggle("on", b.dataset.m === this.mode)); }
   _syncHistButtons() { if (!this._ui) return; this._ui.wrap.querySelector("#fbUndo").disabled = !this._undo.length; this._ui.wrap.querySelector("#fbRedo").disabled = !this._redo.length; }
   _refreshList() {
     if (!this._ui) return;
     const list = this._ui.wrap.querySelector("#fbList");
     this._ui.wrap.querySelector("#fbCount").textContent = String(this.placed.length);
+    const q = (this._ui.wrap.querySelector("#fbFilter")?.value || "").trim().toLowerCase();
     list.innerHTML = "";
+    const selSet = new Set(this.sel && this.sel.length ? this.sel : (this.selected ? [this.selected] : []));
     this.placed.forEach((p, i) => {
-      const row = document.createElement("div"); row.className = "it" + (p === this.selected ? " sel" : "");
-      const name = document.createElement("span"); name.textContent = i + ". " + p.asset;
-      const sel = document.createElement("button"); sel.textContent = "sel"; sel.onclick = () => this._select(p);
-      const del = document.createElement("button"); del.textContent = "x"; del.onclick = () => { this._select(p); this._deleteSelected(); };
-      row.appendChild(name); row.appendChild(sel); row.appendChild(del); list.appendChild(row);
+      if (q && !p.asset.toLowerCase().includes(q)) return;
+      const row = document.createElement("div"); row.className = "it" + (selSet.has(p) ? " sel" : "");
+      const idx = document.createElement("b"); idx.textContent = String(i);
+      const name = document.createElement("span"); name.textContent = p.asset.split("/").pop();
+      row.appendChild(idx); row.appendChild(name);
+      row.onclick = () => this._select(p);
+      row.ondblclick = () => { try { const pos = p.entity.getPosition(); const R = this.renderer; if (R && R.camTarget) { R.camTarget.set(pos.x, pos.y, pos.z); if (R.camDist > 18) R.camDist = 14; } this._select(p); } catch (_) {} };
+      list.appendChild(row);
     });
   }
   _status(msg) { if (this._ui) this._ui.status.textContent = msg; }

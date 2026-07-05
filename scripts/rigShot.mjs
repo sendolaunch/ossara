@@ -14,7 +14,8 @@ const browser = await pw.launch({ executablePath: exe, args: [...sparticuz.args,
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 let kitLine = "";
 page.on("console", (m) => { const t = m.text(); if (t.includes("[fbKit]") || t.includes("[dungeonKit]")) kitLine += t + " | "; });
-await page.goto("http://localhost:5199/?showcase=first-breach", { waitUntil: "domcontentloaded", timeout: 30000 });
+const RIG_URL = process.env.RIG_URL || "http://localhost:5199/?showcase=first-breach";
+await page.goto(RIG_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
 await page.waitForFunction(() => window.OSSARA?.mission?.renderer?.app, null, { timeout: 30000 });
 await page.waitForTimeout(3500); // models/kit settle
 const state = await page.evaluate(([tx, tz, dist, pitch, yaw, probe]) => {
