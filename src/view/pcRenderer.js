@@ -391,7 +391,14 @@ export class PCRenderer {
   // Visual-only surface height for First Breach actors (0 when no plan / other scenes).
   _surfaceY(x, z) {
     if (!this._surfacePlan || !this._surfaceLevel) return 0;
-    return getSurfaceHeightAtWorld(x, z, this._surfacePlan, this._surfaceLevel);
+    const lvl = this._surfaceLevel;
+    const h = getSurfaceHeightAtWorld(x, z, this._surfacePlan, lvl);
+    if (h === (this._surfacePlan.defaultHeight ?? 0) && typeof lvl.surfaceHeightAt === "function") {
+      const t = lvl.tile || 1;
+      const g = lvl.surfaceHeightAt(Math.round(x / t + (lvl.cols - 1) / 2), Math.round(z / t + (lvl.rows - 1) / 2));
+      if (Number.isFinite(g) && g > h) return g;
+    }
+    return h;
   }
   // Smoothly lerp an entity toward its surface Y so actors read as climbing, not popping.
   _smoothSurfaceY(ent, x, z, k = 0.25) {

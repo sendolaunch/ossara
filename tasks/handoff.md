@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.40 — 2026-07-04 — TIER REBUILD: heights raised (floor 1.3 / stairs 2.2-2.8 / plats+ward 3.6 / dais 4.0 / walls 8.6), 10 drop-gap cells cut, one-way ledge rule in the sim (drop yes, climb via stairs only), kit regen 661. Suite 0 fails incl new oneWayLedges 17/17; build 899. PUSH PENDING |
+| **Last session** | S7.41 — 2026-07-05 — Hudson playtested b98c480: fall-through at gaps + stutter -> ROOT CAUSE half-cell offset in getSurfaceHeightAtWorld (fixed + grid fallback). Real KayKit stairs on fan edges (57), tall-wall skin, gap dressing, +2 gaps (719 pcs). Suite 0 fails; build 899. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,18 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.41 — 2026-07-05 — Playtest bugs: half-cell surface offset (fall-through + stutter) fixed; real stairs [GATE GREEN; PUSH PENDING]
+- Hudson playtested the S7.40 deploy (badge `b98c480`, ~12:15AM screenshot): (1) walking the drop-gap seam DROPS the hero inside the wall, who then walks out on the lower floor; (2) movement "stuttering all over the place"; (3) wants REAL stairs from the pack, not painted ramps; (4) the bare grey walls on the bottom floor are "terrible"; (5) wants more one-way drop-offs to the bottom floor.
+- **ROOT CAUSE (both 1+2):** `getSurfaceHeightAtWorld` mapped world->fractional cell WITHOUT the +0.5 cell-centre shift, so every zone boundary read half a cell early. On the west half of a 1-wide gap cell NO zone matched -> visual height fell to `defaultHeight 0` -> hero rendered sunk inside the wall ("falls straight through"). Same offset made the hero's y-target flip half a cell early at every tier boundary -> constant lerp bounce = the stutter. Terrain rect coverage audited: 0 missing / 0 double / 0 height mismatches — the offset was the whole story.
+- **Fixes:** +0.5 shift in `mapSurfaceHeights.getSurfaceHeightAtWorld` (cell-index bounds vs cell-centred world, commented); `pcRenderer._surfaceY` now falls back to the painted grid height when the plan has no zone (never plummet to 0 again). Existing mapSurfaceHeights test still green (cell-centre lookups unchanged by the shift).
+- **Real stairs (generator C4):** every fan-boundary edge where ground steps up 0.5-1.3 gets a `stairs_modular_center` (measured 2x4x4) at sx 0.5 / sy rise/4 / sz 0.25, facing the ascent — 57 pieces across both fans. First-pass ry mapping = eyeball candidate.
+- **Tall-wall skin (B3b):** the 5.6 inner walls (bare grey terrain boxes in his screenshot) get two `wall_cracked` courses (sy height/8 each side).
+- **Drop-gap dressing (C5):** gaps auto-detected (platform cell flanked by walls on opposite sides) -> stone `floor_foundation_front` lip under the jump edge + landing rubble below. Works for any future gap without hardcoding.
+- **+2 drop gaps** (13,34)/(13,35): west platform strip -> south courtyard (now 12 gap cells / 6 openings). oneWayLedges still 17/17.
+- Kit v4 = **719 pieces** (stair 57, wall 178, wrap 55). Deterministic (`054f160a...` twice).
+- Verified (R5/R6): FULL suite exit 0, 0 fails; /tmp build **899 modules**; NUL 0 on all five touched files. **Unverified:** the fixed drop feel + stair look + stutter-gone — needs Hudson's hands (or the dev-server loop; badge check after push).
+- **In Friendly Words:** Found the real bug behind both the falling-through-the-floor and the stuttering — the game was reading the ground's height half a tile off from where you actually stand, so near edges it thought you were over nothing. One-line geometry fix plus a safety net. Also: the ramps are now actual stone staircases from your pack (57 of them), the ugly bare grey walls got the cracked-stone treatment, every jump-down opening got a stone lip and rubble below so it looks intentional, and there are two more drop-offs into the south courtyard. Push and walk it — the fall-through and jitter should be gone.
 
 ### S7.40 — 2026-07-04 — Raised tiers + one-way drops (jump down, stairs back up) [GATE GREEN; PUSH PENDING]
 - Hudson (after seeing v3 live): floors patchy over the base layer, pit a mess, props now MINIATURIZED (v2 over-corrected), and the big one: tiers should be higher with one-way verticality — jump down, but climb back only via the stairs. Chose (AskUser): dev-server QA loop + HEIGHTS FIRST. Art-look fixes (floors/pit/per-asset size table) are next session, via the localhost loop.

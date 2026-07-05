@@ -21,6 +21,7 @@ const remap = (h) => { if (h == null) return null; if (!MAP.has(h)) throw new Er
 const DROP_GAPS = [
   [12, 12], [12, 13],   // NW platform east rim -> courtyard
   [12, 20], [12, 21],   // NW platform east rim (south opening)
+  [13, 34], [13, 35],   // west platform strip -> south courtyard
   [33, 46], [34, 46],   // south band north rim -> mid floor (west opening)
   [49, 46], [50, 46],   // south band north rim (center opening)
   [57, 47], [58, 47],   // south band north rim (east opening)

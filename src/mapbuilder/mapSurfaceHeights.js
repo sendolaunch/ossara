@@ -53,8 +53,11 @@ export function getSurfaceHeightAtCell(col, row, plan) {
 export function getSurfaceHeightAtWorld(x, z, plan, level) {
   if (!level) return surfaceHeightAt(plan, x, z);
   const tile = level.tile || 1;
-  const col = x / tile + (level.cols - 1) / 2;
-  const row = z / tile + (level.rows - 1) / 2;
+  // +0.5: cell c is CENTRED at world (c-(cols-1)/2)*tile, i.e. it spans [c-0.5, c+0.5).
+  // Zone bounds are cell-indexed [col, col+w), so the fractional lookup needs the shift —
+  // without it every boundary reads half a cell early (S7.41 fall-through/stutter bug).
+  const col = x / tile + (level.cols - 1) / 2 + 0.5;
+  const row = z / tile + (level.rows - 1) / 2 + 0.5;
   return surfaceHeightAt(plan, col, row);
 }
 

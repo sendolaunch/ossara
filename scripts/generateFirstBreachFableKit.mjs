@@ -1,4 +1,4 @@
-// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 — dividers/railings rebuilt from REAL GLTF dims: wall sy0.65 dividers, run-based non-overlapping railings).
+// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 dividers/railings from real dims; v4 S7.41 — tall-wall skin, real fan stairs, drop-gap dressing, grid-derived heights).
 // Fresh full-map dressing: perimeter + inner wall skin, gates, floors, platform wraps,
 // railings, scatter, and authored set dressing. Theme: RUIN WITH A HELD HEART —
 // the crypt is long dead (rubble, broken tiles, dead torches, red necro banners at the
@@ -101,6 +101,10 @@ for (const [wall, fixed, from, to] of RUNS) {
 for (const [c, r, ry] of [[1, 6, 90], [65, 6, 0], [0, 56, 180], [66, 56, 270]]) { add("wall_corner", "wall", c, r, 0, ry, 1); add("wall_corner", "wall", c, r, 3.6, ry, 1, { sy: 1.25 }); }
 
 // ============================================================
+// B1b. INNER TALL-WALL SKIN — the 5.6 divider walls rendered as bare terrain boxes;
+// give them two cracked courses per side height (sy 0.7 -> 2.8 + 2.8 = 5.6).
+// (declared here, applied after innerRuns exist — see B3b below)
+// ============================================================
 // B2. GATES — Hudson's five tuned arches verbatim (proven in-engine) + necro dressing
 // ============================================================
 add("wall_arched", "wall", 62, 9, 0, 324, 2.2);                                     // C (MAIN)
@@ -130,6 +134,21 @@ for (const z of innerRuns) {
   for (; t <= to - 1.5; t += 4) add("wall", "wall", vert ? z.col : t, vert ? t : z.row, 0, ry, 1, { sy: dsy });
   const rem = to + 1 - (t - 0.5);
   if (rem >= 1) add("wall_half", "wall", vert ? z.col : to - 0.5, vert ? to - 0.5 : z.row, 0, ry, 1, { sy: dsy });
+}
+
+// B3b. tall inner walls (height >= 5, below perimeter 8.6): two cracked courses
+const tallRuns = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.height >= 5 && z.height < 8 && !(z.w > 1 && z.h > 1));
+for (const z of tallRuns) {
+  const vert = z.h >= z.w;
+  const from = vert ? z.row : z.col, to = vert ? z.row + z.h - 1 : z.col + z.w - 1;
+  const len = to - from + 1, ry = vert ? 90 : 0;
+  const csy = +(z.height / 8).toFixed(3); // two courses of a 4-tall piece
+  if (len <= 2) { add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, 0, ry, 1, { sy: csy }); add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, +(z.height / 2).toFixed(2), ry, 1, { sy: csy }); continue; }
+  for (let t2 = from + 1.5; t2 <= to - 1.5; t2 += 4) {
+    const c = vert ? z.col : t2, r = vert ? t2 : z.row;
+    add("wall_cracked", "wall", c, r, 0, ry, 1, { sy: csy });
+    add("wall_cracked", "wall", c, r, +(z.height / 2).toFixed(2), ry, 1, { sy: csy });
+  }
 }
 
 // ============================================================
@@ -238,6 +257,44 @@ for (const name of ["N", "S", "E", "W"]) {
     };
     for (const a of cells) { if (run.length && a !== run[run.length - 1] + 1) flush(); run.push(a); }
     flush();
+  }
+}
+
+// ============================================================
+// C4. REAL STAIRS — KayKit steps on every fan boundary where the ground steps up.
+// stairs_modular_center is 2W x 4H x 4D natively: sx 0.5 spans one cell, sy rise/4,
+// sz 0.25 compresses the run into the boundary cell. Faces the ascent.
+// ============================================================
+const ASCENT_RY = { N: 180, S: 0, E: 90, W: 270 }; // ry so the steps climb toward the higher cell (first-pass guess)
+let stairN = 0;
+for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
+  if (T(c, r) !== 7) continue;
+  const h = H(c, r);
+  for (const [dc, dr, , name] of DIRS) {
+    const nc = c + dc, nr = r + dr;
+    if (!WALK(nc, nr) || T(nc, nr) === 7) continue;
+    const nh = H(nc, nr);
+    const rise = h - nh;
+    if (rise < 0.5 || rise > 1.3) continue; // the fan edge cells that actually step up onto this stair cell
+    add("stairs_modular_center", "stair", c + dc * 0.5, r + dr * 0.5, nh, ASCENT_RY[name], 0.5, { sy: +(rise / 4).toFixed(3), sz: 0.25 });
+    stairN++;
+  }
+}
+
+// C5. DROP-GAP DRESSING — auto-detect the cut openings (platform cell flanked by walls
+// on opposite sides) and make them read as deliberate: a stone lip + landing rubble.
+for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
+  if (!WALK(c, r) || H(c, r) < 2) continue;
+  const flankNS = T(c, r - 1) === 6 && T(c, r + 1) === 6;
+  const flankEW = T(c - 1, r) === 6 && T(c + 1, r) === 6;
+  if (!flankNS && !flankEW) continue;
+  const h = H(c, r);
+  for (const [dc, dr, ry] of DIRS) {
+    const nh = H(c + dc, r + dr);
+    if (WALK(c + dc, r + dr) && h - nh > 1) {
+      add("floor_foundation_front", "wrap", c, r, h - 2, ry, 1);                                  // lip under the jump edge
+      add("rubble_half", "rubble", c + dc * 1.4 + rnd() * 0.4 - 0.2, r + dr * 1.4 + rnd() * 0.4 - 0.2, nh, rnd() * 360, 0.42); // landing debris
+    }
   }
 }
 

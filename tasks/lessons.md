@@ -147,3 +147,10 @@ Newest entries first within each section. Sections stay even when empty — they
 - **Rule (prop scale):** KayKit DUNGEON-PACK PROPS (furniture, rubble, containers, trophies) want scale **0.4-0.65** in this 1-unit-cell world — grid-modular pieces (walls, floors, foundations, barriers, arches, wall-mounted banners) stay ~1. Anything authored above 0.72 that is not a grid piece is almost certainly 2x too big. `wall_half` is ~2 cells wide -> tile every 2 cells, not 4.
 
 - **Rule (measure, don't guess):** before tiling/stacking ANY kit piece, read its true bounds from the .gltf (`accessors[primitives.attributes.POSITION].min/max` — they're plain JSON). Traps already hit: `wall_half` = half-LENGTH (2x4x1, full height); `barrier_column` = a 4-long fence WITH posts, not a post; `floor_foundation_front` = 2 wide. Spacing/scale derived from measured W/H/D; `sy` squashes height (e.g. wall sy 0.65 -> 2.6 divider).
+
+
+## Half-cell coordinate bias (S7.41)
+
+- **Symptom:** hero "falls straight through" a 1-cell walkway into the wall and pops out a floor below; movement stutters everywhere after tiers got taller.
+  **Root cause:** `getSurfaceHeightAtWorld` converted world->fractional cell WITHOUT +0.5: grid cell c is CENTRED at world (c-(cols-1)/2)*tile (spans [c-0.5,c+0.5)), but zone bounds are cell-indexed [col,col+w). Every boundary therefore read half a cell early; on narrow walkable strips the lookup missed ALL zones and returned defaultHeight 0.
+  **Rule:** any world->cell-fraction conversion that will be compared against CELL-INDEXED bounds needs the +0.5 centre shift; and no visual height resolver may ever return a default that differs wildly from its surroundings — fall back to the painted grid (`surfaceHeightAtCell(round,round)`), not to 0. Wide rects hide this bias; 1-cell strips expose it.
