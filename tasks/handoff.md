@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.45 — 2026-07-05 — READABILITY: Hudson called out the monotone-beige read (tiles WERE placed — probe: 747, y ok). Fix = per-tier kit-floor TINTS (renderer hook, 4 shared material clones) + visible lane beds. Variant A (cool low/warm high) RIG-VERIFIED at player cam. Suite 0 fails; build 899. PUSH PENDING |
+| **Last session** | S7.46 — 2026-07-05 — RESTORE by Hudson's call: map data back to 0806079 (kit v3, original heights — no tiers/stairs/gaps/tints, 'those are ass') while KEEPING the half-cell fix, the rig, R27, prop scales. Rig-verified restored look. Suite 0 fails; build 899. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.46 — 2026-07-05 — Restore to the pre-tier map (keep the fixes) [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: revert to "before the floor height and whatever made you change the layout on the middle floor like the stairs and everything too bc those are ass." Chose: keep the non-map fixes.
+- **Surgical restore, not a blind revert** — map data/code back to `0806079` (kit v3: 631 pieces, original heights floor 1.3 / plat 2.6 / dais 3.0 / walls 7.2, no one-way, no drop gaps, no stair GLBs, no floor-coverage passes, no tier tints): firstBreachGrid, level.js, World.js, firstBreachKit.js, pcRenderer.js, mapThemes.js, generator script, kit test, package.json, 2d html, kit json. **KEPT:** the mapSurfaceHeights half-cell fix (strictly more correct), `scripts/rigShot.mjs` + R27, prop-scale corrections (already in kit v3), lessons/handoff history. oneWayLedges + noSoftLock tests stubbed to skip (mount blocks rm; CC `git rm -f`s them — restore from history if tiers return).
+- **OneDrive mount quirk:** `git checkout -- <files>` cannot unlink on the mount ("Operation not permitted") — restore via `git show 0806079:<f> > <f>` redirects (write-in-place works, unlink does not). Same for rm -> stub-overwrite instead.
+- **DO NOT run `scripts/retierFirstBreachHeights.mjs`** unless tiers are wanted again — it would re-raise the restored grid.
+- Verified (R5/R6): suite exit 0 (firstBreachKit 813/813 on restored kit); /tmp build **899 modules**; rig shot of the restored map at player cam (`outputs/restored-map.png`) = the S7.39 look, confirmed with eyes.
+- **Un-restore:** everything removed lives at `fbdd4c4` — `git checkout fbdd4c4 -- <files>` brings any of it back.
+- **In Friendly Words:** Map's back to how it was before I started raising floors and adding stairs — exactly the version you asked for — but I kept the genuine bug fixes and my robot tester underneath. Nothing is lost forever: the tier experiment is safely stored in history if you ever want any piece of it back.
 
 ### S7.45 — 2026-07-05 — Tier-tint readability pass (the floor was paved, it just read as nothing) [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson: "how can you look at this and tell me it's fixed." Correct call — TWO lessons: (1) my rig verification was from a HIGH camera; his complaint is at PLAYER camera (rig now supports `player` mode incl. hero teleport: `node scripts/rigShot.mjs out player <col> <row>`). (2) The live probe showed the floor WAS fully paved (747 tiles, correct y) — the failure was READABILITY: tiles ~= terrain ~= walls, one beige sheet, no tier contrast, lanes invisible (laneStoneBed opacity 0.115).

@@ -13,7 +13,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => (c ? pass++ : (fail++, console.error("  FAIL:", m)));
 
 // small + well-formed
-ok(FIRST_BREACH_KIT.length > 0 && FIRST_BREACH_KIT.length < 1300, `kit is bounded (${FIRST_BREACH_KIT.length} < 1300)`);
+ok(FIRST_BREACH_KIT.length > 0 && FIRST_BREACH_KIT.length < 1200, `kit is bounded (${FIRST_BREACH_KIT.length} < 1200)`);
 ok(new Set(FIRST_BREACH_KIT.map((s) => s.id)).size === FIRST_BREACH_KIT.length, "every kit id is unique");
 for (const s of FIRST_BREACH_KIT) {
   ok(typeof s.asset === "string" && s.scale > 0 && Number.isFinite(s.col) && Number.isFinite(s.row) && Number.isFinite(s.y), `${s.id} has valid fields`);

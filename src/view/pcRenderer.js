@@ -391,14 +391,7 @@ export class PCRenderer {
   // Visual-only surface height for First Breach actors (0 when no plan / other scenes).
   _surfaceY(x, z) {
     if (!this._surfacePlan || !this._surfaceLevel) return 0;
-    const lvl = this._surfaceLevel;
-    const h = getSurfaceHeightAtWorld(x, z, this._surfacePlan, lvl);
-    if (h === (this._surfacePlan.defaultHeight ?? 0) && typeof lvl.surfaceHeightAt === "function") {
-      const t = lvl.tile || 1;
-      const g = lvl.surfaceHeightAt(Math.round(x / t + (lvl.cols - 1) / 2), Math.round(z / t + (lvl.rows - 1) / 2));
-      if (Number.isFinite(g) && g > h) return g;
-    }
-    return h;
+    return getSurfaceHeightAtWorld(x, z, this._surfacePlan, this._surfaceLevel);
   }
   // Smoothly lerp an entity toward its surface Y so actors read as climbing, not popping.
   _smoothSurfaceY(ent, x, z, k = 0.25) {
@@ -886,31 +879,14 @@ export class PCRenderer {
       .then(() => {
         if (this._fbKitToken !== token || this.fbKitRoot !== root) return;
         let placed = 0;
-        const tintCache = new Map();
-        const tintFor = (spec) => {
-          if (spec.cat === "wrap") return "fbWrapTint";
-          if (spec.cat !== "floor") return null;
-          return spec.y < 2 ? "fbFloorLow" : spec.y < 3 ? "fbFloorMid" : "fbFloorHigh";
-        };
         for (const spec of firstBreachKitSpecs(level)) {
           const ent = place(this.app, root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale, sy: spec.sy, sz: spec.sz });
           if (!ent) continue; // GLB missing -> primitive blockout fallback stays
           ent.name = `fbkit-${spec.id}`;
-          const tintToken = tintFor(spec);
           for (const render of ent.findComponents("render")) {
             for (const mesh of render.meshInstances || []) {
               mesh.castShadow = spec.cat !== "light" && spec.cat !== "floor" && spec.cat !== "wrap";
               mesh.receiveShadow = true;
-              if (tintToken) {
-                const key = tintToken + ":" + mesh.material.id;
-                if (!tintCache.has(key)) {
-                  const tinted = mesh.material.clone();
-                  tinted.diffuse = this._themeMaterial(tintToken).diffuse.clone();
-                  tinted.update();
-                  tintCache.set(key, tinted);
-                }
-                mesh.material = tintCache.get(key);
-              }
             }
           }
           placed++;

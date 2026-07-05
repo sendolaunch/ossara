@@ -3,7 +3,7 @@
 // simplified to axis-aligned waypoints. Hero collision = the grid's walls + void
 // (blockedZones imported from firstBreachGrid.js). Core/hero come from the grid markers.
 // Five lane ids kept (gate C = northeast-market = MAIN). Enemy stats/waves unchanged.
-import { FB_BLOCKED_RECTS, surfaceHeightAtCell, terrainAt } from "./firstBreachGrid.js";
+import { FB_BLOCKED_RECTS } from "./firstBreachGrid.js";
 
 export const LANES = [
   {
@@ -107,12 +107,6 @@ export const LEVEL = {
   corridorWidth: 2.6,
 
   core: { col: 9, row: 51 },
-
-  // Walkable-elevation lookups for the sim's one-way ledge rule (pure data, engine-agnostic):
-  // the hero can DROP off ledges but climbs only via stair terrain (id 7).
-  surfaceHeightAt: surfaceHeightAtCell,
-  terrainKindAt: terrainAt,
-  stairTerrain: 7,
   heroSpawn: { col: 5, row: 53 },
   lanes: LANES,
   spawns: LANES.map((lane) => ({ id: lane.id, name: lane.name, ...lane.spawn })),
