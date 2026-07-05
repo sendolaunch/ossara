@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.54 — 2026-07-05 — Gap MONOLITHS removed per Hudson (openings now ground-level floor; he dresses them with walls himself). noSoftLock CAUGHT a real trap — the (12,20)/(12,21) double-wall pair would've been an inescapable pit -> restored to wall (10 openings remain). Auto-lips removed from his canonical kit (826). Suite 0 fails; build 900; rig-verified. PUSH PENDING |
+| **Last session** | S7.55 — 2026-07-05 — Hudson's decluttered export baked (796: stripped my scatter, re-laid dividers HIS way) + deco-* TOP-FLOOR-ONLY decoration pass (24 pcs, validated, >=1.5 cells from his pieces) = 820. Buried-walls optimization PARKED per Hudson (post-map). Floor-by-floor plan active. Suite 0 fails; build 900; rig-verified. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -40,11 +40,20 @@ Close every session by updating this file per the R16 ritual.
 - [ ] **Animated hero** — current `hero.glb` is static; needs a rigged+animated model + PlayCanvas anim wiring.
 - [ ] **Remove dead `three` code** once confirmed unused (R21 cleanup): `view/Renderer.js`, `meshFactory.js`, `assets.js`, `ui/preview.js`.
 - [ ] **Perf: batch the static map art** (planning-ahead — no current lag). Trigger: more maps/enemies or fps dips on phones. Fix: set a `batchGroupId` on the kit + blockout static meshes (`_loadFirstBreachKit` / `_loadMapBuilderArt`) and call `app.batcher.generate()` → the ~130 wall/prop draw calls collapse to ~10 with NO visual change (walls never move = ideal static-batch candidates). Cheap pre-knobs with zero code risk (regen the kit): widen cracked spacing (every 8 cells not 4) or drop to one wall course instead of two = ~half the pieces. Also consider turning off shadow-casting on the wall skin. Needs an eyeball after — batching can have quirks with transparent/rotated meshes.
+- [ ] **Optimize: strip truly-buried wall pieces** (Hudson-parked until the map is done) — needs occlusion-aware audit (face-skins vs embedded), then a one-click cleanup + bake. Crude flag count: ~139 candidates.
 - [x] **Git remote live** — `origin` → github.com/sendolaunch/ossara (`main`), pushed with LFS healthy.
 
 ---
 
 ## Session log (newest first)
+
+### S7.55 — 2026-07-05 — His declutter baked + deco-* top-floor pass [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson's export studied before baking (his ask): 65 deleted / 35 added vs previous kit = he STRIPPED my scatter clutter (~31 pcs: rocks/crates/trunks/buckets "in the way"), removed the last railing, and RE-LAID the divider walls around the gap openings himself (14+11 out, 16+14 back — his "I'll add the walls," delivered). Baked verbatim as the canonical base (796).
+- **deco-* top-floor decoration** (`scripts/decorateTopFloor.mjs`, deterministic, ADDITIVE-only): torch rhythm (ground-relative y), rocky clusters (his direction), story anchors — every piece validated: top tier only (h>=3.4), >=2 off lanes, off protected, **>=1.5 cells from any of his non-floor pieces**. 24 survived validation (his layout + lanes own most top space — sparse by design; he tunes after). Total 820.
+- **Buried-walls optimization PARKED** (his call: after the whole map). Crude audit flagged 139 wall-line candidates but cannot separate visible face-skins from truly-embedded pieces without occlusion math — noted for the optimization pass. Backlog item added.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**; rig shot `outputs/topfloor-deco.png` (his walls + deco together, player-adjacent cam).
+- ROADMAP: top floor = his floors/deco tuning next -> floor 2 -> "third floor drop." deco-* ids make my pieces findable/removable.
+- **In Friendly Words:** Your cleanup is the map now, exactly as you sent it — and I looked first like you asked: you cleared my clutter and rebuilt the inner walls your own way, got it. My decoration went ONLY on the top floor and only in spots that are provably safe and not crowding your work — torches on the walls, rocky piles along the bases, a few crates and battle leftovers. All my pieces are named "deco-something" so you can spot and move or delete any of them. Off to your floors-and-decoration pass; the buried-wall cleanup is on the list for when the whole map is done.
 
 ### S7.54 — 2026-07-05 — Gap blocks removed; noSoftLock catches its first real trap [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson: "remove the block, I'll add the walls" — the drop-gap TERRAIN cubes (platform-height cells poking through the wall lines) read as ungrabbable monoliths. Retier now makes gap cells **ground-level floor (terrain 2, 1.3)**: the opening is a hole in the wall line — jump down through it, no climbing back, nothing sticking up. He dresses the openings with wall pieces himself.
