@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.44 — 2026-07-05 — THE RIG: headless in-sandbox game screenshots (scripts/rigShot.mjs) = verify-before-ship is real (R27). Fan plateaus floored, run-based rim wraps, block skin — all RIG-VERIFIED pre-push. New noSoftLock test (0 traps). Kit 1211/cap 1300. PUSH PENDING |
+| **Last session** | S7.45 — 2026-07-05 — READABILITY: Hudson called out the monotone-beige read (tiles WERE placed — probe: 747, y ok). Fix = per-tier kit-floor TINTS (renderer hook, 4 shared material clones) + visible lane beds. Variant A (cool low/warm high) RIG-VERIFIED at player cam. Suite 0 fails; build 899. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.45 — 2026-07-05 — Tier-tint readability pass (the floor was paved, it just read as nothing) [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: "how can you look at this and tell me it's fixed." Correct call — TWO lessons: (1) my rig verification was from a HIGH camera; his complaint is at PLAYER camera (rig now supports `player` mode incl. hero teleport: `node scripts/rigShot.mjs out player <col> <row>`). (2) The live probe showed the floor WAS fully paved (747 tiles, correct y) — the failure was READABILITY: tiles ~= terrain ~= walls, one beige sheet, no tier contrast, lanes invisible (laneStoneBed opacity 0.115).
+- **Fix (art direction, not more pieces):** per-tier TINTS on the kit floor/wrap pieces — pcRenderer._loadFirstBreachKit hook multiplies dungeon_texture via ~4 SHARED material clones keyed by height band (fbFloorLow 1.3 cool grey / fbFloorMid 2.4 neutral / fbFloorHigh 3.6+ warm light / fbWrapTint cliffs dark), tokens in mapThemes. Lane beds raised to opacity 0.32 (readable routes). Zero per-piece material cost.
+- **RIG-verified at player camera from Hudson's vantage (hero teleported to 22,28):** courtyard reads cool grey, upper band warm tan — tiers separate at a glance (`outputs/look-A-cool.png`). Variant B (warm sand family) scripted via live in-page material swap (`/tmp shotAB.mjs`) but its shot kept missing the 45s sandbox window — time-boxed; B is a 4-token change if Hudson prefers warm after seeing A live.
+- Rig ops note: keep ONE rigShot source of truth (the repo copy) — a /tmp-only edit diverged and cost a debugging loop; the repo copy now carries CDP capture + player mode + teleport.
+- Verified (R5/R6): suite exit 0 (0 fails); /tmp build **899 modules**; NUL 0 x3. Kit unchanged (tints are runtime).
+- **In Friendly Words:** The ground WAS paved — the problem was that everything wore the same beige, so it read like nothing. Now each floor level has its own tone: bottom cool grey, middle neutral, top warm — you can tell your height at a glance, and the monster lanes show as dark paths. I checked it standing where you stood, through the same camera. If you'd rather have the whole map warmer instead of cooler, that's a 2-minute switch — say the word after you see it.
 
 ### S7.44 — 2026-07-05 — The rig: verify-before-ship becomes real [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson (rightly): "come up with a plan that lets you be a real dev — actually test fixes and see if they worked." Delivered the plan AND the infrastructure in one session.

@@ -3,8 +3,10 @@
 // Needs: a vite dev server on :5199 (npx vite --port 5199), playwright-core + @sparticuz/chromium.
 import { chromium as pw } from "playwright-core";
 import sparticuz from "@sparticuz/chromium";
+import { writeFileSync } from "node:fs";
 
 const [out = "/tmp/rig.png", tx = "0", tz = "0", dist = "34", pitch = "0.9", yaw = "0.8"] = process.argv.slice(2);
+const playerCam = tx === "player";
 const probe = process.argv.includes("--probe");
 
 const exe = await sparticuz.executablePath();
@@ -14,11 +16,16 @@ let kitLine = "";
 page.on("console", (m) => { const t = m.text(); if (t.includes("[fbKit]") || t.includes("[dungeonKit]")) kitLine += t + " | "; });
 await page.goto("http://localhost:5199/?showcase=first-breach", { waitUntil: "domcontentloaded", timeout: 30000 });
 await page.waitForFunction(() => window.OSSARA?.mission?.renderer?.app, null, { timeout: 30000 });
-await page.waitForTimeout(6000); // models/kit settle
+await page.waitForTimeout(3500); // models/kit settle
 const state = await page.evaluate(([tx, tz, dist, pitch, yaw, probe]) => {
   const O = window.OSSARA, R = O.mission.renderer, W = O.mission.world;
-  try { if (!R.freeCam) R.toggleFreeCam(); } catch (e) {}
-  R.camTarget.set(+tx, 2, +tz); R.camDist = +dist; R.camPitch = +pitch; R.camYaw = +yaw;
+  if (tx !== "player") {
+    try { if (!R.freeCam) R.toggleFreeCam(); } catch (e) {}
+    R.camTarget.set(+tx, 2, +tz); R.camDist = +dist; R.camPitch = +pitch; R.camYaw = +yaw;
+  } else if (Number.isFinite(+tz) && Number.isFinite(+dist) && +tz > 0) {
+    // player mode with a teleport: node rigShot.mjs out player <col> <row>
+    const L2 = W.level; W.hero.x = +tz - (L2.cols - 1) / 2; W.hero.z = +dist - (L2.rows - 1) / 2;
+  }
   let fbkit = 0; const walk = (e) => { if (e.name?.startsWith("fbkit-")) fbkit++; e.children && e.children.forEach(walk); }; walk(R.app.root);
   const out = { fbkit, badge: [...document.querySelectorAll("div,span")].map((e) => e.textContent).find((t) => t && t.includes("OSSARA ·")) };
   if (probe) {
@@ -27,7 +34,10 @@ const state = await page.evaluate(([tx, tz, dist, pitch, yaw, probe]) => {
   }
   return out;
 }, [tx, tz, dist, pitch, yaw, probe]);
-await page.waitForTimeout(1500); // camera settle + repaint
-await page.screenshot({ path: out });
+await page.waitForTimeout(1200); // camera settle + repaint
+// CDP capture: page/element screenshots wait for "stability" and hang on a live game canvas
+const cdp = await page.context().newCDPSession(page);
+const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
+writeFileSync(out, Buffer.from(shot.data, "base64"));
 console.log(JSON.stringify({ out, kit: kitLine.slice(0, 160), ...state }, null, 1));
 await browser.close();

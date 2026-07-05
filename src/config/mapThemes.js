@@ -27,7 +27,12 @@ export const MAP_THEMES = Object.freeze({
       torchWarm: { color: "gold", emissive: 0.82, gloss: 0.38 },
       boneAsh: { color: "bone", emissive: 0.035, gloss: 0.2 },
       shadowRubble: { color: "#20261e", emissive: 0.002, gloss: 0.1 },
-      laneStoneBed: { color: "#2a3128", emissive: 0.008, opacity: 0.115, gloss: 0.12, depthWrite: false },
+      laneStoneBed: { color: "#232b22", emissive: 0.01, opacity: 0.32, gloss: 0.12, depthWrite: false },
+      // per-tier kit-floor tints (S7.45 readability): multiply dungeon_texture by height band
+      fbFloorLow: { color: "#8f96a8" },   // courtyard 1.3 — cool, dark
+      fbFloorMid: { color: "#aaa89e" },   // mid band 2.4 — neutral
+      fbFloorHigh: { color: "#cfc3a4" },  // platforms/ward 3.6+ — warm, light
+      fbWrapTint: { color: "#7e7a72" },   // cliff faces — grounded dark
       lanePlagueSeam: { color: "#4f8f52", emissive: 0.095, opacity: 0.038, gloss: 0.12, depthWrite: false },
       laneDirectionGold: { color: "#8b7d3f", emissive: 0.075, opacity: 0.055, gloss: 0.16, depthWrite: false },
       pathTileStone: { color: "#68705d", emissive: 0.008, opacity: 0.024, gloss: 0.1, depthWrite: false },

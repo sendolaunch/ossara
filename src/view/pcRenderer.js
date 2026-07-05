@@ -886,14 +886,31 @@ export class PCRenderer {
       .then(() => {
         if (this._fbKitToken !== token || this.fbKitRoot !== root) return;
         let placed = 0;
+        const tintCache = new Map();
+        const tintFor = (spec) => {
+          if (spec.cat === "wrap") return "fbWrapTint";
+          if (spec.cat !== "floor") return null;
+          return spec.y < 2 ? "fbFloorLow" : spec.y < 3 ? "fbFloorMid" : "fbFloorHigh";
+        };
         for (const spec of firstBreachKitSpecs(level)) {
           const ent = place(this.app, root, spec.asset, { x: spec.x, y: spec.y, z: spec.z, ry: spec.ry, scale: spec.scale, sy: spec.sy, sz: spec.sz });
           if (!ent) continue; // GLB missing -> primitive blockout fallback stays
           ent.name = `fbkit-${spec.id}`;
+          const tintToken = tintFor(spec);
           for (const render of ent.findComponents("render")) {
             for (const mesh of render.meshInstances || []) {
               mesh.castShadow = spec.cat !== "light" && spec.cat !== "floor" && spec.cat !== "wrap";
               mesh.receiveShadow = true;
+              if (tintToken) {
+                const key = tintToken + ":" + mesh.material.id;
+                if (!tintCache.has(key)) {
+                  const tinted = mesh.material.clone();
+                  tinted.diffuse = this._themeMaterial(tintToken).diffuse.clone();
+                  tinted.update();
+                  tintCache.set(key, tinted);
+                }
+                mesh.material = tintCache.get(key);
+              }
             }
           }
           placed++;
