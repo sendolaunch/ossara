@@ -167,6 +167,7 @@ export class Input {
       const dy = e.clientY - this._orbitDrag.y;
       this._orbitDrag = { x: e.clientX, y: e.clientY };
       this.renderer.orbit(-dx * MOUSE_ORBIT_RATE);
+      if (typeof this.renderer.tilt === "function") this.renderer.tilt(dy * MOUSE_ORBIT_RATE * 0.7);
       if (typeof this.renderer.pitchBy === "function") this.renderer.pitchBy(dy * MOUSE_PITCH_RATE);
     });
     window.addEventListener("mouseup", (e) => {

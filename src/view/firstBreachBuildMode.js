@@ -228,6 +228,61 @@ class FirstBreachBuildMode {
     this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
     this._status("Tiled the floor with " + made.length + " KayKit stone tiles. Ctrl+Z to undo.");
   }
+  _addRailings() {
+    // Wood railings along raised edges — the "balcony" treatment: rims of platforms and the
+    // low walls that ring them. Run-based so fences never overlap (barrier pieces are 4 long).
+    const cols = this.level.cols, rows = this.level.rows;
+    const H = (c, r) => { if (c < 0 || r < 0 || c >= cols || r >= rows) return 0; let v = 0; try { v = surfaceHeightAtCell(c, r); } catch (_) {} return Number.isFinite(v) ? v : 0; };
+    const DIRS4 = [[0, 1, "S"], [0, -1, "N"], [1, 0, "E"], [-1, 0, "W"]];
+    const rims = { N: new Map(), S: new Map(), E: new Map(), W: new Map() };
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const h = H(c, r);
+      if (h < 2 || h >= 5) continue;
+      for (const [dc, dr, name] of DIRS4) {
+        if (!(H(c + dc, r + dr) < h - 0.6)) continue;
+        const horiz = name === "N" || name === "S";
+        const line = horiz ? r : c, along = horiz ? c : r;
+        if (!rims[name].has(line)) rims[name].set(line, []);
+        rims[name].get(line).push(along);
+      }
+    }
+    const specs = [];
+    for (const name of ["N", "S", "E", "W"]) {
+      const horiz = name === "N" || name === "S", off = 0.34;
+      for (const [line, alongs] of rims[name]) {
+        alongs.sort((a, b) => a - b);
+        let run = [];
+        const flush = () => {
+          if (run.length >= 3) {
+            const from = run[0], to = run[run.length - 1];
+            let t = from + 1.5, i = 0;
+            for (; t <= to - 1.5; t += 4, i++) {
+              const c2 = horiz ? t : line + (name === "E" ? off : -off);
+              const r2 = horiz ? line + (name === "S" ? off : -off) : t;
+              const h2 = horiz ? H(Math.round(t), line) : H(line, Math.round(t));
+              const w = gridToWorld(c2, r2, this.level);
+              specs.push({ asset: i % 2 ? "barrier_column" : "barrier", cat: "balcony", x: w.x, y: h2, z: w.z, ry: horiz ? 0 : 90, scale: 1 });
+            }
+            if (to + 1 - (t - 0.5) >= 1) {
+              const c2 = horiz ? to - 0.5 : line + (name === "E" ? off : -off);
+              const r2 = horiz ? line + (name === "S" ? off : -off) : to - 0.5;
+              const h2 = horiz ? H(Math.round(to - 1), line) : H(line, Math.round(to - 1));
+              const w = gridToWorld(c2, r2, this.level);
+              specs.push({ asset: "barrier_half", cat: "balcony", x: w.x, y: h2, z: w.z, ry: horiz ? 0 : 90, scale: 1 });
+            }
+          }
+          run = [];
+        };
+        for (const a of alongs) { if (run.length && a !== run[run.length - 1] + 1) flush(); run.push(a); }
+        flush();
+      }
+    }
+    if (!specs.length) { this._status("No raised edges found for railings."); return; }
+    let made = specs.map((sp) => this._spawn(sp)).filter(Boolean);
+    this._selectMany(made);
+    this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
+    this._status("Railed " + made.length + " edge pieces (wood). Ctrl+Z undoes the whole set.");
+  }
   _scatterClutter() {
     // Fling rocks/rubble/barrels along wall bases + map edges at random angle + jitter to break the grid read.
     const cols = this.level.cols, rows = this.level.rows;
@@ -557,6 +612,7 @@ class FirstBreachBuildMode {
     let best = null, bestT = Infinity;
     for (const p of this.placed) {
       if (!p.entity) continue;
+      if (p.cat === "floor" || p.cat === "wrap") continue; // ground carpet: select via the Scene list, so drags orbit the camera
       const aabb = this._entAabb(p.entity);
       if (aabb && aabb.intersectsRay(ray, hit)) { const t = hit.distance(ray.origin); if (t < bestT) { bestT = t; best = p; } }
     }
@@ -718,7 +774,8 @@ class FirstBreachBuildMode {
       '<div class="grp"><button id="fbAutoBtn">Auto-build &#9662;</button><div class="menu" id="fbAutoMenu">',
       '<button id="fbWrap">Wrap raised platform faces (stone)</button>',
       '<button id="fbTile">Tile floor (KayKit stone)</button>',
-      '<button id="fbClutter">Scatter clutter (un-square)</button></div></div>',
+      '<button id="fbClutter">Scatter clutter (un-square)</button>',
+      '<button id="fbRails">Add wood railings (balcony edges)</button></div></div>',
       '<div class="grp"><button id="fbOvBtn">Overlays &#9662;</button><div class="menu" id="fbOvMenu">',
       '<label><input type="checkbox" id="fbOvRoute"> enemy routes</label>',
       '<label><input type="checkbox" id="fbOvReserve"> ward/gate reserves</label>',
@@ -785,6 +842,7 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbWrap").onclick = () => this._wrapPlatforms();
     wrap.querySelector("#fbTile").onclick = () => this._tileFloor();
     wrap.querySelector("#fbClutter").onclick = () => this._scatterClutter();
+    wrap.querySelector("#fbRails").onclick = () => this._addRailings();
     wrap.querySelector("#fbOvRoute").onchange = (ev) => this._toggleOverlay("route", new pc.Color(0.2, 0.7, 1.0), ev.target.checked);
     wrap.querySelector("#fbOvReserve").onchange = (ev) => this._toggleOverlay("reserve", new pc.Color(1.0, 0.65, 0.2), ev.target.checked);
     wrap.querySelector("#fbOvProt").onchange = (ev) => this._toggleOverlay("protected", new pc.Color(0.9, 0.25, 0.25), ev.target.checked);

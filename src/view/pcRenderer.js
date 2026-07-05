@@ -1686,6 +1686,9 @@ export class PCRenderer {
   orbit(d) {
     this.camYaw += d;
   }
+  tilt(d) {
+    this.camPitch = Math.min(1.5, Math.max(0.22, this.camPitch + d));
+  }
   resetCamera() {
     this.freeCam = false;
     this.camYaw = MISSION_CAMERA.yaw;

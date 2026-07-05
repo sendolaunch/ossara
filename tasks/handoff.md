@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.47 — 2026-07-05 — BUILD LAB v3: pro docked editor (toolbar / scene outliner / inspector / bottom asset browser with SEARCH + 484 THUMBNAILS auto-photographed by the rig). New deal: Hudson = artist, Cowork = toolsmith. Suite 0 fails; build 900. PUSH PENDING |
+| **Last session** | S7.48 — 2026-07-05 — Editor polish: camera TILT (dy was computed but never used!), floor/wrap pieces un-grabbable in viewport (carpet blocked orbiting — Scene list selects them), NEW 'Add wood railings' button (the balcony look, run-based). Suite 0 fails (input 66/66); build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.48 — 2026-07-05 — Camera tilt + railings button [GATE GREEN + RIG BOOT-VERIFIED; PUSH PENDING]
+- Hudson (using v3 live): (1) "hard to tilt the camera without grabbing an object, and I can't tilt" — TWO real causes found: Input.js computed the vertical drag delta (dy) and NEVER USED it (orbit was yaw-only since forever), and the v5-era floor carpet made every left-drag start on a piece. (2) Wants the balcony/edge treatment back as it was on the top layer.
+- **Tilt:** `pcRenderer.tilt(d)` (camPitch clamped 0.22-1.5) + Input.js feeds dy on right/middle-drag orbit. Works in play + editor (input test 66/66 — normal-play path unchanged in behavior except gaining tilt).
+- **Grabbable-carpet fix:** `_pickPiece` skips cat floor/wrap — the ground can't be grabbed in the viewport (select those rows in the Scene list instead; noted in Keys help). Left-drag over tiled ground now orbits.
+- **"Add wood railings (balcony edges)" button** in Auto-build menu: run-based (barrier/barrier_column alternating, 4-spacing, barrier_half tails, no overlaps — the measured-dims lesson applied), rails every raised edge h in [2,5) with a >=0.6 drop, one-undo batch. The old "Wrap raised platform faces" button also survives right above it — that pair = the balcony look Hudson remembers, now self-serve.
+- Verified (R5/R6): suite exit 0 (input 66/66); /tmp build **900 modules**; rig boot shot of the editor (`outputs/editor-v31.png`). Button/tilt FEEL = Hudson's hands (interaction isn't rig-testable yet).
+- **In Friendly Words:** Camera fixed — drag with the right mouse button and it now tilts up and down as well as spinning (turns out the tilt code half-existed and was never plugged in). The ground can't be accidentally grabbed anymore, so dragging to look around just works; pick floor tiles from the Scene list if you ever need to move one. And the balcony look is yours to apply anytime: Auto-build menu -> "Wrap raised platform faces" then "Add wood railings" — click, look, Ctrl+Z if you don't like it.
 
 ### S7.47 — 2026-07-05 — Build Lab v3: the pro editor shell [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Post-revert discussion: WHY is map-making hard? Honest answer given: maps are an eyes job; AI is systems-strong/taste-blind; the Build Lab is the right investment (Hudson: "i kinda like our build engine but it needs a complete rework... like unreal engine's or playcanvas"). New working deal: Hudson = artist (eyes, placement, judgment), Cowork = toolsmith (editor, generators, tests, rig). Chose: pro layout + full asset browser first; prefabs/grouping = phase 2.
