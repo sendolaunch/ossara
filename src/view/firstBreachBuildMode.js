@@ -228,6 +228,31 @@ class FirstBreachBuildMode {
     this._pushUndo({ undo: () => { for (const p of [...made]) this._remove(p); made = []; }, redo: () => { made = specs.map((sp) => this._spawn(sp)).filter(Boolean); this._selectMany(made); } });
     this._status("Tiled the floor with " + made.length + " KayKit stone tiles. Ctrl+Z to undo.");
   }
+  _fixSavedHeights() {
+    // After a map re-tier, pieces saved against the OLD ground sit buried inside the new,
+    // taller terrain. Re-seat them: pieces that stood ON a raised surface rise with it;
+    // ground-level wall skins stay grounded. One undo restores everything.
+    const OLD_OF = { 8.6: 7.2, 5.6: 4.3, 4: 3, 3.6: 2.6, 2.8: 1.9, 2.2: 1.6 }; // current -> pre-re-tier surface
+    const moved = [];
+    for (const p of this.placed) {
+      if (!p.entity) continue;
+      const pos = p.entity.getPosition();
+      const g = worldToGrid(pos.x, pos.z, this.level);
+      let cur = 0; try { cur = surfaceHeightAtCell(g.col, g.row); } catch (_) {}
+      const old = OLD_OF[cur];
+      if (old == null) continue;                       // unchanged tier
+      const delta = cur - old;
+      if (!(delta > 0)) continue;
+      if (pos.y <= old - 0.75) continue;               // grounded skins (e.g. y=0 wall courses) stay put
+      moved.push({ piece: p, before: this._snapshot(p) });
+      p.entity.setPosition(pos.x, pos.y + delta, pos.z);
+    }
+    if (!moved.length) { this._status("Nothing needed lifting — heights already match the map."); return; }
+    const after = moved.map((m) => this._snapshot(m.piece));
+    this._pushUndo({ undo: () => { moved.forEach((m) => this._applySnap(m.piece, m.before)); this._updateHighlight(); this._refreshInspector(); }, redo: () => { moved.forEach((m, i) => this._applySnap(m.piece, after[i])); this._updateHighlight(); this._refreshInspector(); } });
+    this._updateHighlight(); this._refreshInspector();
+    this._status("Lifted " + moved.length + " saved pieces onto the re-tiered ground (Ctrl+Z undoes all).");
+  }
   _addRailings() {
     // Wood railings along raised edges — the "balcony" treatment: rims of platforms and the
     // low walls that ring them. Run-based so fences never overlap (barrier pieces are 4 long).
@@ -775,7 +800,8 @@ class FirstBreachBuildMode {
       '<button id="fbWrap">Wrap raised platform faces (stone)</button>',
       '<button id="fbTile">Tile floor (KayKit stone)</button>',
       '<button id="fbClutter">Scatter clutter (un-square)</button>',
-      '<button id="fbRails">Add wood railings (balcony edges)</button></div></div>',
+      '<button id="fbRails">Add wood railings (balcony edges)</button>',
+      '<button id="fbFixH">Fix piece heights (after map re-tier)</button></div></div>',
       '<div class="grp"><button id="fbOvBtn">Overlays &#9662;</button><div class="menu" id="fbOvMenu">',
       '<label><input type="checkbox" id="fbOvRoute"> enemy routes</label>',
       '<label><input type="checkbox" id="fbOvReserve"> ward/gate reserves</label>',
@@ -843,6 +869,7 @@ class FirstBreachBuildMode {
     wrap.querySelector("#fbTile").onclick = () => this._tileFloor();
     wrap.querySelector("#fbClutter").onclick = () => this._scatterClutter();
     wrap.querySelector("#fbRails").onclick = () => this._addRailings();
+    wrap.querySelector("#fbFixH").onclick = () => this._fixSavedHeights();
     wrap.querySelector("#fbOvRoute").onchange = (ev) => this._toggleOverlay("route", new pc.Color(0.2, 0.7, 1.0), ev.target.checked);
     wrap.querySelector("#fbOvReserve").onchange = (ev) => this._toggleOverlay("reserve", new pc.Color(1.0, 0.65, 0.2), ev.target.checked);
     wrap.querySelector("#fbOvProt").onchange = (ev) => this._toggleOverlay("protected", new pc.Color(0.9, 0.25, 0.25), ev.target.checked);

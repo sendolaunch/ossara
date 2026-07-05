@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.49 — 2026-07-05 — TOP TIER RE-APPLIED per Hudson (revert went too far): platforms 3.6/dais 4.0, 12 drop gaps, one-way rule + both tests back (17/17, 4/4), mid band STAYS 1.3, NO auto-stairs (Hudson hand-places), top-tier full flooring (kit 829). Rig-verified. PUSH PENDING |
+| **Last session** | S7.50 — 2026-07-05 — VISUAL VERIFY of 05f7c3c per Hudson: baked map is CORRECT (829/829, heart intact, tiers probe clean) — 'deleted stuff' = his 378-piece editor SAVE buried under the raised terrain (y vs new surfaces confirmed via his localStorage). Fix = 'Fix piece heights (after map re-tier)' editor button. Suite 0 fails; build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,14 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.50 — 2026-07-05 — "You made it worse / deleted a lot" -> his editor save was buried, not deleted [GATE GREEN; PUSH PENDING]
+- Hudson demanded a visual verify of the S7.49 deploy. Did the full circuit on live `05f7c3c`: 829/829 pieces placed, NW top platform matches the rig shot, heart camp intact, south-band terrain probes uniform 3.6 (the "dark channel" he might see = the lane-E overlay strip, pre-existing, opacity-visual only).
+- **Root cause found in HIS browser:** `localStorage["fbBuildSave"]` = **378 pieces saved against the PRE-re-tier heights** (probe: floor tiles y=2.61 under platforms now 3.6 -> buried 1.0 under the ground; old-era wall courses seated for 7.2 walls). The baked map is fine — his editor work LOOKS deleted because it is underground. (The save also predates several bakes — it is an old-era layout, not just yesterday's edits.)
+- **Fix:** new Auto-build button **"Fix piece heights (after map re-tier)"** (`_fixSavedHeights`): per piece, infer the pre-re-tier surface from the current cell height (8.6->7.2, 5.6->4.3, 4->3, 3.6->2.6, 2.8->1.9, 2.2->1.6), lift pieces that stood ON a raised surface by the delta, keep grounded wall skins (y <= oldSurface - 0.75) in place. Batch-undoable; autosave persists the result.
+- His alternatives, in the editor: (1) the new Fix-heights button lifts everything back onto the ground; (2) "Reset to deployed map" discards the stale save and starts from the correct 829-piece bake. Recommend he EXPORT first (E) if he wants a file backup of the old save.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**. Button behavior = logic + his click (his localStorage cannot run on the rig).
+- **In Friendly Words:** Good news — nothing was deleted. Your saved editor pieces are all still there, they are just buried: I raised the ground and your saved stuff kept its old, lower positions, so it is sitting inside the floor. The map itself checked out piece-for-piece on my full camera pass. Push this, open the editor, and click Auto-build -> "Fix piece heights" — everything pops up onto the new ground, and Ctrl+Z undoes it if anything lands weird. If you would rather start clean from the real map instead, use "Reset to deployed map" (press E first if you want to keep a backup file of the old save).
 
 ### S7.49 — 2026-07-05 — Top-tier raise re-applied (the revert overshot) [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson clarified: the S7.46 restore went too far — he LIKED the top-floor-to-second-floor drop, the rim walls as barriers, and the top-layer flooring. What he did NOT want: the mid-band third tier, my auto-stairs ("I'll figure out the stairs"), the tints.
