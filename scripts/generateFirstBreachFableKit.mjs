@@ -1,4 +1,4 @@
-// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 — dividers/railings rebuilt from REAL GLTF dims: wall sy0.65 dividers, run-based non-overlapping railings).
+// FIRST BREACH — "Fable" full art pass generator (S7.37; v2 scale pass S7.38; v3 S7.39 dividers/railings from real dims; v4 S7.41 tall-wall skin/gap dressing; v8 S7.49 — top tier re-raised, NO auto-stairs (hand-placed), top-tier full flooring).
 // Fresh full-map dressing: perimeter + inner wall skin, gates, floors, platform wraps,
 // railings, scatter, and authored set dressing. Theme: RUIN WITH A HELD HEART —
 // the crypt is long dead (rubble, broken tiles, dead torches, red necro banners at the
@@ -94,12 +94,16 @@ for (const [wall, fixed, from, to] of RUNS) {
     let base = buttress ? "wall_pillar" : "wall_cracked";
     if (!buttress && i % 5 === 3) base = (wall === "N" || wall === "E") ? "wall_inset_shelves_broken" : "wall_inset_candles";
     add(base, "wall", c, r, 0, RY[wall], 1);
-    add(buttress ? "wall_pillar" : "wall_cracked", "wall", c, r, 3.6, RY[wall], 1);
+    add(buttress ? "wall_pillar" : "wall_cracked", "wall", c, r, 3.6, RY[wall], 1, { sy: 1.25 });
   });
 }
 // corners (rotations proven in S7.23): NW90 NE0 SW180 SE270, two courses
-for (const [c, r, ry] of [[1, 6, 90], [65, 6, 0], [0, 56, 180], [66, 56, 270]]) { add("wall_corner", "wall", c, r, 0, ry, 1); add("wall_corner", "wall", c, r, 3.6, ry, 1); }
+for (const [c, r, ry] of [[1, 6, 90], [65, 6, 0], [0, 56, 180], [66, 56, 270]]) { add("wall_corner", "wall", c, r, 0, ry, 1); add("wall_corner", "wall", c, r, 3.6, ry, 1, { sy: 1.25 }); }
 
+// ============================================================
+// B1b. INNER TALL-WALL SKIN — the 5.6 divider walls rendered as bare terrain boxes;
+// give them two cracked courses per side height (sy 0.7 -> 2.8 + 2.8 = 5.6).
+// (declared here, applied after innerRuns exist — see B3b below)
 // ============================================================
 // B2. GATES — Hudson's five tuned arches verbatim (proven in-engine) + necro dressing
 // ============================================================
@@ -119,16 +123,32 @@ for (const [c, r, ry] of BANNERS) add("banner_patternB_red", "prop", c, r, 3.9, 
 // B3. INNER LOW-WALL SKIN — wall_half along the 2.6 divider runs
 // ============================================================
 // Real GLTF dims: wall = 4 long x 4 tall -> sy 0.65 crowns at the 2.6 ridge; wall_half = 2 long (full height) for remainders.
-const innerRuns = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.height === 2.6 && !(z.w > 1 && z.h > 1));
+const innerRuns = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.height < 5 && !(z.w > 1 && z.h > 1));
 for (const z of innerRuns) {
   const vert = z.h >= z.w;
   const from = vert ? z.row : z.col, to = vert ? z.row + z.h - 1 : z.col + z.w - 1;
   const len = to - from + 1, ry = vert ? 90 : 0;
   let t = from + 1.5;
-  if (len <= 2) { add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, 0, ry, 1, { sy: 0.65 }); continue; }
-  for (; t <= to - 1.5; t += 4) add("wall", "wall", vert ? z.col : t, vert ? t : z.row, 0, ry, 1, { sy: 0.65 });
+  const dsy = +(z.height / 4).toFixed(3);
+  if (len <= 2) { add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, 0, ry, 1, { sy: dsy }); continue; }
+  for (; t <= to - 1.5; t += 4) add("wall", "wall", vert ? z.col : t, vert ? t : z.row, 0, ry, 1, { sy: dsy });
   const rem = to + 1 - (t - 0.5);
-  if (rem >= 1) add("wall_half", "wall", vert ? z.col : to - 0.5, vert ? to - 0.5 : z.row, 0, ry, 1, { sy: 0.65 });
+  if (rem >= 1) add("wall_half", "wall", vert ? z.col : to - 0.5, vert ? to - 0.5 : z.row, 0, ry, 1, { sy: dsy });
+}
+
+// B3b. tall inner walls (height >= 5, below perimeter 8.6): two cracked courses
+const tallRuns = FB_TERRAIN_RECTS.filter((z) => z.terrain === 6 && z.height >= 5 && z.height < 8 && !(z.w > 1 && z.h > 1));
+for (const z of tallRuns) {
+  const vert = z.h >= z.w;
+  const from = vert ? z.row : z.col, to = vert ? z.row + z.h - 1 : z.col + z.w - 1;
+  const len = to - from + 1, ry = vert ? 90 : 0;
+  const csy = +(z.height / 8).toFixed(3); // two courses of a 4-tall piece
+  if (len <= 2) { add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, 0, ry, 1, { sy: csy }); add("wall_half", "wall", vert ? z.col : from + len / 2 - 0.5, vert ? from + len / 2 - 0.5 : z.row, +(z.height / 2).toFixed(2), ry, 1, { sy: csy }); continue; }
+  for (let t2 = from + 1.5; t2 <= to - 1.5; t2 += 4) {
+    const c = vert ? z.col : t2, r = vert ? t2 : z.row;
+    add("wall_cracked", "wall", c, r, 0, ry, 1, { sy: csy });
+    add("wall_cracked", "wall", c, r, +(z.height / 2).toFixed(2), ry, 1, { sy: csy });
+  }
 }
 
 // ============================================================
@@ -166,6 +186,16 @@ for (let r = 1; r < ROWS; r += 2) for (let c = 1; c < COLS; c += 2) {
   const broken = !inHeart(c, r) && rnd() < 0.22;
   const asset = broken ? pick(["floor_tile_small_broken_A", "floor_tile_small_broken_B", "floor_tile_small_weeds_A"]) : "floor_tile_small";
   add(asset, "floor", c - 0.5, r - 0.5, h + 0.012, pick([0, 90, 180, 270]), 1);
+  for (let rr = r - 1; rr <= r; rr++) for (let cc = c - 1; cc <= c; cc++) covered.add(cellKey(cc, rr));
+}
+// TOP-TIER full coverage (S7.49): every walkable cell on the raised floors (3.4+) gets a
+// quarter-scale tile if the bigger passes missed it — "the flooring done up there".
+for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
+  if (covered.has(cellKey(c, r)) || !inPlay(c, r) || !WALK(c, r) || T(c, r) === 7 || gateMouth(c, r)) continue;
+  const h = H(c, r);
+  if (h < 3.4 || h >= 5) continue;
+  const broken = !inHeart(c, r) && rnd() < 0.15;
+  add(broken ? pick(["floor_tile_small_broken_A", "floor_tile_small_broken_B"]) : "floor_tile_small", "floor", c, r, h + 0.014, pick([0, 90, 180, 270]), 0.5);
 }
 // warm wood decking under the defenders' camp (heart, east of the dais)
 for (const [c, r] of [[14, 54], [18, 54], [21.6, 54]]) add("floor_wood_large", "floor", c, r, H(Math.round(c), r) + 0.03, 0, 1);
@@ -240,6 +270,25 @@ for (const name of ["N", "S", "E", "W"]) {
   }
 }
 
+// (C4 auto-stairs removed S7.49 — stair visuals are hand-placed in the Build Lab)
+
+// C5. DROP-GAP DRESSING — auto-detect the cut openings (platform cell flanked by walls
+// on opposite sides) and make them read as deliberate: a stone lip + landing rubble.
+for (let r = 6; r < ROWS; r++) for (let c = 0; c <= 66; c++) {
+  if (!WALK(c, r) || H(c, r) < 2) continue;
+  const flankNS = T(c, r - 1) === 6 && T(c, r + 1) === 6;
+  const flankEW = T(c - 1, r) === 6 && T(c + 1, r) === 6;
+  if (!flankNS && !flankEW) continue;
+  const h = H(c, r);
+  for (const [dc, dr, ry] of DIRS) {
+    const nh = H(c + dc, r + dr);
+    if (WALK(c + dc, r + dr) && h - nh > 1) {
+      add("floor_foundation_front", "wrap", c, r, h - 2, ry, 1);                                  // lip under the jump edge
+      add("rubble_half", "rubble", c + dc * 1.4 + rnd() * 0.4 - 0.2, r + dr * 1.4 + rnd() * 0.4 - 0.2, nh, rnd() * 360, 0.42); // landing debris
+    }
+  }
+}
+
 // ============================================================
 // D1. TORCH RHYTHM — dead brackets along the ruin walls, live flames near the heart.
 // ============================================================
@@ -260,23 +309,24 @@ for (const [c, r, ry, lit] of torchSpots) add(lit ? "torch_lit" : "torch_mounted
 // ============================================================
 // D2. THE HELD HEART — Ward dais + defenders' camp (lit, blue, stocked)
 // ============================================================
+const DAIS_H = H(8, 50), WARD_H = H(15, 53), TABLE_TOP = WARD_H + 0.5, CRATE_TOP = WARD_H + 1.35;
 const heartPieces = [
-  ["pillar_decorated", "ward", 5, 48.6, 3.0, 0, 0.62], ["pillar_decorated", "ward", 12, 48.6, 3.0, 0, 0.62], ["pillar_decorated", "ward", 12.4, 53.4, 3.0, 0, 0.62],
-  ["torch_lit", "light", 4.6, 49, 3.0, 0, 0.5], ["torch_lit", "light", 12.4, 49.4, 3.0, 0, 0.5], ["torch_lit", "light", 12.4, 52, 3.0, 0, 0.5], ["torch_lit", "light", 6, 54.6, 3.0, 0, 0.5],
-  ["candle_triple", "ward", 8, 49.5, 3.0, 15, 0.6], ["candle_triple", "ward", 10.2, 52.6, 3.0, 290, 0.6],
-  ["chest_gold", "ward", 4.4, 48.5, 3.0, 25, 0.55],
-  ["resource/Gems_Pile_Large", "ward", 11, 51, 3.0, 20, 0.5], ["resource/Gems_Sack", "ward", 11.7, 50.3, 3.0, 130, 0.55],
-  ["banner_shield_blue", "prop", 1.6, 47, 3.9, 90, 1.05], ["banner_shield_blue", "prop", 1.6, 51.5, 3.9, 90, 1.05], ["banner_shield_blue", "prop", 10, 55.55, 3.9, 180, 1.05],
+  ["pillar_decorated", "ward", 5, 48.6, DAIS_H, 0, 0.62], ["pillar_decorated", "ward", 12, 48.6, DAIS_H, 0, 0.62], ["pillar_decorated", "ward", 12.4, 53.4, DAIS_H, 0, 0.62],
+  ["torch_lit", "light", 4.6, 49, DAIS_H, 0, 0.5], ["torch_lit", "light", 12.4, 49.4, DAIS_H, 0, 0.5], ["torch_lit", "light", 12.4, 52, DAIS_H, 0, 0.5], ["torch_lit", "light", 6, 54.6, DAIS_H, 0, 0.5],
+  ["candle_triple", "ward", 8, 49.5, DAIS_H, 15, 0.6], ["candle_triple", "ward", 10.2, 52.6, DAIS_H, 290, 0.6],
+  ["chest_gold", "ward", 4.4, 48.5, DAIS_H, 25, 0.55],
+  ["resource/Gems_Pile_Large", "ward", 11, 51, DAIS_H, 20, 0.5], ["resource/Gems_Sack", "ward", 11.7, 50.3, DAIS_H, 130, 0.55],
+  ["banner_shield_blue", "prop", 1.6, 47, WARD_H + 1.3, 90, 1.05], ["banner_shield_blue", "prop", 1.6, 51.5, WARD_H + 1.3, 90, 1.05], ["banner_shield_blue", "prop", 10, 55.55, WARD_H + 1.3, 180, 1.05],
   // the camp (east of the dais, tucked south of lane E's corridor)
-  ["table_medium_decorated_A", "prop", 13.2, 54.6, 2.6, 95, 0.65],
-  ["rpgtools/journal_open", "prop", 13.2, 54.4, 3.1, 200, 0.6], ["plate_food_A", "prop", 13.5, 54.9, 3.1, 40, 0.6], ["bottle_A_labeled_green", "prop", 12.9, 54.75, 3.1, 0, 0.6],
-  ["stool_round", "prop", 12.3, 54.2, 2.6, 210, 0.6],
-  ["bed_floor", "prop", 16, 54.7, 2.6, 10, 0.65], ["bed_floor", "prop", 17.6, 54.3, 2.6, 350, 0.65],
-  ["bookcase_single_decoratedA", "prop", 19.2, 55.4, 2.6, 180, 0.65],
-  ["crates_stacked", "prop", 20.6, 54.8, 2.6, 15, 0.6], ["box_stacked", "prop", 19.8, 54.1, 2.6, 65, 0.6],
-  ["barrel_small_stack", "prop", 21.7, 55.1, 2.6, 40, 0.6], ["keg", "prop", 22.4, 54.5, 2.6, 75, 0.6],
-  ["sword_shield", "prop", 21.2, 53.9, 2.6, 75, 0.5],
-  ["rpgtools/lantern", "prop", 13.55, 54.15, 3.1, 0, 0.6], ["rpgtools/lantern", "prop", 20.6, 56.0 - 1.3, 3.95, 30, 0.6],
+  ["table_medium_decorated_A", "prop", 13.2, 54.6, WARD_H, 95, 0.65],
+  ["rpgtools/journal_open", "prop", 13.2, 54.4, TABLE_TOP, 200, 0.6], ["plate_food_A", "prop", 13.5, 54.9, TABLE_TOP, 40, 0.6], ["bottle_A_labeled_green", "prop", 12.9, 54.75, TABLE_TOP, 0, 0.6],
+  ["stool_round", "prop", 12.3, 54.2, WARD_H, 210, 0.6],
+  ["bed_floor", "prop", 16, 54.7, WARD_H, 10, 0.65], ["bed_floor", "prop", 17.6, 54.3, WARD_H, 350, 0.65],
+  ["bookcase_single_decoratedA", "prop", 19.2, 55.4, WARD_H, 180, 0.65],
+  ["crates_stacked", "prop", 20.6, 54.8, WARD_H, 15, 0.6], ["box_stacked", "prop", 19.8, 54.1, WARD_H, 65, 0.6],
+  ["barrel_small_stack", "prop", 21.7, 55.1, WARD_H, 40, 0.6], ["keg", "prop", 22.4, 54.5, WARD_H, 75, 0.6],
+  ["sword_shield", "prop", 21.2, 53.9, WARD_H, 75, 0.5],
+  ["rpgtools/lantern", "prop", 13.55, 54.15, TABLE_TOP, 0, 0.6], ["rpgtools/lantern", "prop", 20.6, 56.0 - 1.3, CRATE_TOP, 30, 0.6],
 ];
 for (const [asset, cat, c, r, y, ry, s] of heartPieces) add(asset, cat, c, r, y, ry, s);
 

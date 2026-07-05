@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.48 — 2026-07-05 — Editor polish: camera TILT (dy was computed but never used!), floor/wrap pieces un-grabbable in viewport (carpet blocked orbiting — Scene list selects them), NEW 'Add wood railings' button (the balcony look, run-based). Suite 0 fails (input 66/66); build 900. PUSH PENDING |
+| **Last session** | S7.49 — 2026-07-05 — TOP TIER RE-APPLIED per Hudson (revert went too far): platforms 3.6/dais 4.0, 12 drop gaps, one-way rule + both tests back (17/17, 4/4), mid band STAYS 1.3, NO auto-stairs (Hudson hand-places), top-tier full flooring (kit 829). Rig-verified. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -45,6 +45,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.49 — 2026-07-05 — Top-tier raise re-applied (the revert overshot) [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson clarified: the S7.46 restore went too far — he LIKED the top-floor-to-second-floor drop, the rim walls as barriers, and the top-layer flooring. What he did NOT want: the mid-band third tier, my auto-stairs ("I'll figure out the stairs"), the tints.
+- **Re-assembled from tested history (nothing rebuilt blind):** retier script + level.js one-way hooks + World.js `_moveBlocked` restored from `8a615d3` (S7.41: heights remap + 12 discrete drop gaps, NO mid band, NO open-everything); oneWayLedges (17/17) + noSoftLock (4/4, drop-edge threshold 20->8 for the gap count) back in the npm chain; pcRenderer `_surfaceY` grid fallback re-added (half-cell fix was already kept).
+- **Generator v8:** from `8a615d3` minus the C4 auto-stairs pass, plus top-tier-only full flooring (coverage-tracked 1x1 filler for h>=3.4 — "the flooring done up there", 403 floor pieces). Gap lips + landing rubble kept (the walls-as-barriers look with intentional fall spots). Kit = **829 pieces**, deterministic (`55dc6f06` twice).
+- Probes: floor 1.3 | mid band STAYS 1.3 | platform 3.6 | dais 4.0 | gap cells = platform. Terrain stair fans still carry the 2.2/2.8 ramp heights (enemies + hero climb) — only the stair GLB visuals are Hudson's to place (the browser has the whole stairs category).
+- OneDrive gotcha logged: paths deleted by CC's git rm are TOMBSTONED on the mount — bash/python cannot recreate them ("No such file or directory" on create); the Cowork Write tool can, but the mount then serves a STALE truncated view for a while (node ran a 160-byte ghost of a 4KB test, exit 0, zero output). Fix: after Write, overwrite in place via bash `cat > file` and verify with `wc -c` + actually running it.
+- Verified (R5/R6): FULL suite exit 0 (oneWayLedges 17/17, noSoftLock 4/4); /tmp build **900 modules**; rig shot `outputs/toptier-back.png` = raised, fully-tiled top platform with drop rim faced. Feel of drops/gaps = Hudson's hands.
+- **In Friendly Words:** The top floor is tall again with its walls back as railings-of-stone, the drop spots where you fall to the second floor work one-way like before, and the top floor is properly tiled edge to edge. The middle and bottom floors stay exactly as they are now, and no robot stairs anywhere — the whole stairs collection is in your editor browser whenever you want to build them your way.
 
 ### S7.48 — 2026-07-05 — Camera tilt + railings button [GATE GREEN + RIG BOOT-VERIFIED; PUSH PENDING]
 - Hudson (using v3 live): (1) "hard to tilt the camera without grabbing an object, and I can't tilt" — TWO real causes found: Input.js computed the vertical drag delta (dy) and NEVER USED it (orbit was yaw-only since forever), and the v5-era floor carpet made every left-drag start on a piece. (2) Wants the balcony/edge treatment back as it was on the top layer.
