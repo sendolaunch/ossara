@@ -356,6 +356,28 @@ class FirstBreachBuildMode {
     }
     this._refreshList();
     this._status(fromSave ? ("Restored your local save: " + this.placed.length + " pieces. ('Reset to deployed map' to discard.)") : ("Loaded " + this.placed.length + " pieces from the deployed map."));
+    // NEW-DEPLOY BANNER: if the baked map changed since this local save was made, say so loudly.
+    try {
+      const kitNow = firstBreachKitSpecs(this.level);
+      const fp = kitNow.length + ":" + kitNow.reduce((a, s) => (a + s.col * 7 + s.row * 13 + (s.y * 31 | 0)) % 1e9, 0).toFixed(0);
+      if (!fromSave) { localStorage.setItem("fbSeenKitFp", fp); }
+      else if (localStorage.getItem("fbSeenKitFp") !== fp) {
+        const bar = document.createElement("div");
+        bar.id = "fbNewDeploy";
+        bar.style.cssText = "position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:100001;background:#2a3a22;border:1px solid #7bd86b;color:#c9f0bc;font:13px ui-monospace,monospace;padding:9px 14px;border-radius:8px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.5)";
+        bar.innerHTML = '<span>The DEPLOYED map is newer than your local copy (' + kitNow.length + ' pieces live).</span>';
+        const load = document.createElement("button");
+        load.textContent = "Load new map";
+        load.style.cssText = "background:#7bd86b;color:#10240c;border:none;border-radius:5px;padding:5px 10px;cursor:pointer;font:inherit;font-weight:bold";
+        load.onclick = () => { localStorage.setItem("fbSeenKitFp", fp); this._resetToMap(); };
+        const keep = document.createElement("button");
+        keep.textContent = "Keep my copy";
+        keep.style.cssText = "background:transparent;color:#c9f0bc;border:1px solid #4a5a44;border-radius:5px;padding:5px 10px;cursor:pointer;font:inherit";
+        keep.onclick = () => { localStorage.setItem("fbSeenKitFp", fp); bar.remove(); };
+        bar.appendChild(load); bar.appendChild(keep);
+        document.body.appendChild(bar);
+      }
+    } catch (_) {}
   }
 
   _placeAt(asset, col, row, y) {

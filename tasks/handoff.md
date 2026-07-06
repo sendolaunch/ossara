@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.57 — 2026-07-06 — floorfix-* pass: 300 top-tier flooring gaps/corners filled (coverage computed from HIS tiles), ~5% weeds + 6 deliberate grass-stone patches ('every once in a while'). Kit 1097. Suite 0 fails; build 900; rig-verified. PUSH PENDING |
+| **Last session** | S7.58 — 2026-07-06 — NEW-DEPLOY BANNER: editor now fingerprints the baked kit and shows a 'Load new map / Keep my copy' banner when the deploy is newer than the local save (the localStorage mask bit Hudson 4x — ended). Suite 0 fails; build 900. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,11 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.58 — 2026-07-06 — New-deploy banner kills the localStorage mask [GATE GREEN; PUSH PENDING]
+- Hudson (4th time): "did not notice anything different in the art link" — floorfix WAS pushed (`db8ebe3` live); his editor loaded the stale local save, as always. Two-second fix given (Reset to deployed map) + PERMANENT fix built: `_seedFromKit` fingerprints the baked kit (length + position hash); when a local save is restored and the deployed fingerprint differs from the last-seen one, a top-center banner appears: **"The DEPLOYED map is newer… [Load new map] [Keep my copy]"**. Fingerprint updates on either choice and on deployed-seed loads. No more silent masking.
+- Verified (R5/R6): marker survived the OneDrive settle re-check; suite exit 0; /tmp build **900 modules**. Banner behavior = Hudson's next reload (needs a bake newer than his save, which is exactly the current state).
+- **In Friendly Words:** The editor will now TELL you when the real map has changed behind your back, with a one-click button to load it — no more silently showing you old work. For right now, one last manual time: hit "Reset to deployed map" and your filled floors and grass patches appear.
 
 ### S7.57 — 2026-07-06 — Top-tier floor fill + grass patches [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson: "gaps are scattered and some corners at the top don't have flooring... every once in a while a grass stone patch." New `scripts/fillTopFloors.mjs` (deterministic, additive floorfix-*): computes exact coverage from HIS floor pieces (span by asset family x scale), fills uncovered top-tier walkable cells — 2x2 holes get full small tiles, singles get quarter tiles — plus ~5% weeds variants and 6 seeded grass-stone patches laid over the stone.
