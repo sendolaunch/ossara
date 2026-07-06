@@ -25,13 +25,21 @@ const SPAN = (asset, scale) => {
     : asset.includes("extralarge") ? 6 : 2;
   return (w * (scale || 1)) / 2; // half-span in cells
 };
-const covered = new Set();
+// FRACTIONAL coverage (S7.60): accumulate each tile's actual overlap area per cell;
+// a cell is a hole only if less than 55% of it is under tile. Slivers stay quiet,
+// real bare patches (Hudson's screenshots) finally register.
+const coverFrac = new Map();
 for (const s of base) {
   if (s.cat !== "floor") continue;
   const hs = SPAN(s.asset, s.scale);
-  for (let r = Math.ceil(s.row - hs + 0.01); r < s.row + hs - 0.01; r++)
-    for (let c = Math.ceil(s.col - hs + 0.01); c < s.col + hs - 0.01; c++) covered.add(c + "," + r);
+  for (let r = Math.floor(s.row - hs); r <= Math.ceil(s.row + hs); r++)
+    for (let c = Math.floor(s.col - hs); c <= Math.ceil(s.col + hs); c++) {
+      const ox = Math.max(0, Math.min(s.col + hs, c + 0.5) - Math.max(s.col - hs, c - 0.5));
+      const oz = Math.max(0, Math.min(s.row + hs, r + 0.5) - Math.max(s.row - hs, r - 0.5));
+      if (ox > 0 && oz > 0) { const k = c + "," + r; coverFrac.set(k, (coverFrac.get(k) || 0) + ox * oz); }
+    }
 }
+const covered = { has: (k) => (coverFrac.get(k) || 0) >= 0.55, add: (k) => coverFrac.set(k, 1) };
 
 const fills = [];
 let n = 0;

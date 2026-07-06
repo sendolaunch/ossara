@@ -1095,6 +1095,9 @@
 {"id":"floor-701","asset":"floor_tile_small_weeds_A","col":11,"row":50,"y":4.02,"ry":180,"scale":0.5,"cat":"floor"},
 {"id":"floor-702","asset":"floor_tile_small_weeds_A","col":10,"row":51,"y":4.02,"ry":180,"scale":0.5,"cat":"floor"},
 {"id":"floor-703","asset":"floor_tile_small_weeds_A","col":35,"row":53,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
-{"id":"floorfix-1","asset":"floor_tile_small_weeds_A","col":8,"row":29,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
-{"id":"floorfix-2","asset":"floor_tile_small_weeds_A","col":2,"row":35,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
-{"id":"floorfix-3","asset":"floor_tile_small_weeds_A","col":41,"row":50,"y":3.62,"ry":0,"scale":0.5,"cat":"floor"}]
+{"id":"floor-704","asset":"floor_tile_small_weeds_A","col":8,"row":29,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
+{"id":"floor-705","asset":"floor_tile_small_weeds_A","col":2,"row":35,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
+{"id":"floor-706","asset":"floor_tile_small_weeds_A","col":41,"row":50,"y":3.62,"ry":0,"scale":0.5,"cat":"floor"},
+{"id":"floorfix-1","asset":"floor_tile_small_weeds_A","col":5,"row":32,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
+{"id":"floorfix-2","asset":"floor_tile_small_weeds_A","col":2,"row":38,"y":3.62,"ry":90,"scale":0.5,"cat":"floor"},
+{"id":"floorfix-3","asset":"floor_tile_small_weeds_A","col":2,"row":53,"y":3.62,"ry":0,"scale":0.5,"cat":"floor"}]

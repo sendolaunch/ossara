@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.59 — 2026-07-06 — PHANTOM BOXES KILLED: the primitive blockout layer (pillars/props/markers — un-pickable 'fillers') is now fully hidden when the kit is active (only laneFloor strips remain; ?fbKit=0 restores for debug). +3 missed floor spots filled; patch-pass duplicate guard. Kit 1100. Suite 0 fails; build 900; rig-verified. PUSH PENDING |
+| **Last session** | S7.60 — 2026-07-06 — S7.59's blanket-hide ate the DAIS SKIRT (ward-shrine role) -> shrine floated over void; restored that role (+laneFloor). Floor coverage now FRACTIONAL (area-overlap >=55%) — slivers quiet, real holes register (+3 filled). Kit 1103. Suite 0 fails; build 900; rig before/after at Hudson's vantage. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,13 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.60 — 2026-07-06 — Own goal from S7.59 fixed: the floating shrine [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: "holes were not filled and now this is a new problem" (shrine screenshot). Rig at HIS vantage confirmed BOTH: (1) the dais floated over black void — S7.59's blanket blockout-hide also removed the `ward-shrine` primitives (the dais SKIRT). Restored: skip-rule now keeps `laneFloor` + `ward-shrine`, hides everything else. Before/after shots at the same camera (`shrine-holes.png` / `shrine-fixed.png`) — skirt back, void gone. (2) The dark pit at the right = a drop-gap opening awaiting HIS wall dressing (his design call, not a defect).
+- Floor "holes": coverage model rewritten to FRACTIONAL area overlap (a cell is a hole only if <55% under tile) — the strict full-coverage attempt wanted 100s of sliver fills (cap trip, reverted); fractional found + filled 3 real holes. If Hudson still sees specific bare spots, they are now either terrain features or need his screenshot with a landmark.
+- Kit **1103** (dedupe pass included; patch-pass duplicate guard from S7.59 active).
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**; rig before/after pair.
+- **In Friendly Words:** The shrine was hovering because yesterday's ghost-cleanup also swept away the stone rim UNDER it — that rim is back and the platform sits solid again. The dark pit near it is one of your jump-down openings still waiting for the walls you said you would place. And the floor-hole detector got smarter — it found and fixed three real ones. If you still see a bare patch somewhere, screenshot it with something recognizable next to it and I will pin the exact tile.
 
 ### S7.59 — 2026-07-06 — The un-pickable "black boxes" were the blockout layer [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson (3 screenshots): random black boxes / olive pillars / wall-mounted bits he "cannot physically pick up" + 4 floor spots still missing. Diagnosis: the S7.24-era hide-rule only skipped `wall`/`wall-trim` roles of the PRIMITIVE BLOCKOUT layer — every other placement (pillars, props, gate decorations, readability markers, gb-* dressing) still rendered. They are not kit pieces, so no editor can ever grab them.

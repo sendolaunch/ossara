@@ -1014,7 +1014,7 @@ export class PCRenderer {
           // blockout layer — walls, pillars, props, markers, gate decorations — except the
           // laneFloor strips (players read enemy routes off them). ?fbKit=0 brings the
           // primitives back for A/B debugging. This kills the un-pickable "black boxes."
-          if (!fbKit0 && placement.type !== "laneFloor") continue;
+          if (!fbKit0 && placement.type !== "laneFloor" && placement.readabilityRole !== "ward-shrine") continue; // keep lane strips + the dais skirt (S7.60)
           const ent = placement.assetName
             ? place(this.app, root, placement.assetName, {
               x: placement.x,
