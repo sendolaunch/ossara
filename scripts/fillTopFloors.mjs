@@ -57,9 +57,10 @@ for (let r = 6; r < LEVEL.rows; r++) for (let c = 0; c <= 66; c++) {
 // pass 3: a few deliberate grass patches ON covered stone (his "every once in a while") —
 // small weeds tiles laid over the stone at sparse, seeded spots on the top tier
 let patches = 0;
+const weedsAt = new Set(base.filter((s) => s.asset.includes("weeds")).map((s) => Math.round(s.col) + "," + Math.round(s.row)));
 for (let r = 8; r < LEVEL.rows - 1 && patches < 7; r += 3) for (let c = 2; c <= 64 && patches < 7; c += 3) {
   const h = H(c, r);
-  if (!TOPH(h) || !WALK(c, r) || rnd() > 0.055) continue;
+  if (!TOPH(h) || !WALK(c, r) || weedsAt.has(c + "," + r) || rnd() > 0.055) continue;
   add(pick(["floor_tile_small_weeds_A", "floor_tile_small_weeds_B"]), c, r, h + 0.016, pick([0, 90, 180, 270]), 0.5);
   if (rnd() < 0.5) add(pick(["floor_tile_small_weeds_A", "floor_tile_small_weeds_B"]), c + pick([-1, 1]), r + pick([-1, 1]), h + 0.016, pick([0, 90, 180, 270]), 0.5);
   patches++;

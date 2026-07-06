@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.58 — 2026-07-06 — NEW-DEPLOY BANNER: editor now fingerprints the baked kit and shows a 'Load new map / Keep my copy' banner when the deploy is newer than the local save (the localStorage mask bit Hudson 4x — ended). Suite 0 fails; build 900. PUSH PENDING |
+| **Last session** | S7.59 — 2026-07-06 — PHANTOM BOXES KILLED: the primitive blockout layer (pillars/props/markers — un-pickable 'fillers') is now fully hidden when the kit is active (only laneFloor strips remain; ?fbKit=0 restores for debug). +3 missed floor spots filled; patch-pass duplicate guard. Kit 1100. Suite 0 fails; build 900; rig-verified. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,13 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.59 — 2026-07-06 — The un-pickable "black boxes" were the blockout layer [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson (3 screenshots): random black boxes / olive pillars / wall-mounted bits he "cannot physically pick up" + 4 floor spots still missing. Diagnosis: the S7.24-era hide-rule only skipped `wall`/`wall-trim` roles of the PRIMITIVE BLOCKOUT layer — every other placement (pillars, props, gate decorations, readability markers, gb-* dressing) still rendered. They are not kit pieces, so no editor can ever grab them.
+- **Fix (pcRenderer):** with the kit active, the ENTIRE mapbuilder layer is skipped except `laneFloor` strips (players read enemy routes off them). `?fbKit=0` still restores the primitives for A/B debugging.
+- Floor stragglers: fillTopFloors rerun caught **3 more holes** (span math vs his fractional tiles). Also fixed the grass-patch pass re-laying tiles over previous patches on rerun (weedsAt guard) + a full kit dedupe (no dupes found). Kit **1100**.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**; rig shot `outputs/no-more-boxes.png` at his screenshot vantage — pillar/box/wall-bits GONE, only his map remains.
+- **In Friendly Words:** Those things you could not grab were leftovers from the old placeholder system — invisible scaffolding from before we had real art, still half-showing. They are all switched off now; what you see is only real, grabbable pieces. Also found and filled the last few floor holes. Push and look — the ghosts are gone.
 
 ### S7.58 — 2026-07-06 — New-deploy banner kills the localStorage mask [GATE GREEN; PUSH PENDING]
 - Hudson (4th time): "did not notice anything different in the art link" — floorfix WAS pushed (`db8ebe3` live); his editor loaded the stale local save, as always. Two-second fix given (Reset to deployed map) + PERMANENT fix built: `_seedFromKit` fingerprints the baked kit (length + position hash); when a local save is restored and the deployed fingerprint differs from the last-seen one, a top-center banner appears: **"The DEPLOYED map is newer… [Load new map] [Keep my copy]"**. Fingerprint updates on either choice and on deployed-seed loads. No more silent masking.

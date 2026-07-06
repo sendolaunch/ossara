@@ -1010,9 +1010,11 @@ export class PCRenderer {
         let fallbackCount = 0;
         const fbKit0 = typeof window !== "undefined" && new URLSearchParams((window.location && window.location.search) || "").get("fbKit") === "0";
         for (const placement of built.placements) {
-          // The kit's GLB walls replace the primitive perimeter; hide the tall wall boxes + their
-          // caps while the kit is active (?fbKit=0 turns the kit off and brings the primitives back).
-          if (!fbKit0 && (placement.readabilityRole === "wall" || placement.readabilityRole === "wall-trim")) continue;
+          // The kit IS the art now (S7.59): while it is active, hide the ENTIRE primitive
+          // blockout layer — walls, pillars, props, markers, gate decorations — except the
+          // laneFloor strips (players read enemy routes off them). ?fbKit=0 brings the
+          // primitives back for A/B debugging. This kills the un-pickable "black boxes."
+          if (!fbKit0 && placement.type !== "laneFloor") continue;
           const ent = placement.assetName
             ? place(this.app, root, placement.assetName, {
               x: placement.x,
