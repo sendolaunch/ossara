@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.55 — 2026-07-05 — Hudson's decluttered export baked (796: stripped my scatter, re-laid dividers HIS way) + deco-* TOP-FLOOR-ONLY decoration pass (24 pcs, validated, >=1.5 cells from his pieces) = 820. Buried-walls optimization PARKED per Hudson (post-map). Floor-by-floor plan active. Suite 0 fails; build 900; rig-verified. PUSH PENDING |
+| **Last session** | S7.57 — 2026-07-06 — floorfix-* pass: 300 top-tier flooring gaps/corners filled (coverage computed from HIS tiles), ~5% weeds + 6 deliberate grass-stone patches ('every once in a while'). Kit 1097. Suite 0 fails; build 900; rig-verified. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,12 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.57 — 2026-07-06 — Top-tier floor fill + grass patches [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: "gaps are scattered and some corners at the top don't have flooring... every once in a while a grass stone patch." New `scripts/fillTopFloors.mjs` (deterministic, additive floorfix-*): computes exact coverage from HIS floor pieces (span by asset family x scale), fills uncovered top-tier walkable cells — 2x2 holes get full small tiles, singles get quarter tiles — plus ~5% weeds variants and 6 seeded grass-stone patches laid over the stone.
+- 300 fills -> kit **1097** (cap 1300; floors cast no shadows). HIS STYLE GUIDE (S7.56) respected: fills are quiet stone, grass is sparse punctuation.
+- Verified (R5/R6): suite exit 0; /tmp build **900 modules**; rig shot `outputs/floors-filled.png` — corners paved, weed tufts sparse, his rock landmarks untouched.
+- **In Friendly Words:** Every bare spot and corner on the top floor has proper stone now, matched against your own tiles so nothing double-stacks, and little grass-in-the-cracks patches appear here and there like you wanted. All my fill pieces are named floorfix-something — grab and move any you dislike.
 
 ### S7.55 — 2026-07-05 — His declutter baked + deco-* top-floor pass [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson's export studied before baking (his ask): 65 deleted / 35 added vs previous kit = he STRIPPED my scatter clutter (~31 pcs: rocks/crates/trunks/buckets "in the way"), removed the last railing, and RE-LAID the divider walls around the gap openings himself (14+11 out, 16+14 back — his "I'll add the walls," delivered). Baked verbatim as the canonical base (796).
