@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.60 — 2026-07-06 — S7.59's blanket-hide ate the DAIS SKIRT (ward-shrine role) -> shrine floated over void; restored that role (+laneFloor). Floor coverage now FRACTIONAL (area-overlap >=55%) — slivers quiet, real holes register (+3 filled). Kit 1103. Suite 0 fails; build 900; rig before/after at Hudson's vantage. PUSH PENDING |
+| **Last session** | S7.61 — 2026-07-06 — FINAL top-floor baked (1106, his call) + top floor DONE. Next: ONE grand central staircase (Hudson's choice) over the existing central fan (cols 30-37, only climb route already) — Cowork builds art+climb from marks. Sandbox rotated session mid-work (mount path changed, all intact). Suite 0 fails. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,15 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.61 — 2026-07-06 — Final top floor baked; stairs plan locked [GATE GREEN; PUSH PENDING]
+- Hudson: "final top floor version for now, lets move on to the stairs." Baked his export verbatim (1106 pcs; +1 pillar +1 rubble +1 prop vs prev). Kit guards 1254/1254, suite green.
+- **Stairs decision (AskUser):** ONE grand central staircase = the only climb-up route; all drop gaps stay one-way down. Cowork builds BOTH the staircase ART and the climb terrain from Hudson's marks.
+- **Key realization:** the central stair FAN (terrain 7, cols 29-39 rows 29-38, h 2.2 plateau bridging courtyard 1.3 -> platform 3.6) is ALREADY the map's only climbable up-route (one-way rule blocks every other rise). So "one grand central staircase" = lay real `stairs_wide` GLB art over that fan; function already matches. West fan (cols 15-24 rows 39-47): Hudson chose CLOSE IT (center = only climb). Plan: convert those terrain-7 cells to platform 3.6 (drop-only from the top, no climb from courtyard); noSoftLock MUST stay green (hero still reaches all gates+Ward) or adjust.
+- **Next-session build (planned, not yet built):** grand staircase on the NE central fan — lower flight courtyard(1.3)->plateau(2.2) at the south mouth (rows 37-38), upper flight plateau(2.2)->platform(3.6) at the north (rows 30-31), flanking pillars; rig-verify at player cam before ship; then Hudson tunes. `stairs_wide` = 7w x 5.1h x 4d (sy = rise/5.1, sz ~0.5-0.6 for readable run).
+- **Sandbox event:** the session rotated mid-work (`upbeat-laughing-dirac` -> `gallant-admiring-hypatia`); mount briefly threw "Permission denied" then reappeared at the new path with everything intact. No data lost. Lesson: on a mount outage, wait + re-resolve the session path under /sessions/*/mnt/.
+- Verified (R5/R6): suite exit 0 (firstBreachKit 1254/1254). Build pending on CC side (tmp env also reset with the session).
+- **In Friendly Words:** Your top floor is locked in and saved. For the stairs: good news — the middle of your map already has the only ramp that lets you climb back up, so your "one grand central staircase" just means dressing that spot with a real staircase. That's my next build, and I'll show you a picture before it ships. Quick thing I'll need: there's a second smaller ramp near the Ward — do you want that kept as another way up, or closed off so the center truly is the only climb?
 
 ### S7.60 — 2026-07-06 — Own goal from S7.59 fixed: the floating shrine [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
 - Hudson: "holes were not filled and now this is a new problem" (shrine screenshot). Rig at HIS vantage confirmed BOTH: (1) the dais floated over black void — S7.59's blanket blockout-hide also removed the `ward-shrine` primitives (the dais SKIRT). Restored: skip-rule now keeps `laneFloor` + `ward-shrine`, hides everything else. Before/after shots at the same camera (`shrine-holes.png` / `shrine-fixed.png`) — skirt back, void gone. (2) The dark pit at the right = a drop-gap opening awaiting HIS wall dressing (his design call, not a defect).
