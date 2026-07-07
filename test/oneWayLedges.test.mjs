@@ -14,8 +14,8 @@ ok(typeof LEVEL.surfaceHeightAt === "function" && LEVEL.terrainKindAt === terrai
 
 // tier sanity after the re-tier
 ok(surfaceHeightAtCell(20, 10) === 1.3, "floor tier is 1.3");
-ok(surfaceHeightAtCell(6, 10) === 3.6, "platform tier is 3.6");
-ok(surfaceHeightAtCell(8, 50) === 4.0, "dais tier is 4.0");
+ok(surfaceHeightAtCell(6, 10) === 5.3, "platform tier is 5.3");
+ok(surfaceHeightAtCell(8, 50) === 5.7, "dais tier is 5.7");
 
 const blocked = new Set(expandRects(LEVEL.blockedZones || []).map((c) => cellKey(c.col, c.row)));
 const open = (c, r) => c >= 0 && r >= 0 && c < LEVEL.cols && r < LEVEL.rows && !blocked.has(cellKey(c, r));

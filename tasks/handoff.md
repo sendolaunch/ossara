@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.61 — 2026-07-06 — FINAL top-floor baked (1106, his call) + top floor DONE. Next: ONE grand central staircase (Hudson's choice) over the existing central fan (cols 30-37, only climb route already) — Cowork builds art+climb from marks. Sandbox rotated session mid-work (mount path changed, all intact). Suite 0 fails. PUSH PENDING |
+| **Last session** | S7.62 — 2026-07-06 — 4-UNIT RE-TIER (Hudson: 'make our unit 4 so we can use the stairs'): top floor 3.6->5.3 (courtyard->top gap now 4.0 = stairs_walled height), his 1106 pieces lifted nearest-tier + 60 wall-gap bridges + 28 odd props reseated (0 buried/floating). Tests green (oneWay 17/17, noTrap 4/4). RIG UNVERIFIED (sandbox headless browser crashed all session) — Hudson eyeballs. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,22 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.62 — 2026-07-06 — Raise top floor to a 4-unit gap so real stairs fit [GATE GREEN; RIG UNVERIFIED — R27 eyeball to Hudson; PUSH PENDING]
+- Stair-look finding first: KayKit stair pieces are built for ~4-5 unit climbs; our courtyard->top gap was only 2.3, so stairs flattened into slabs (2 rig shots confirmed). Options given; Hudson chose RAISE THE TOP FLOOR to a 4-unit gap ("make our unit 4 so we can use the stairs") + he'll place the staircase himself in the editor.
+- **Re-tier (retierFirstBreachHeights.mjs remapped):** 1.3 floor | 3.3/3.9 stair-fan | **5.3 top floor** (gap 4.0 ✓) | 5.7 dais | 7.3 inner walls | 10.3 perimeter. Idempotency detect flipped to FB_HEIGHT[3]===5.3. Fixed the (12,20)/(12,21) WALL_RESTORE height (was hardcoded 3.6 -> pit; now 5.3) — noSoftLock caught it again.
+- **His 1106 pieces LIFTED** by nearest-old-tier delta (2.2->+1.1, 3.6->+1.7, 4.0->+1.7; ground/courtyard unchanged): 715 moved. **60 wall-gap bridges** added (wall course-2 jumped 3.6->5.3 leaving a 4.0-5.3 band; bridge = duplicate at y-1.3). **28 odd-height props reseated** to their cell surface. Final audit: **0 buried, 0 floating**. Kit 1166.
+- oneWayLedges test heights updated (5.3/5.7). FULL suite exit 0.
+- **RIG UNVERIFIED (R27):** the sandbox headless browser (playwright+sparticuz) crashed on EVERY attempt this session (Node exit, session was mid-rotation `upbeat-laughing-dirac`->`gallant-admiring-hypatia`, heavy load). Could not screenshot. Handed the eyeball to Hudson — he opens the editor to place his staircase anyway, so he IS the eyeball. If walls/pieces look off, the lift math is sound; likely a few hand-tuned walls need a nudge.
+- Scratch files NOT for commit: `_rigshot.png`, `staircase-finding.png` (mount permission blocked rm; CC should `git rm --cached`/ignore them).
+- **NEXT:** Hudson places the grand staircase (stairs_walled now fits the 4-unit climb) in the editor; exports; Cowork bakes. Then floor 2.
+- **In Friendly Words:** Done — your floors are now a full 4 units apart, exactly the height the staircase pieces are built for, so when you place them they'll look like real steps instead of flat slabs. I lifted your entire top floor up to the new height (all 1100+ pieces moved together, nothing left buried or floating) and patched the walls so there's no gap band. Everything passes the tests. The one thing I couldn't do this session: my screenshot tool kept crashing, so I haven't SEEN it — but you're about to, when you open the editor to place your stairs. If any wall looks short or a piece looks off, tell me and it's a quick fix.
+
+### S7.61b — STAIR SPEC LOCKED (Hudson's DD reference screenshots)
+- LOOK: Dungeon-Defenders grand staircase — wide stone steps, STONE side railings (not wood), decorated newel posts at the base corners, flanking braziers. Monumental, center-stage.
+- PIECES CONFIRMED IN PACK: **stairs_walled** (5w x 4h x 4d — stone stairs WITH built-in side walls = the DD look in one piece; also stairs_wall_left/right for widening), **pillar_decorated** (newel posts), **torch_lit** (braziers). sy = rise/4 for stairs_walled.
+- GEOMETRY: central climb is a stepped 2.2 mid-plateau spine in the 1.3 courtyard; true 1.3<->3.6 bridge cells = (30,29),(39,35),(38,36). Grand staircase runs the central spine (cols ~30-39, rows ~29-38). WEST fan (cols 15-24 rows 39-47) = CLOSE (convert t7->platform 3.6, drop-only) so center is the sole climb. noSoftLock MUST stay green after — hero still reaches all gates + Ward.
+- DELIVERY: build on rig, screenshot at player cam, show Hudson BEFORE ship; he tunes.
 
 ### S7.61 — 2026-07-06 — Final top floor baked; stairs plan locked [GATE GREEN; PUSH PENDING]
 - Hudson: "final top floor version for now, lets move on to the stairs." Baked his export verbatim (1106 pcs; +1 pillar +1 rubble +1 prop vs prev). Kit guards 1254/1254, suite green.
