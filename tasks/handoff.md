@@ -5,7 +5,7 @@ Close every session by updating this file per the R16 ritual.
 
 | Field | Value |
 |---|---|
-| **Last session** | S7.62 — 2026-07-06 — 4-UNIT RE-TIER (Hudson: 'make our unit 4 so we can use the stairs'): top floor 3.6->5.3 (courtyard->top gap now 4.0 = stairs_walled height), his 1106 pieces lifted nearest-tier + 60 wall-gap bridges + 28 odd props reseated (0 buried/floating). Tests green (oneWay 17/17, noTrap 4/4). RIG UNVERIFIED (sandbox headless browser crashed all session) — Hudson eyeballs. PUSH PENDING |
+| **Last session** | S7.63 — 2026-07-06 — Retaining walls (wrap) -> floor+0.2 (stretched to reach the raised 5.3 top); DELETED the 60 wall-bridge duplicates (Hudson's 'delete that clutter') + stretched 45 base-course walls to close the gap cleanly (no dupes). RIG-VERIFIED (walls solid+continuous, no clutter band). Kit 1106. Suite 0 fails. PUSH PENDING |
 | **Project identity** | OSSARA — browser co-op tower-defense on Solana (single-player slice; target site ossara.gg) |
 | **Deployed version** | Live on Vercel — https://ossara-nine.vercel.app |
 | **Vercel project ID** | prj_mG5nB3TZHHnL4jTVYqynT2deapv5 |
@@ -46,6 +46,16 @@ Close every session by updating this file per the R16 ritual.
 ---
 
 ## Session log (newest first)
+
+### S7.63 — 2026-07-06 — Retaining walls to floor+0.2, delete wall-bridge clutter [GATE GREEN + RIG-VERIFIED; PUSH PENDING]
+- Hudson: retaining walls to floor height +0.2; delete the duplicated outer-wall clutter on the top floor; "take screenshots and see what I mean first."
+- **Root cause of the clutter:** the 60 `wallbridge-*` pieces I added in S7.62 to fill the post-lift wall gap were literal duplicates -> read as doubled walls. Deleted all 60. Replaced with the CLEAN fix: stretched the 45 base-course perimeter walls (y=0, native 4-tall) to sy 1.325 so their top reaches 5.3 and meets the upper course — continuous wall, zero duplication.
+- **Retaining walls (wrap, 50):** were stuck at old low height (top ~3.6) while the platform rose to 5.3. Reset each: base at its low-floor neighbour, sy so top = (max neighbour surface) + 0.2. Now they face the full raised edge +0.2 proud, per Hudson.
+- **RIG FINALLY RENDERED** (sandbox stabilised after the session rotation; earlier all-session OOM/timeout): `outputs/walls-fixed.png` — walls solid + continuous, no clutter band, edges reach the floor. VERIFIED, not blind.
+- Kit back to clean **1106**; suite exit 0 (oneWay 17/17, noTrap 4/4).
+- Rig note for next time: server boots in ~1s but chromium render now takes ~30s (slower session); give `rigShot` timeout 40, boot vite + sleep 3 in the SAME call, don't waste budget on a curl-wait loop.
+- **NEXT:** Hudson places the grand staircase (4-unit gap now fits stairs_walled) in the editor -> export -> bake. Then floor 2.
+- **In Friendly Words:** I saw it this time. That doubled-wall clutter is gone — I deleted the duplicate pieces I'd used to patch the walls and instead just stretched the real walls taller, so they're one clean solid wall now. Your retaining walls now reach all the way up to the new floor height plus a hair (0.2) like you wanted. Push it, look, and if it's good, go place your staircase.
 
 ### S7.62 — 2026-07-06 — Raise top floor to a 4-unit gap so real stairs fit [GATE GREEN; RIG UNVERIFIED — R27 eyeball to Hudson; PUSH PENDING]
 - Stair-look finding first: KayKit stair pieces are built for ~4-5 unit climbs; our courtyard->top gap was only 2.3, so stairs flattened into slabs (2 rig shots confirmed). Options given; Hudson chose RAISE THE TOP FLOOR to a 4-unit gap ("make our unit 4 so we can use the stairs") + he'll place the staircase himself in the editor.
